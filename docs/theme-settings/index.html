@@ -1,0 +1,849 @@
+<hr>
+<p>title: Theme Settings<br>date: 2018-02-08 18:50:03</p>
+<h2 id="description-NexT-User-Docs-–-Theme-Settings"><a href="#description-NexT-User-Docs-–-Theme-Settings" class="headerlink" title="description: NexT User Docs – Theme Settings"></a>description: NexT User Docs – Theme Settings</h2><p>NexT insists to hide complex details and gives you a simple but flexible config, so you can use it easily.</p>
+<h3 id="Cache-Support"><a href="#Cache-Support" class="headerlink" title="Cache Support"></a>Cache Support</h3><p>NexT v6+ allows to cache content generation. Set the value <code>enable</code> to <code>true</code> in <code>cache</code> section in {% label primary@theme config file %} as following:</p>
+<p><code>`</code>yml next/_config.yml</p>
+<h1 id="Allow-to-cache-content-generation-Introduced-in-NexT-v6-0-0"><a href="#Allow-to-cache-content-generation-Introduced-in-NexT-v6-0-0" class="headerlink" title="Allow to cache content generation. Introduced in NexT v6.0.0."></a>Allow to cache content generation. Introduced in NexT v6.0.0.</h1><p>cache:<br>  enable: true</p>
+<pre><code>
+### RSS Support
+
+There are three RSS options in NexT to fit different cases.
+Edit {% label primary@theme config file %} and set the value of `rss`:
+
+* `false`: Disable RSS, which won&apos;t show links on page.
+* Leave Blank: Use Hexo to generate feed and insert links automatically. You may need to install {% exturl hexo-generator-feed https://github.com/hexojs/hexo-generator-feed %} plugin with npm firstly.
+* Concrete URL: This means you have generate Feed in advance.
+
+### GitHub Banner
+
+NexT provides `Follow me on GitHub` banner in right-top corner. GitHub banner has format `permalink || title` which contains 2 values:
+
+{% tabs gitHub-banner %}
+&lt;!-- tab &lt;code&gt;permalink&lt;/code&gt; --&gt;
+Value before `||` delimeter (`permalink`) → is the specified link must have full url path.
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;title&lt;/code&gt; --&gt;
+Value after `||` delimeter (`title`) → is the title and aria-label name.
+&lt;!-- endtab --&gt;
+{% endtabs %}
+
+You can uncomment `github_banner` value and add your GitHub link in {% label primary@theme config file %} as following:
+
+```yml next/_config.yml
+github_banner: https://github.com/yourname || Follow me on GitHub
+</code></pre><h3 id="Custom-Logo-Support"><a href="#Custom-Logo-Support" class="headerlink" title="Custom Logo Support"></a>Custom Logo Support</h3><p>NexT supports the site logo personalization.</p>
+<p>{% tabs custom_logo %}<br><!-- tab <code>enabled</code> → --><br>You can enable it by editing values <code>custom_logo.enable</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% codeblock lang:yml next/_config.yml %}<br>custom_logo:<br>  enabled: false<br>{% endcodeblock %}<br><!-- endtab --></p>
+<!-- tab <code>image</code> -->
+<p>Then you can add images’s url by editing values in <code>custom_logo.image</code> section in {% label primary@theme config file %}.</p>
+<p>{% codeblock lang:yml next/_config.yml %}<br>custom_logo:<br>  image:<br>{% endcodeblock %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<p>{% note danger %}<br>For now only default Muse Scheme supports custom logo setting under <strong>6.0.x</strong> version or highter.<br>{% endnote %}</p>
+<h3 id="Custom-Style-Support"><a href="#Custom-Style-Support" class="headerlink" title="Custom Style Support"></a>Custom Style Support</h3><p>Like <a href="/docs/getting-started/data-files/">Next Data files</a>, you can put all your custom styles into one place (<code>hexo/source/_data</code>).</p>
+<ul>
+<li><code>head</code>: It’s custom swig styles placed in <code>layout/_custom/head.swig</code>.</li>
+<li><code>header</code>: It’s custom swig styles placed in <code>layout/_custom/header.swig</code>.</li>
+<li><code>sidebar</code>: It’s custom swig styles placed in <code>layout/_custom/sidebar.swig</code>.</li>
+<li><code>variables</code>: It’s variables styles placed in <code>source/css/_variables/custom.styl</code>.</li>
+<li><code>mixins</code>: It’s mixins styles placed in <code>source/css/_mixins/custom.styl</code>.</li>
+<li><code>styles</code>: It’s custom styles placed in <code>source/css/_custom/custom.styl</code>.</li>
+</ul>
+<p>Add your custom files in <code>hexo/source/_data</code> and uncomment needed files under the <code>custom_file_path</code> section in {% label primary@theme config file %} as following:</p>
+<p><code>`</code>yml next/_config.yml</p>
+<h1 id="For-example-you-want-to-put-your-custom-styles-file"><a href="#For-example-you-want-to-put-your-custom-styles-file" class="headerlink" title="For example, you want to put your custom styles file"></a>For example, you want to put your custom styles file</h1><h1 id="outside-theme-directory-in-root-source-data-set"><a href="#outside-theme-directory-in-root-source-data-set" class="headerlink" title="outside theme directory in root source/_data, set"></a>outside theme directory in root <code>source/_data</code>, set</h1><h1 id="styles-source-data-styles-styl"><a href="#styles-source-data-styles-styl" class="headerlink" title="styles: source/_data/styles.styl"></a><code>styles: source/_data/styles.styl</code></h1><p>#custom_file_path:</p>
+<h1 id="Default-paths-layout-custom"><a href="#Default-paths-layout-custom" class="headerlink" title="Default paths: layout/_custom/*"></a>Default paths: layout/_custom/*</h1><p>  #head: source/_data/head.swig</p>
+<p>  #header: source/_data/header.swig</p>
+<p>  #sidebar: source/_data/sidebar.swig</p>
+<h1 id="Default-path-source-css-variables-custom-styl"><a href="#Default-path-source-css-variables-custom-styl" class="headerlink" title="Default path: source/css/_variables/custom.styl"></a>Default path: source/css/_variables/custom.styl</h1><p>  #variables: source/_data/variables.styl</p>
+<h1 id="Default-path-source-css-mixins-custom-styl"><a href="#Default-path-source-css-mixins-custom-styl" class="headerlink" title="Default path: source/css/_mixins/custom.styl"></a>Default path: source/css/_mixins/custom.styl</h1><p>  #mixins: source/_data/mixins.styl</p>
+<h1 id="Default-path-source-css-custom-custom-styl"><a href="#Default-path-source-css-custom-custom-styl" class="headerlink" title="Default path: source/css/_custom/custom.styl"></a>Default path: source/css/_custom/custom.styl</h1><p>  #styles: source/_data/styles.styl</p>
+<pre><code>
+### Custom Page Support
+
+Next allows users to add custom pages in menu.
+
+{% tabs adding-custom-page %}
+&lt;!-- tab Adding New Page → --&gt;
+In your terminal emulator, change to Hexo site dir. Use `hexo new page custom_name` to create a new `custom_name` page:
+
+    $ cd your-hexo-site
+    $ hexo new page custom_name
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Setting Front-matter Values → --&gt;
+Front-matter is a block of YAML or JSON at the beginning of the file that is used to configure settings for your writings. Settings Front-matter values and more detailed can be found in {% exturl Front-matter https://hexo.io/docs/front-matter.html %}. You can also add contents in `custom_name/index.md` if you like.
+
+{% codeblock lang:md %}
+title: custom_name
+date: 2014-12-22 12:39:04
+---
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Editting Menu --&gt;
+Add `custom_name` to `menu` by editing {% label primary@theme config file %}, like adding `about` page:
+{% codeblock lang:yml next/_config.yml %}
+menu:
+  home: / || home
+  archives: /archives/ || archive
+  about: /about/ || user
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+{% endtabs %}
+
+If you want to add Tags or Categories page, please continue reading.
+
+#### Adding «Tags» Page
+
+Adding «Tags» page and show «Tags» link in menu. «Tags» page will show all tags of site. If no article has tags, this page will leave blank.
+Following code shows you a example of article with tags:
+
+{% tabs tags-variants %}
+&lt;!-- tab Variant 1 --&gt;
+{% codeblock lang:md %}
+title: Tags Testing Article
+tags: [Testing, Another Tag]
+---
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Variant 2 --&gt;
+{% codeblock lang:md %}
+title: Tags Testing Article
+tags:
+  - Testing
+  - Another Tag
+---
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+{% endtabs %}
+
+{% note info %}
+Please read {% exturl Hexo&apos;s Docs of Categories &amp; Tags https://hexo.io/docs/front-matter.html#Categories-amp-Tags %} to know how to add tags or categories for articles.
+{% endnote %}
+
+{% tabs adding-tags-page %}
+&lt;!-- tab Adding New Page → --&gt;
+In your terminal emulator, change to Hexo site dir. Use `hexo new page tags` to create a new `tags` page:
+
+    $ cd your-hexo-site
+    $ hexo new page tags
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Setting Page Type → --&gt;
+Edit the new page and change the type to `&quot;tags&quot;`, theme will show tags cloud automatically in this page. Page content looks like following:
+
+{% codeblock lang:md %}
+title: Tags
+date: 2014-12-22 12:39:04
+type: &quot;tags&quot;
+---
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Editting Menu --&gt;
+Add `tags` to `menu` by editing {% label primary@theme config file %}, like following:
+{% codeblock lang:yml next/_config.yml %}
+menu:
+  home: / || home
+  archives: /archives/ || archive
+  tags: /tags/ || tags
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+{% endtabs %}
+
+{% note warning %}
+If you enable any comment system for your site, comments will be shown for all posts and pages.
+See [«How to Disable Comments on Page»](/docs/faqs/#How-to-Disable-Comments-on-Page) if you want to do it for pages like `tags` or `categories`.
+{% endnote %}
+
+#### Adding «Categories» Page
+
+{% note default %}
+«Categories» page can be added in similar way as [«Tags» page](#Adding-%C2%ABTags%C2%BB-Page), only name there is difference: just need to replace `tags` with `categories`.
+{% endnote %}
+
+#### Adding Google Calendar Page
+
+{% tabs calendar %}
+&lt;!-- tab Adding Schedule Page → --&gt;
+In your terminal emulator, change to Hexo site dir. Use `hexo new page schedule` to create a new `schedule` page:
+
+    $ cd your-hexo-site
+    $ hexo new page schedule
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Setting Front-matter Values → --&gt;
+Front-matter is a block of YAML or JSON at the beginning of the file that is used to configure settings for your writings. Settings Front-matter values and more detailed can be found in {% exturl Front-matter https://hexo.io/docs/front-matter.html %}. You can also add contents in `schedule/index.md` if you like.
+
+{% codeblock lang:md %}
+title: schedule
+date: 2014-12-22 12:39:04
+---
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Editting Menu → --&gt;
+Add `schedule` to `menu` by editing {% label primary@theme config file %}:
+{% codeblock lang:yml next/_config.yml %}
+menu:
+  home: / || home
+  archives: /archives/ || archive
+  schedule: /schedule/ || calendar
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Setting Google Calendar--&gt;
+
+{% subtabs calendar1 %}
+&lt;!-- tab Get calendar ID and API KEY→  --&gt;
+Login to {% exturl Google developers https://console.developers.google.com/flows/enableapi?apiid=calendar %} and add Google Calendar API, you will get your calendar ID and API KEY. {% exturl More detailed documentation https://developers.google.com/calendar/quickstart/js %}
+
+&lt;!-- endtab --&gt;
+&lt;!-- tab NexT Config  --&gt;
+You can enable it by editing values `calendar.enable` to `true`, and copy the value of calendar ID and API KEY in {% label primary@theme config file %}.
+
+{% codeblock lang:yml next/_config.yml %}
+calendar:
+  enable: false
+  calendar_id: &lt;required&gt;
+  api_key: &lt;required&gt;
+  orderBy: startTime
+  offsetMax: 24
+  offsetMin: 4
+  timeZone:
+  showDeleted: false
+  singleEvents: true
+  maxResults: 250
+{% endcodeblock %}
+&lt;!-- endtab --&gt;
+{% endsubtabs %}
+
+&lt;!-- endtab --&gt;
+{% endtabs %}
+
+#### Cheers Archive Page
+
+By default NexT shows the cheers characters from `ok` to `excellent` according to the numbers of your posts. You can disable it by editing values `cheers_enabled` to `false` in {% label primary@theme config file %}.
+
+```yml next/_config.yml
+cheers_enabled: true
+</code></pre><h3 id="Fonts-Customization"><a href="#Fonts-Customization" class="headerlink" title="Fonts Customization"></a>Fonts Customization</h3><p>To solve the unstable of {% exturl Google Fonts API <a href="https://www.google.com/fonts">https://www.google.com/fonts</a> %} in some countries, NexT supports setting fonts. By using this feature you can assign URL of fonts library. And NexT gives you 5 specific font settings, they are:</p>
+<ul>
+<li>Global Font: Font used in the whole site.</li>
+<li>Title Font: Font used by titles in articles (H1, H2, H3, H4, H5, H6).</li>
+<li>Article Font: Font used by articles.</li>
+<li>Logo Font: Font used by Logo.</li>
+<li>Code Font: Font used by code blocks in articles.</li>
+</ul>
+<p>Each fonts will be used as the first font of this class, NexT will fallback to internal font settings if they are unavalible.</p>
+<ul>
+<li>Non-code Font: Fallback to <code>&quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, sans-serif</code></li>
+<li>Code Font: Fallback to <code>consolas, Menlo, &quot;PingFang SC&quot;, &quot;Microsoft YaHei&quot;, monospace</code></li>
+</ul>
+<p>Plus each section has a <code>external</code> attribute, this controls whether to use the font library CDN.<br>Use this can help you to use fonts installed in system and reduce unnecessary requests.</p>
+<p><code>`</code>yml next/_config.yml<br>font:<br>  enable: true</p>
+<h1 id="Font-library-CDN-e-g-fonts-googleapis-com-Default"><a href="#Font-library-CDN-e-g-fonts-googleapis-com-Default" class="headerlink" title="Font library CDN, e.g. //fonts.googleapis.com (Default)"></a>Font library CDN, e.g. //fonts.googleapis.com (Default)</h1><p>  host:</p>
+<h1 id="Global-font-settings-used-for-all-elements-in"><a href="#Global-font-settings-used-for-all-elements-in" class="headerlink" title="Global font settings used for all elements in ."></a>Global font settings used for all elements in <body>.</body></h1><p>  global:<br>    external: true<br>    family: Monda<br>    size:</p>
+<h1 id="Font-settings-for-Headlines-H1-H2-H3-H4-H5-H6"><a href="#Font-settings-for-Headlines-H1-H2-H3-H4-H5-H6" class="headerlink" title="Font settings for Headlines (H1, H2, H3, H4, H5, H6)."></a>Font settings for Headlines (H1, H2, H3, H4, H5, H6).</h1><h1 id="Fallback-to-global-font-settings"><a href="#Fallback-to-global-font-settings" class="headerlink" title="Fallback to global font settings."></a>Fallback to <code>global</code> font settings.</h1><p>  headings:<br>    external: true<br>    family: Roboto Slab<br>    size:</p>
+<h1 id="Font-settings-for-posts"><a href="#Font-settings-for-posts" class="headerlink" title="Font settings for posts."></a>Font settings for posts.</h1><h1 id="Fallback-to-global-font-settings-1"><a href="#Fallback-to-global-font-settings-1" class="headerlink" title="Fallback to global font settings."></a>Fallback to <code>global</code> font settings.</h1><p>  posts:<br>    external: true<br>    family:</p>
+<h1 id="Font-settings-for-Logo"><a href="#Font-settings-for-Logo" class="headerlink" title="Font settings for Logo."></a>Font settings for Logo.</h1><h1 id="Fallback-to-global-font-settings-2"><a href="#Fallback-to-global-font-settings-2" class="headerlink" title="Fallback to global font settings."></a>Fallback to <code>global</code> font settings.</h1><p>  logo:<br>    external: true<br>    family: Lobster Two<br>    size: 24</p>
+<h1 id="Font-settings-for-and-code-blocks"><a href="#Font-settings-for-and-code-blocks" class="headerlink" title="Font settings for  and code blocks."></a>Font settings for <code> and code blocks.</code></h1><p>  codes:<br>    external: true<br>    family: PT Mono<br>    size:</p>
+<pre><code>
+### Post Settings
+
+#### Page Scroll
+
+{% tabs page-scroll %}
+&lt;!-- tab &lt;code&gt;scroll_to_more&lt;/code&gt; --&gt;
+By default NexT scrolls page automatically to section which is under &lt;!-- more --&gt; mark. You can disable it by editing values `scroll_to_more` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+scroll_to_more: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;save_scroll&lt;/code&gt; --&gt;
+If you want to save page scroll position automatically in cookies, you can enable it by editing values `save_scroll` to `true` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+save_scroll: false
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+{% endtabs %}
+
+#### Preamble Text
+
+It&apos;s a common need to show some part of article in home page and then give a link to full article. NexT gives 3 ways to control how article is shown in home page. In other words, you can use following ways to show summary of articles and a **Read More** button.
+
+{% tabs preamble %}
+&lt;!-- tab &lt;code&gt;excerpt_description&lt;/code&gt; --&gt;
+If you have added `description` and set its value to your article summary in {% exturl front-matter https://hexo.io/docs/front-matter.html %}, NexT excerpts `description` as preamble text in homepage by default. Without `description`, the full contents would be the preamble text in homepage.
+
+You can disable it by editing values `excerpt_description` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+excerpt_description: true
+{% endcode %}
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab {% label success@Tag more %} --&gt;
+Use `&lt;!-- more --&gt;` in your article to break your article manually, which is recommended by Hexo.
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab {% label warning@auto_excerpt %} --&gt;
+Next would use `150` characters from article header automatically as preamble text by editing values `auto_excerpt.enable` to `true`.
+
+You can configure it by editing values in `auto_excerpt` section in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+auto_excerpt:
+  enable: false
+  length: 150
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+{% endtabs %}
+
+{% note info %}
+It is recommended to use `&lt;!-- more --&gt;` which can not only control what you want to show better, but also let Hexo&apos;s plugins use it easily.
+{% endnote %}
+
+#### Post Meta Display
+
+NexT supports post created date, post updated date and post categories display.
+
+{% tabs postmeta %}
+&lt;!-- tab &lt;code&gt;item_text&lt;/code&gt; --&gt;
+By default NexT shows the description text of post meta. You can disable it by editing values `post_meta.item_text` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+post_meta:
+  item_text: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;created_at&lt;/code&gt; --&gt;
+By default NexT shows the post created date in post meta section and created time in popup. You can disable it by editing values `post_meta.created_at` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+post_meta:
+  created_at: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;updated_at&lt;/code&gt; --&gt;
+
+{% subtabs postmeta1 %}
+&lt;!-- tab &lt;code&gt;enabled&lt;/code&gt; --&gt;
+By default NexT shows the post updated date in post meta section and updated time in popup. You can disable it by editing values `post_meta.updated_at.enabled` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+post_meta:
+  updated_at:
+    enabled: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;another_day&lt;/code&gt; --&gt;
+By default edited time would be show in popup message if updated/edited date is same as created date. You can disable it by editing values `post_meta.updated_at.another_day` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+post_meta:
+  updated_at:
+    another_day: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+{% endsubtabs %}
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;categories&lt;/code&gt; --&gt;
+By default NexT shows the post categorie in post meta section. You can disable it by editing values `post_meta.categories` to `false` in {% label primary@theme config file %}.
+
+{% code lang:yml next/_config.yml %}
+post_meta:
+  categories: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+{% endtabs %}
+
+#### Post Wordcount
+
+3rd-party plugin `{% exturl hexo-wordcount https://github.com/willin/hexo-wordcount %}` was replaced by `{% exturl hexo-symbols-count-time https://github.com/theme-next/hexo-symbols-count-time %}` in 6.x versions because `hexo-symbols-count-time` no have any external nodejs dependencies, no have {% exturl language filter https://github.com/willin/hexo-wordcount/issues/7 %} which causes better performance on speed at site generation.
+
+{% tabs wordcount %}
+&lt;!-- tab Installation → --&gt;
+Install `hexo-symbols-count-time` by run following command in {% label info@site root dir %}:
+
+    $ npm install hexo-symbols-count-time --save
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab Hexo Config → --&gt;
+Activate this plugin in {% label info@site config file %} by enabled any option:
+
+{% subtabs wordcount1 %}
+&lt;!-- tab &lt;code&gt;symbols&lt;/code&gt; --&gt;
+By default NexT shows the number of post words in post meta section. You can disable it by editing values `symbols_count_time.symbols` to `false` in {% label info@site config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  symbols: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;time&lt;/code&gt; --&gt;
+By default NexT shows the estimated reading time of post in post meta section. You can disable it by editing values `symbols_count_time.time` to `false` in {% label info@site config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  time: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;total_symbols&lt;/code&gt; --&gt;
+By default NexT shows the number of all posts words in footer section. You can disable it by editing values `symbols_count_time.total_symbols` to `false` in {% label info@site config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  total_symbols: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;total_time&lt;/code&gt; --&gt;
+By default NexT shows the estimated reading time of all posts in footer section. You can disable it by editing values `symbols_count_time.total_time` to `false` in {% label info@site config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  total_time: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+{% endsubtabs %}
+
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab NexT Config --&gt;
+After the plugin enabled, you may adjust options in `symbols_count_time` section in {% label primary@theme config file %}:
+
+{% subtabs wordcount2 %}
+&lt;!-- tab &lt;code&gt;separated_meta&lt;/code&gt; --&gt;
+By default NexT shows the words counts and estimated reading time in a separated line. You can add them into one line by editing values `symbols_count_time.separated_meta` to `false` in {% label primary@theme config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  separated_meta: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;item_text_post&lt;/code&gt; --&gt;
+By default NexT shows the text description of the words counts and estimated reading time in post meta section. You can disable it by editing values `symbols_count_time.item_text_post` to `false` in {% label primary@theme config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  item_text_post: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;item_text_total&lt;/code&gt; --&gt;
+By default NexT doesn&apos;t shows the text description of the words counts and estimated reading time in footer section. You can enable it by editing values `symbols_count_time.item_text_total` to `false` in {% label primary@theme config file %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  item_text_total: false
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;awl&lt;/code&gt; --&gt;
+`awl` means the average Word Length (chars count in word). You can check this {% exturl here https://charactercounttool.com/ %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  awl: 4
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;wpm&lt;/code&gt; --&gt;
+`wpm` means the average words per minute. You can check this {% exturl here https://wordcounter.net/ %}.
+{% code lang:yml hexo/_config.yml %}
+symbols_count_time:
+  wpm: 275
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+{% endsubtabs %}
+
+&lt;!-- endtab --&gt;
+{% endtabs %}
+
+#### Post Codeblock
+
+{% tabs codeblock %}
+&lt;!-- tab &lt;code&gt;border_radius&lt;/code&gt; --&gt;
+By default NexT defines the default value of codeblock border radius as 1. You can configure it by editing `border_radius` values in `codeblock` section in {% label primary@theme config file %}.
+
+{% code lang:yml hexo/_config.yml %}
+codeblock:
+  border_radius:
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;copy_button&lt;/code&gt; --&gt;
+NexT supports the copy-and-paste functionality of codeblock.
+
+{% subtabs codeblock1 %}
+&lt;!-- tab &lt;code&gt;enable&lt;/code&gt; --&gt;
+You can enable it by editing values `copy_button.enable` to `true` in {% label primary@theme config file %}.
+
+{% code lang:yml hexo/_config.yml %}
+codeblock:
+  copy_button:
+    enable: false
+{% endcode %}
+&lt;!-- endtab --&gt;
+&lt;!-- tab &lt;code&gt;show_result&lt;/code&gt; --&gt;
+By default NexT doesn&apos;t show copy results of the copy-and-paste functionality. You can also enable it by editing values `copy_button.show_result` to `true` in {% label primary@theme config file %}.
+
+{% code lang:yml hexo/_config.yml %}
+codeblock:
+  copy_button:
+    show_result: false
+{% endcode %}
+&lt;!-- endtab --&gt;
+{% endsubtabs %}
+
+&lt;!-- endtab --&gt;
+
+{% endtabs %}
+
+#### Code Highlight Theme
+
+NexT uses {% exturl Tomorrow Theme https://github.com/chriskempson/tomorrow-theme %} to support code highlight.
+Default style is white (`normal`) and there are 5 styles to choose:
+
+* `normal`
+* `night`
+* `night blue`
+* `night bright`
+* `night eighties`
+
+Change the value of `highlight_theme` to choose the highlight style you like, for example:
+
+```yml next/_config.yml
+# Code Highlight theme
+# Available values: normal | night | night eighties | night blue | night bright
+# https://github.com/chriskempson/tomorrow-theme
+highlight_theme: night
+</code></pre><h4 id="Post-Copyright"><a href="#Post-Copyright" class="headerlink" title="Post Copyright"></a>Post Copyright</h4><p>NexT supports the copyright declaration for your posts.</p>
+<p>{% tabs post_copyright %}<br><!-- tab <code>enable</code> --><br>You can enable it by editing values <code>post_copyright.enable</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml hexo/_config.yml %}<br>post_copyright:<br>  enable: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>license</code> -->
+<p>You can also configure your custom license by editing values in <code>post_copyright.license</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml hexo/_config.yml %}<br>post_copyright:<br>  license: <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a><br>{% endcode %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<h4 id="Post-Edit"><a href="#Post-Edit" class="headerlink" title="Post Edit"></a>Post Edit</h4><p>NexT supports the edit functionality of your posts.</p>
+<p>{% tabs post_edit %}<br><!-- tab <code>enable</code> --><br>You can enable it by editing values <code>post_edit.enable</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml hexo/_config.yml %}<br>post_edit:<br>  enable: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>url</code> -->
+<p>You should create a source repository of your post files. The <code>url</code> setting depends on the source project in github.</p>
+<ul>
+<li>For site repository<ul>
+<li>Link for view source: <code>url: https://github.com/.../tree/master/source/_posts/</code></li>
+<li>Link for fork &amp; edit: <code>url: https://github.com/.../edit/master/source/_posts/</code></li>
+</ul>
+</li>
+<li>For post repository<ul>
+<li>Link for view source: <code>url: https://github.com/.../_posts/tree/master/</code></li>
+<li>Link for fork &amp; edit: <code>url: https://github.com/.../_posts/edit/master/</code></li>
+</ul>
+</li>
+</ul>
+<p>{% code lang:yml hexo/_config.yml %}<br>post_edit:<br>  url:<br>{% endcode %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<h4 id="Related-popular-posts-REDOCS"><a href="#Related-popular-posts-REDOCS" class="headerlink" title="Related popular posts (REDOCS)"></a>Related popular posts (REDOCS)</h4><p>NexT supports the related posts functionality according to {% exturl hexo-related-popular-posts <a href="https://github.com/tea3/hexo-related-popular-posts">https://github.com/tea3/hexo-related-popular-posts</a> %}.</p>
+<p>{% tabs related_posts %}<br><!-- tab <code>enable</code> --><br>You can enable it by editing values <code>related_posts.enable</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml hexo/_config.yml %}<br>related_posts:<br>  enable: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>title</code> -->
+<p>By default NexT uses ‘Related Posts’ as title by default. You can configure it by editing values in <code>related_posts.title</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml hexo/_config.yml %}<br>related_posts:<br>  title:<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>display_in_home</code> -->
+<p>By default NexT doesn’t show the related posts in homepage. You can enable it by editing values <code>related_posts.display_in_home</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml hexo/_config.yml %}<br>related_posts:<br>  display_in_home: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>params</code> -->
+<p>2</p>
+<p>{% subtabs related_posts1 %}<br><!-- tab <code>maxCount</code> --><br>1.1<br><!-- endtab --><br><!-- tab <code>PPMixingRate</code> --><br>1.2<br><!-- endtab --><br><!-- tab <code>isDate</code> --><br>1.2<br><!-- endtab --><br><!-- tab <code>isImage</code> --><br>1.2<br><!-- endtab --><br><!-- tab <code>isExcerpt</code> --><br>1.2<br><!-- endtab --><br>{% endsubtabs %}</p>
+<!-- endtab -->
+<p>{% endtabs %}</p>
+<h3 id="Reward-Donate"><a href="#Reward-Donate" class="headerlink" title="Reward (Donate)"></a>Reward (Donate)</h3><p>More and more platform (WeChat public accounts, Weibo, Jianshu, Baidu Reward) supports reward (donate). To catch paid reading trends, we added reward feature, supports WeChat Pay, Alipay and Bitcoin. What you need is:</p>
+<ol>
+<li>Get your WeChat Pay / Alipay / Bitcoin receive money QRcode image(s) and put into <code>source/images</code> under {% label primary@theme directory %} or upload it(them) to an image cloud to get the absolute HTTP address(es).</li>
+<li><p>Set needed values in  {% label primary@theme config file %}:</p>
+<p><code>`</code>yml next/_config.yml</p>
+<h1 id="Reward"><a href="#Reward" class="headerlink" title="Reward"></a>Reward</h1><p>reward:<br>  enable: true<br>  comment: Donate comment here<br>  wechatpay: /images/wechatpay.jpg # or HTTP address like <a href="https://i.loli.net/2017/07/04/595a7e1e266f2.gif">https://i.loli.net/2017/07/04/595a7e1e266f2.gif</a><br>  alipay: /images/alipay.jpg<br>  bitcoin: /images/bitcoin.png<br><code>`</code></p>
+</li>
+</ol>
+<h3 id="WeChat-Subscribing"><a href="#WeChat-Subscribing" class="headerlink" title="WeChat Subscribing"></a>WeChat Subscribing</h3><p>Show your WeChat public account QRcode after each article, subscribing blog by simply scanning.</p>
+<ol>
+<li>Download your QRcode from WeChat Public Platform, and save it under <code>source/uploads/</code> {% label info@site directory %}.</li>
+<li><p>Edit {% label primary@theme config file %} like following:</p>
+<p><code>yml next/_config.yml
+wechat_subscriber:
+ enabled: true
+ qcode: /uploads/wechat-qcode.jpg
+ description: Welcome to scan the WeChat Public Account QRcode and subscribe my blog!</code></p>
+</li>
+</ol>
+<h3 id="Mobile-Devices-Adaptation"><a href="#Mobile-Devices-Adaptation" class="headerlink" title="Mobile Devices Adaptation"></a>Mobile Devices Adaptation</h3><p>{% tabs Mobile-Adaptation %}<br><!-- tab <code>mobile_layout_economy</code> --><br>If you want to reduce padding/margin indents on devices with narrow width, you can enable it by editing values <code>mobile_layout_economy</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>mobile_layout_economy: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>android_chrome_color</code> -->
+<p>By default NexT uses black-deep (<code>#222</code>) as the color of android Chrome header panel. You can configure it by editing values with Hex color in <code>android_chrome_color</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>android_chrome_color: “#222”<br>{% endcode %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<h3 id="Sidebar-Setting"><a href="#Sidebar-Setting" class="headerlink" title="Sidebar Setting"></a>Sidebar Setting</h3><h4 id="Sidebar-Style"><a href="#Sidebar-Style" class="headerlink" title="Sidebar Style"></a>Sidebar Style</h4><p>By default sidebar only shows in posts (have a table of content), and is placed in left side. You can change it by editing values under <code>sidebar</code> setting in {% label primary@theme config file %}.</p>
+<p>Sidebar has several options, but for now we will consider <code>position</code>, <code>width</code>, <code>display</code>, <code>offset</code>, <code>b2t</code>, <code>scrollpercent</code>, and <code>onmobile</code> options.</p>
+<p>{% tabs setting-sidebar %}<br><!-- tab <code>position</code> --><br>Set up sidebar position by changing the value of <code>sidebar.position</code>, which can be one of following:</p>
+<ul>
+<li><strong><code>left</code></strong> → Place at the left of the screen.</li>
+<li><code>right</code> → Place at the right of the screen.</li>
+</ul>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  position: left</p>
+<p>  #position: right<br>{% endcode %}<br>{% note danger %}<br>For now only Pisces / Gemini Schemes supports <code>position</code> setting under <strong>6.0.x</strong> version or highter.<br>{% endnote %}<br><!-- endtab --></p>
+<!-- tab <code>width</code> -->
+<p>You can change sidebar width by specify <code>sidebar.width</code> setting in pixels, for example:</p>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  width: 300<br>{% endcode %}</p>
+<p>{% note warning %}<br>This option commented out by default and values are:</p>
+<ul>
+<li>For Muse | Mist schemes: <code>320</code></li>
+<li>For Pisces | Gemini schemes: <code>240</code></li>
+</ul>
+<p>{% endnote %}</p>
+<p>{% note danger %}<br>From version {% label <a href="mailto:danger@6.0.4">danger@6.0.4</a> %} to {% label <a href="mailto:danger@6.3.0">danger@6.3.0</a> %} option was called <code>sidebar_width</code> and was available for Gemini Scheme only.<br>From {% label <a href="mailto:danger@6.4.0">danger@6.4.0</a> %} version or highter, option renamed to <code>sidebar.width</code> and available for all schemes.<br>{% endnote %}<br><!-- endtab --></p>
+<!-- tab <code>display</code> -->
+<p>Set up conditions under which sidebar will show by editing <code>sidebar.display</code> value, which can be one of following:</p>
+<ul>
+<li><strong><code>post</code></strong> → Show sidebar only in posts which have index.</li>
+<li><code>always</code> → Show sidebar in all pages.</li>
+<li><code>hide</code> → Hide it in all pages (but can be opened by user manually).</li>
+<li><code>remove</code> → Remove sidebar totally.</li>
+</ul>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  display: post</p>
+<p>  #display: always</p>
+<p>  #display: hide</p>
+<p>  #display: remove<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>offset</code> -->
+<p>Set up sidebar offset from top menubar in pixels by changing the value of <code>sidebar.offset</code>, which can be one of following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  offset: 12<br>{% endcode %}</p>
+<p>{% note danger %}<br>For now only Pisces / Gemini Schemes supports <code>offset</code> setting under <strong>6.0.x</strong> version or highter.<br>{% endnote %}<br><!-- endtab --></p>
+<!-- tab <code>b2t</code> -->
+<p>Set the value <code>sidebar.b2t</code> to <code>true</code> to display <code>Back to top</code> button as following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  b2t: false<br>{% endcode %}</p>
+<p>{% note danger %}<br>For now only Pisces / Gemini Schemes supports <code>b2t</code> setting under <strong>6.0.x</strong> version or highter.<br>{% endnote %}<br><!-- endtab --></p>
+<!-- tab <code>scrollpercent</code> -->
+<p>Set the value <code>sidebar.scrollpercent</code> to <code>true</code> to display scroll percent label in <code>Back to top</code> button as following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  scrollpercent: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>onmobile</code> -->
+<p>Set the value <code>sidebar.onmobile</code> to <code>true</code> to enable sidebar on narrow view for mobile device as following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>sidebar:<br>  onmobile: false<br>{% endcode %}</p>
+<p>{% note danger %}<br>For now only Muse / Mist Schemes supports <code>onmobile</code> setting under <strong>6.0.x</strong> version or highter.<br>{% endnote %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<h4 id="Sidebar-Site-State"><a href="#Sidebar-Site-State" class="headerlink" title="Sidebar Site State"></a>Sidebar Site State</h4><p>By default NexT shows the categories and counts of Posts / Categories / Tags in sidebar. You can configure it by editing values in <code>site_state</code> section in {% label primary@theme config file %}.</p>
+<p><code>`</code>yml next/_config.yml<br>site_state: true</p>
+<pre><code>
+#### Sidebar Social Links
+
+{% note default %}
+Social Links have similar fucture as [Menu Items](../getting-started/#Configuring-Menu-Items), only target link there is difference: specified link must have full url path (permalink).
+{% endnote %}
+
+Edit the `social` section in {% label primary@theme config file %} as following:
+
+```yml next/_config.yml
+social:
+  GitHub: https://github.com/yourname || github
+  E-Mail: mailto:yourname@gmail.com || envelope
+  Google: https://plus.google.com/yourname || google
+  Twitter: https://twitter.com/yourname || twitter
+  FB Page: https://www.facebook.com/yourname || facebook
+  VK Group: https://vk.com/yourname || vk
+  StackOverflow: https://stackoverflow.com/yourname || stack-overflow
+  YouTube: https://youtube.com/yourname || youtube
+  Instagram: https://instagram.com/yourname || instagram
+  Skype: skype:yourname?call|chat || skype
+</code></pre><p>By default NexT shows the icons of social links in sidebar.</p>
+<p>{% tabs social_icons %}<br><!-- tab <code>enable</code> --><br>You can configure it by editing values in <code>social_icons.enable</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>social_icons:<br>  enable: true<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>icons_only</code> -->
+<p>Set the value <code>icons_only</code> to <code>true</code> to display social icons without description in <code>social_icons</code> section in {% label primary@theme config file %} as following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>social_icons:<br>  icons_only: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>transition</code> -->
+<p>Set the value <code>transition</code> to <code>true</code> to display social icons with transition effects in <code>social_icons</code> section in {% label primary@theme config file %} as following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>social_icons:<br>  transition: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>exturl</code> -->
+<p>Set the value <code>exturl</code> to <code>true</code> to {% exturl encrypt social links <a href="https://www.base64encode.org">https://www.base64encode.org</a> %} in <code>social_icons</code> section in {% label primary@theme config file %}. For example, encoded GitHub link: <code>GitHub: aHR0cHM6Ly9naXRodWIuY29tL3RoZW1lLW5leHQ= || github</code>.</p>
+<p>{% code lang:yml next/_config.yml %}<br>social_icons:<br>  exturl: false<br>{% endcode %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<h4 id="Sidebar-Blogrolls"><a href="#Sidebar-Blogrolls" class="headerlink" title="Sidebar Blogrolls"></a>Sidebar Blogrolls</h4><p>You can add blog rolls within sidebar in NexT.</p>
+<p>{% tabs blogrolls %}<br><!-- tab <code>links</code> --><br>Edit the <code>links</code> section in {% label primary@theme config file %} and add your favorite links:</p>
+<p>{% code lang:yml next/_config.yml %}<br>links:<br>  Title1: <a href="http://example1.com/">http://example1.com/</a><br>  Title2: <a href="http://example2.com/">http://example2.com/</a><br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>links_icon</code> -->
+<p>By default NexT shows the <code>link</code> icon {% btn #,, link %} before <code>links_title</code>. The name of icon can be found in {% exturl Font Awesome <a href="https://fontawesome.com">https://fontawesome.com</a> %} site. You can configure it by editing values in <code>links_icon</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>links_icon: link<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>links_title</code> -->
+<p>By default NexT uses <code>Links</code> as the name of blogroll. You can configure it by editing values in <code>links_title</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>links_title: Links<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>links_layout</code> -->
+<p>By default all blogrolls are displayed in block. You can configure it to <code>inline</code> by editing values in <code>links_layout</code> section in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>links_layout: block</p>
+<p>#links_layout: inline<br>{% endcode %}</p>
+<!-- endtab -->
+<p>{% endtabs %}</p>
+<h4 id="Sidebar-TOC"><a href="#Sidebar-TOC" class="headerlink" title="Sidebar TOC"></a>Sidebar TOC</h4><p>{% tabs toc %}<br><!-- tab <code>enable</code> --><br>By default NexT shows <code>Table Of Contents (TOC)</code> in the Sidebar. You can disable it by editing values <code>toc.enable</code> to <code>false</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>toc:<br>  enable: true<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>number</code> -->
+<p>By default NexT adds list number to TOC automatically. You can disable it by editing values <code>toc.number</code> to <code>false</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>toc:<br>  number: true<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>wrap</code> -->
+<p>If the post header width longer than sidebar width, you can wrap the header words in next lines by editing values <code>toc.wrap</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>toc:<br>  wrap: false<br>{% endcode %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<h4 id="Sidebar-Creative-Commons"><a href="#Sidebar-Creative-Commons" class="headerlink" title="Sidebar Creative Commons"></a>Sidebar Creative Commons</h4><p>NexT supports the display of {% exturl Creative Commons 4.0 International License <a href="http://creativecommons.org/">http://creativecommons.org/</a> %} including <code>by</code>, <code>by-nc</code>, <code>by-nc-nd</code>, <code>by-nc-sa</code>, <code>by-nd</code>, <code>by-sa</code>, <code>zero</code>. These licenses allow creators to communicate which rights they reserve, and which rights they waive for the benefit of recipients or other creators.</p>
+<p>You can configure it by editing values in <code>creative_commons</code> section in {% label primary@theme config file %}.</p>
+<p><code>`</code>yml next/_config.yml<br>creative_commons:</p>
+<pre><code>
+### Site Footer Setting
+
+#### Site Start Time
+
+By default NexT shows current year in the footer like `© 2018`. You can configure it to show the time gap like `© 2015 - 2018` by editing values in `since` section in {% label primary@theme config file %}.
+
+```yml next/_config.yml
+footer:
+  since: 2015
+</code></pre><h4 id="Site-Footer-Icon"><a href="#Site-Footer-Icon" class="headerlink" title="Site Footer Icon"></a>Site Footer Icon</h4><p>By default NexT shows black <code>user</code> icon {% btn #,, user %} without animation between year and copyright information in the footer. You can configure it by editing values in <code>icon</code> section in {% label primary@theme config file %}.</p>
+<p>{% tabs icon %}<br><!-- tab <code>name</code> --><br>The name of footer icon can be founded in {% exturl Font Awesome <a href="https://fontawesome.com">https://fontawesome.com</a> %} site. <code>heart</code> is recommended.</p>
+<p>{% code lang:yml next/_config.yml %}<br>footer:<br>  icon:<br>    name: user<br>{% endcode %}</p>
+<!-- endtab -->
+<!-- tab <code>animated</code> -->
+<p>Set up animated of footer icon by changing the value of <code>icon.animated</code>:</p>
+<ul>
+<li><code>true</code> → Icon will be animated.</li>
+<li><strong><code>false</code></strong> → Icon will not be animated.</li>
+</ul>
+<p>{% code lang:yml next/_config.yml %}<br>footer:<br>  icon:<br>    animated: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>color</code> -->
+<p>Set up color of footer icon by changing the value of <code>icon.color</code>. Please use Hex Code, and red (#ff0000) is recommended for <code>heart</code> icon.</p>
+<p>{% code lang:yml next/_config.yml %}<br>footer:<br>  icon:<br>    color: “#808080”<br>{% endcode %}</p>
+<!-- endtab -->
+<p>{% endtabs %}</p>
+<h4 id="Site-Copyright-Name"><a href="#Site-Copyright-Name" class="headerlink" title="Site Copyright Name"></a>Site Copyright Name</h4><p>By default NexT shows the name of <code>author</code> from {% label info@site config file %}. You can configure it by editing values in <code>copyright</code> section in {% label primary@theme config file %}.</p>
+<p><code>`</code>yml next/_config.yml<br>footer:<br>  copyright:</p>
+<pre><code>
+#### Site Platform Information
+
+By default NexT shows Hexo and Theme &amp; scheme information like `Powered by Hexo v3.7.1 | Theme — NexT.Muse v6.3.0`. You can configure it by editing values in `powered` and `theme` section in {% label primary@theme config file %}.
+
+{% tabs platform %}
+&lt;!-- tab &lt;code&gt;powered&lt;/code&gt; --&gt;
+
+{% subtabs platform1 %}
+&lt;!-- tab &lt;code&gt;enable&lt;/code&gt; --&gt;
+* **`true`** → Displaying `Powered by Hexo` Information.
+* `false` → Not Displaying `Powered by Hexo` Information.
+
+{% code lang:yml next/_config.yml %}
+footer:
+  powered:
+    enable: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;version&lt;/code&gt; --&gt;
+* **`true`** → Displaying Hexo Version Information.
+* `false` → Not Displaying Hexo Version Information.
+
+{% code lang:yml next/_config.yml %}
+footer:
+  powered:
+    version: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+{% endsubtabs %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;theme&lt;/code&gt; --&gt;
+
+{% subtabs platform2 %}
+&lt;!-- tab &lt;code&gt;enable&lt;/code&gt; --&gt;
+* **`true`** → Displaying Theme &amp; Scheme Information.
+* `false` → Not Displaying Theme &amp; Scheme Information.
+
+{% code lang:yml next/_config.yml %}
+footer:
+  theme:
+    enable: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+
+&lt;!-- tab &lt;code&gt;version&lt;/code&gt; --&gt;
+* **`true`** → Displaying Theme NexT Version Information.
+* `false` → Not Displaying Theme NexT Version Information.
+
+{% code lang:yml next/_config.yml %}
+footer:
+  theme:
+    version: true
+{% endcode %}
+&lt;!-- endtab --&gt;
+{% endsubtabs %}
+&lt;!-- endtab --&gt;
+
+{% endtabs %}
+
+#### Adding Custom Information
+
+If you want, any custom text can be defined within footer in `custom_text` section in {% label primary@theme config file %} like:
+
+```yml next/_config.yml
+footer:
+  custom_text: Hosted by &lt;a target=&quot;_blank&quot; rel=&quot;external nofollow&quot; href=&quot;https://pages.coding.me&quot;&gt;&lt;b&gt;Coding Pages&lt;/b&gt;&lt;/a&gt;
+</code></pre><h3 id="SEO-Setting"><a href="#SEO-Setting" class="headerlink" title="SEO Setting"></a>SEO Setting</h3><p>Next provides useful options for better Search Engine Optimization (SEO).</p>
+<p>{% tabs SEO %}<br><!-- tab <code>canonical</code> --><br>By default a canonical link tag is created in Hexo by setting the value <code>canonical</code> to <code>true</code> in {% label primary@theme config file %} after you have set up your URL <code>url: http://yoursite.com</code> in {% label info@site config file %}. More detailed information can be found in {% exturl Consolidate duplicate URLs <a href="https://support.google.com/webmasters/answer/139066">https://support.google.com/webmasters/answer/139066</a> %}.</p>
+<p>{% code lang:yml next/_config.yml %}<br>canonical: true<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>seo</code> -->
+<p>Set the value <code>enable</code> to <code>true</code> in <code>seo</code> section to change headers hierarchy on <code>subtitle</code> in {% label info@site config file %} and on all post/pages titles for better SEO in {% label primary@theme config file %} as following:</p>
+<p>{% code lang:yml next/_config.yml %}<br>seo: false<br>{% endcode %}<br><!-- endtab --></p>
+<!-- tab <code>index_with_subtitle</code> -->
+<p>Set the value <code>enable</code> to <code>true</code> in <code>index_with_subtitle</code> section to add <code>subtitle</code> information in {% label info@site config file %} to index page.</p>
+<p>{% code lang:yml next/_config.yml %}<br>index_with_subtitle: false<br>{% endcode %}<br><!-- endtab --></p>
+<p>{% endtabs %}</p>
+<p>NexT also supports the baidu push so that the blog will push the url to baidu automatically which is very helpful for SEO. You can enable it by editing values <code>related_posts.enable</code> to <code>true</code> in {% label primary@theme config file %}.</p>
+<p><code>`</code>yml next/_config.yml<br>baidu_push: false</p>
+<pre><code>
+### Animation Effect
+
+NexT enables animation effect by default which is supported by JavaScript, so it will wait for JavaScript loaded to show content.
+If you need speed you can set this section to `false` to disable it.
+
+Edit {% label primary@theme config file %} and set the needed values under the `motion` to fit your demand.
+
+```yml next/_config.yml
+# Use velocity to animate everything.
+motion:
+  enable: true
+  async: false
+  transition:
+    # Transition variants:
+    # fadeIn | fadeOut | flipXIn | flipXOut | flipYIn | flipYOut | flipBounceXIn | flipBounceXOut | flipBounceYIn | flipBounceYOut
+    # swoopIn | swoopOut | whirlIn | whirlOut | shrinkIn | shrinkOut | expandIn | expandOut
+    # bounceIn | bounceOut | bounceUpIn | bounceUpOut | bounceDownIn | bounceDownOut | bounceLeftIn | bounceLeftOut | bounceRightIn | bounceRightOut
+    # slideUpIn | slideUpOut | slideDownIn | slideDownOut | slideLeftIn | slideLeftOut | slideRightIn | slideRightOut
+    # slideUpBigIn | slideUpBigOut | slideDownBigIn | slideDownBigOut | slideLeftBigIn | slideLeftBigOut | slideRightBigIn | slideRightBigOut
+    # perspectiveUpIn | perspectiveUpOut | perspectiveDownIn | perspectiveDownOut | perspectiveLeftIn | perspectiveLeftOut | perspectiveRightIn | perspectiveRightOut
+    post_block: fadeIn
+    post_header: slideDownIn
+    post_body: slideDownIn
+    coll_header: slideLeftIn
+    # Only for Pisces | Gemini.
+    sidebar: slideUpIn
+</code></pre>
