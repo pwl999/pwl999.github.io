@@ -329,7 +329,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/systrace/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_workqueue/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -349,7 +349,7 @@
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/systrace/" class="post-title-link" itemprop="http://yoursite.com/index.html">Systrace</a>
+                <a href="/2018/12/21/linux_workqueue/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Workqueue</a>
               
             
           </h1>
@@ -381,7 +381,7 @@
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:02:08" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:08:17" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -403,7 +403,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
 
                 
                 
@@ -418,9 +418,9 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/systrace/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/linux_workqueue/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/systrace/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_workqueue/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -450,19 +450,14 @@
       
         
           
-          
-上图基本就能说清systrace的整个框架：
-
-1、systrace调用atrace抓取目标机的trace数据；
-2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件；
-3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分析trace数据。背后是Trace-Viewer的脚本在运行；
-
-内核态和用户态的存储trace数据
+          workqueue是内核里面很重要的一个机制，特别是内核驱动，一般的小型任务(work)都不会自己起一个线程来处理，而是扔到workqueu中处理。workqueue的主要工作就是用进程上下文来处理内核中大量的小任务。  
+所以workqueue的主要设计思想：一个是并行，多个work不要相互阻塞；另外一个是节省资源，多个work尽量共享资源(进程、调度、内存)，不要造成系统过多的资源浪费。  
+为了实现的设计思想，workqueue的设计实现也更新了很多版本。最新的workqueue实现叫做C
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/systrace/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/linux_workqueue/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -522,7 +517,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_scheduler/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/bpf_index/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -542,7 +537,7 @@
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/linux_scheduler/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Schedule</a>
+                <a href="/2018/12/21/bpf_index/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux bpf+bcc (Index)</a>
               
             
           </h1>
@@ -574,7 +569,7 @@
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:11:03" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：16:20:16" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -596,7 +591,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
 
                 
                 
@@ -611,9 +606,9 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/linux_scheduler/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/bpf_index/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_scheduler/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/bpf_index/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -643,18 +638,16 @@
       
         
           
-          1、Linux schedule框架(调度的时刻)
-Linux进程调度(schedule)的框架如上图所示。
-
-本文的代码分析基于linux kernel 4.4.22，最好的学习方法还是”RTFSC”
-
-1.1、中心是rq(runqueue)rq其实是runnable queue，即本cpu上所有可运行进程的队列集合。每个cpu每种类型的rq(cfs/rt)只有一个，一个rq包含多个runnable的task，但是rq当前正在运行的进程(current running task)只有一个。
-既
+          1、内核态解析:1.1、bpf内核框架2、用户态(前端)解析:2.1、bcc3、参考资料：3.1、Berkeley Packet Filter (BPF) (Kernel Document) 3.2、BPF and XDP Reference Guide3.3、DTrace for Linux 2016
+3.4、bcc/BPF Tool End-User Tutorial
+3.5、bcc Python Developer’s Tutorial
+3.6、bcc Reference Guide
+3.
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/linux_scheduler/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/bpf_index/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -905,7 +898,7 @@ Linux进程调度(schedule)的框架如上图所示。
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/bpf_index/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_index/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -925,7 +918,7 @@ Linux进程调度(schedule)的框架如上图所示。
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/bpf_index/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux bpf+bcc (Index)</a>
+                <a href="/2018/12/21/perf_index/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Perf (Index)</a>
               
             
           </h1>
@@ -957,7 +950,7 @@ Linux进程调度(schedule)的框架如上图所示。
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:16:15" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:34:52" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -994,9 +987,9 @@ Linux进程调度(schedule)的框架如上图所示。
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/bpf_index/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/perf_index/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/bpf_index/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_index/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -1026,16 +1019,210 @@ Linux进程调度(schedule)的框架如上图所示。
       
         
           
-          1、内核态解析:1.1、bpf内核框架2、用户态(前端)解析:2.1、bcc3、参考资料：3.1、Berkeley Packet Filter (BPF) (Kernel Document) 3.2、BPF and XDP Reference Guide3.3、DTrace for Linux 2016
-3.4、bcc/BPF Tool End-User Tutorial
-3.5、bcc Python Developer’s Tutorial
-3.6、bcc Reference Guide
-3.
+          1、内核态解析:1.1、perf_event内核框架1.2、tracepoint events1.3、software events 1.4、hardware events2、用户态解析:2.1、simpleperfperf工作的基础是trace数据的采集和分析，但是当铺天盖地的trace数据采集上来的时候该如何分析？答案是具体数据具体分析。  
+perf在trace数据分析方面取得了很多成果，针对一系列具体场景给出了具体的分析工具(子命令)：
+
+perf list。
+perf stat。
+pe
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/bpf_index/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/perf_index/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/systrace/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                
+                <a href="/2018/12/21/systrace/" class="post-title-link" itemprop="http://yoursite.com/index.html">Systrace</a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+            <i class="fa fa-thumb-tack"></i>
+            <font color="7D26CD">置顶</font>
+            <span class="post-meta-divider">|</span>
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:02:08" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/systrace/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/systrace/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+          
+上图基本就能说清systrace的整个框架：
+
+1、systrace调用atrace抓取目标机的trace数据；
+2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件；
+3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分析trace数据。背后是Trace-Viewer的脚本在运行；
+
+内核态和用户态的存储trace数据
+          ...
+          <!--noindex-->
+          
+            <div class="post-button text-center">
+              <a class="btn" href="/2018/12/21/systrace/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1227,194 +1414,6 @@ Property属性。在Node中使用”property
           
             <div class="post-button text-center">
               <a class="btn" href="/2018/12/21/linux_device_tree/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-      
-    
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_workqueue/">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="pwl999">
-      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
-      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="pwl999's blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/2018/12/21/linux_workqueue/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Workqueue</a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-
-          
-            <i class="fa fa-thumb-tack"></i>
-            <font color="7D26CD">置顶</font>
-            <span class="post-meta-divider">|</span>
-          
-
-        <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:08:17" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
-            
-
-            
-              
-
-              
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2018/12/21/linux_workqueue/#comments" itemprop="discussionUrl">
-                
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_workqueue/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-          workqueue是内核里面很重要的一个机制，特别是内核驱动，一般的小型任务(work)都不会自己起一个线程来处理，而是扔到workqueu中处理。workqueue的主要工作就是用进程上下文来处理内核中大量的小任务。  
-所以workqueue的主要设计思想：一个是并行，多个work不要相互阻塞；另外一个是节省资源，多个work尽量共享资源(进程、调度、内存)，不要造成系统过多的资源浪费。  
-为了实现的设计思想，workqueue的设计实现也更新了很多版本。最新的workqueue实现叫做C
-          ...
-          <!--noindex-->
-          
-            <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/linux_workqueue/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1667,7 +1666,7 @@ binder通讯的本质实际上非常
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_signal/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_process_stop/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -1687,7 +1686,7 @@ binder通讯的本质实际上非常
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/linux_signal/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Signal</a>
+                <a href="/2018/12/21/linux_process_stop/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux 进程的Stop,Park,Freeze</a>
               
             
           </h1>
@@ -1719,7 +1718,7 @@ binder通讯的本质实际上非常
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:10:00" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:11:59" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -1756,9 +1755,9 @@ binder通讯的本质实际上非常
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/linux_signal/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/linux_process_stop/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_signal/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_process_stop/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -1788,208 +1787,17 @@ binder通讯的本质实际上非常
       
         
           
-          信号的基本使用场景：使用“ctrl+c”中止一个程序，或者使用”kill pid”命令杀掉一个进程。Linux信号机制基本上每个同学都用过，但是信号的具体实现机制还是有很多人不清楚的。在很多人的概念中信号是一种异步机制，像中断一样。但是除了硬中断，信号也是由中断实现的吗？如果不是中断，系统又怎么样来利用软件机制模拟类似如异步中断的动作？  
+          在调试内核的时候，经常会碰到几个相近的概念：进程stop、进程park、进程freeze。这几个名词看起来都是停止进程，那么他们之间的区别和应用场景在分别是什么呢？下面就来分析一番。
 
-本文的代码分析基于linux kernel 3.18.22，最好的学习方法还是”read the fucking source code”
+本文的代码分析基于linux kernel 3.18.22，最好的学习方法还是”RTFSC”
 
-1.信号的响
+1.进程stop进程stop分成两种：用户进程stop和内核进程stop。
+用户进程stop可以通过给进程发送STOP信号来实现，可以参考“Linux Signal”这一篇的描述。但是对内核进程来说不会响应信号，如果碰
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/linux_signal/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-      
-    
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_interrupt/">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="pwl999">
-      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
-      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="pwl999's blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/2018/12/21/linux_interrupt/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Interrupt</a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-
-          
-            <i class="fa fa-thumb-tack"></i>
-            <font color="7D26CD">置顶</font>
-            <span class="post-meta-divider">|</span>
-          
-
-        <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:12:33" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
-            
-
-            
-              
-
-              
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2018/12/21/linux_interrupt/#comments" itemprop="discussionUrl">
-                
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_interrupt/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-          在面试的时候我们常常问或者被问一个问题：几种中断下半部机制softirq、tasklet、workqueue有什么区别？linux为什么要设计这几种机制？真正能够回答清楚的人还是少数的。下面我们就详细分析一下这其中的区别。
-
-本文的代码分析基于linux kernel 3.18.22和arm64架构，最好的学习方法还是”RTFSC”
-
-1. linux中断arm64和其他所有cpu架构的中断处理流程都是一样：正常执行流程被打断进入中断服务程序，保护现场、处理中断、恢复现场：
-[^ARMPG]
-在
-          ...
-          <!--noindex-->
-          
-            <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/linux_interrupt/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/linux_process_stop/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -2220,6 +2028,196 @@ binder通讯的本质实际上非常
 
 
     
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_signal/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                
+                <a href="/2018/12/21/linux_signal/" class="post-title-link" itemprop="http://yoursite.com/index.html">Linux Signal</a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+            <i class="fa fa-thumb-tack"></i>
+            <font color="7D26CD">置顶</font>
+            <span class="post-meta-divider">|</span>
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:10:00" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/linux_signal/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_signal/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+          信号的基本使用场景：使用“ctrl+c”中止一个程序，或者使用”kill pid”命令杀掉一个进程。Linux信号机制基本上每个同学都用过，但是信号的具体实现机制还是有很多人不清楚的。在很多人的概念中信号是一种异步机制，像中断一样。但是除了硬中断，信号也是由中断实现的吗？如果不是中断，系统又怎么样来利用软件机制模拟类似如异步中断的动作？  
+
+本文的代码分析基于linux kernel 3.18.22，最好的学习方法还是”read the fucking source code”
+
+1.信号的响
+          ...
+          <!--noindex-->
+          
+            <div class="post-button text-center">
+              <a class="btn" href="/2018/12/21/linux_signal/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
   </section>
 
   
@@ -2288,8 +2286,6 @@ binder通讯的本质实际上非常
                     
                       
                     
-                      
-                    
                     <span class="site-state-item-count">3</span>
                     <span class="site-state-item-name">分类</span>
                   </a>
@@ -2302,14 +2298,6 @@ binder通讯的本质实际上非常
                 <div class="site-state-item site-state-tags">
                   <a href="/tags/index.html">
                     
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
                     
                       
                     

@@ -329,7 +329,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_process_stop/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_interrupt/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -349,7 +349,7 @@
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/linux_process_stop/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux 进程的Stop,Park,Freeze</a>
+                <a href="/2018/12/21/linux_interrupt/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Interrupt</a>
               
             
           </h1>
@@ -381,7 +381,7 @@
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:11:59" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:12:33" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -418,9 +418,9 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/linux_process_stop/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/linux_interrupt/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_process_stop/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_interrupt/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -450,17 +450,18 @@
       
         
           
-          在调试内核的时候，经常会碰到几个相近的概念：进程stop、进程park、进程freeze。这几个名词看起来都是停止进程，那么他们之间的区别和应用场景在分别是什么呢？下面就来分析一番。
+          在面试的时候我们常常问或者被问一个问题：几种中断下半部机制softirq、tasklet、workqueue有什么区别？linux为什么要设计这几种机制？真正能够回答清楚的人还是少数的。下面我们就详细分析一下这其中的区别。
 
-本文的代码分析基于linux kernel 3.18.22，最好的学习方法还是”RTFSC”
+本文的代码分析基于linux kernel 3.18.22和arm64架构，最好的学习方法还是”RTFSC”
 
-1.进程stop进程stop分成两种：用户进程stop和内核进程stop。
-用户进程stop可以通过给进程发送STOP信号来实现，可以参考“Linux Signal”这一篇的描述。但是对内核进程来说不会响应信号，如果碰
+1. linux中断arm64和其他所有cpu架构的中断处理流程都是一样：正常执行流程被打断进入中断服务程序，保护现场、处理中断、恢复现场：
+[^ARMPG]
+在
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/linux_process_stop/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/linux_interrupt/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -520,7 +521,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_index/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_scheduler/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -540,7 +541,7 @@
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/perf_index/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Perf (Index)</a>
+                <a href="/2018/12/21/linux_scheduler/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Schedule</a>
               
             
           </h1>
@@ -572,7 +573,7 @@
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:34:52" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:11:03" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -594,7 +595,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
 
                 
                 
@@ -609,9 +610,9 @@
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/perf_index/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/linux_scheduler/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_index/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_scheduler/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -641,17 +642,18 @@
       
         
           
-          1、内核态解析:1.1、perf_event内核框架1.2、tracepoint events1.3、software events 1.4、hardware events2、用户态解析:2.1、simpleperfperf工作的基础是trace数据的采集和分析，但是当铺天盖地的trace数据采集上来的时候该如何分析？答案是具体数据具体分析。  
-perf在trace数据分析方面取得了很多成果，针对一系列具体场景给出了具体的分析工具(子命令)：
+          1、Linux schedule框架(调度的时刻)
+Linux进程调度(schedule)的框架如上图所示。
 
-perf list。
-perf stat。
-pe
+本文的代码分析基于linux kernel 4.4.22，最好的学习方法还是”RTFSC”
+
+1.1、中心是rq(runqueue)rq其实是runnable queue，即本cpu上所有可运行进程的队列集合。每个cpu每种类型的rq(cfs/rt)只有一个，一个rq包含多个runnable的task，但是rq当前正在运行的进程(current running task)只有一个。
+既
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/perf_index/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/linux_scheduler/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -711,7 +713,7 @@ pe
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_simpleperf/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_syscall_event/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -731,7 +733,7 @@ pe
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/perf_simpleperf/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Perf 2.1、simpleperf</a>
+                <a href="/2018/12/21/ftrace_syscall_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 1.5、syscall event</a>
               
             
           </h1>
@@ -759,7 +761,7 @@ pe
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：10:57:44" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:24:49" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -790,19 +792,6 @@ pe
           
 
           
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2018/12/21/perf_simpleperf/#comments" itemprop="discussionUrl">
-                
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_simpleperf/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
 
           
           
@@ -828,14 +817,15 @@ pe
       
         
           
-          因为perf原生的用户态工具(kerneldir/tools/perf)交叉编译出错较多，用户态源码分析改用android 7.0简化版simpleperf来分析。simpleperf支持完整perf命令中的一些常见子命令。
-1、命令框架源码入口在system/extras/simpleperf/main.cpp:
-1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950
+          1、函数插桩
+1.1、”events/raw_syscalls/sys_enter”、”events/raw_syscalls/sys_exit” trace event的插桩在系统调用的出口、入口路径上，系统布置了两个tracepoint格式的trace event。
+el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
+12345678910111213141516171819202122232425262728293031323334353637383
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/perf_simpleperf/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/ftrace_syscall_event/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -895,7 +885,7 @@ pe
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_use_uprobe_event/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_tracepoint_events/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -915,7 +905,7 @@ pe
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/ftrace_use_uprobe_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 2.4、uprobe event的使用</a>
+                <a href="/2018/12/21/perf_tracepoint_events/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Perf 1.2、tracepoint events</a>
               
             
           </h1>
@@ -943,7 +933,7 @@ pe
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:21:45" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：10:52:43" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -974,6 +964,19 @@ pe
           
 
           
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/perf_tracepoint_events/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_tracepoint_events/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
 
           
           
@@ -999,15 +1002,14 @@ pe
       
         
           
-          uprobe是用户态的探针，它和kprobe是相对应的，kprobe是内核态的探针。uprobe需要制定用户态探针在执行文件中的位置，插入探针的原理和kprobe类似。
-参考原文：Uprobe-tracer: Uprobe-based Event Tracing
-1、Overviewuprobe event类似于kprobe event。在编译内核时配置CONFIG_UPROBE_EVENTS=y使能这个特性。
-它的active不是通过current_tracer接口，而是通过“/sys/ker
+          perf复用了ftrace中trace_event的所有插桩点(即tracepoint)，trace数据即可以通过ftrace的通道提供，也可以被包装成perf_event供perf工具使用。
+可以通过perf list命令来查看系统中的tracpoint event，可以看到和/sys/kernel/debug/tracing/events/路径下的trace_event一致：
+1234567891011121314# simpleperf list tracepoint | moreList
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/ftrace_use_uprobe_event/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/perf_tracepoint_events/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1067,7 +1069,7 @@ pe
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_use_kprobe_event/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_kprobe_event/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -1087,7 +1089,7 @@ pe
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/ftrace_use_kprobe_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 2.3、kprobe event的使用</a>
+                <a href="/2018/12/21/ftrace_kprobe_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 1.4、kprobe event</a>
               
             
           </h1>
@@ -1115,7 +1117,7 @@ pe
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:21:53" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:25:59" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -1146,19 +1148,6 @@ pe
           
 
           
-            
-              <span class="post-comments-count">
-                <span class="post-meta-divider">|</span>
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-comment-o"></i>
-                </span>
-                <a href="/2018/12/21/ftrace_use_kprobe_event/#comments" itemprop="discussionUrl">
-                
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/ftrace_use_kprobe_event/" itemprop="commentCount"></span>
-                </a>
-              </span>
-            
-          
 
           
           
@@ -1184,14 +1173,14 @@ pe
       
         
           
-          原始的trace event插桩是静态的：使用TRACE_EVENT()定义tracepoint，并且在代码中显式调用tracepoint。而kprobe机制可以实现在内核运行时动态的插桩，利用kprobe机制我们可以动态的插入trace event，实现和静态trace event同样的功能。
-参考原文：Kprobe-based Event Tracing
-1、Overview这些event和基于tracepoint的event非常类似，使用kprobe机制来替代tracepoint机制。所以
+          从前面几章看：trace event使用静态tracepoint插桩，function tracer使用“bl _mcount”的插桩点来动态插桩。既然都是插桩，为什么我们不使用功能强大的kprobe机制？
+kprobe event就是这样的产物。krpobe event和trace event的功能一样，但是因为它采用的是kprobe插桩机制，所以它不需要预留插桩位置，可以动态的在任何位置进行插桩。开销会大一点，但是非常灵活，是一个非常方便的补充机制。
+1、函数插桩1.1、插桩原理kprobe
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/ftrace_use_kprobe_event/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/ftrace_kprobe_event/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1435,7 +1424,7 @@ pe
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_syscall_event/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_simpleperf/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -1455,7 +1444,7 @@ pe
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/ftrace_syscall_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 1.5、syscall event</a>
+                <a href="/2018/12/21/perf_simpleperf/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Perf 2.1、simpleperf</a>
               
             
           </h1>
@@ -1483,352 +1472,7 @@ pe
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:24:49" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
-            
-
-            
-              
-
-              
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-          1、函数插桩
-1.1、”events/raw_syscalls/sys_enter”、”events/raw_syscalls/sys_exit” trace event的插桩在系统调用的出口、入口路径上，系统布置了两个tracepoint格式的trace event。
-el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
-12345678910111213141516171819202122232425262728293031323334353637383
-          ...
-          <!--noindex-->
-          
-            <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/ftrace_syscall_event/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-      
-    
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/bpf_kernel/">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="pwl999">
-      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
-      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="pwl999's blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/2018/12/21/bpf_kernel/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux BPF 1.1、bpf内核框架</a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-
-          
-
-        <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:28:44" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
-            
-
-            
-              
-
-              
-            
-          </span>
-
-          
-            <span class="post-category">
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
-
-                
-                
-              
-            </span>
-          
-
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-          BPF的字面上意思Berkeley Packet Filter意味着它是从包过滤而来。如果在开始前对BPF缺乏感性的认识建议先看一下参考文档：“3.1、Berkeley Packet Filter (BPF) (Kernel Document)”、“3.2、BPF and XDP Reference Guide”。
-本质上它是一种内核代码注入的技术：
-
-内核中实现了一个cBPF/eBPF虚拟机；
-用户态可以用C来写运行的代码，再通过一个Clang&amp;LLVM的编译器将C代码编译成BPF目标
-          ...
-          <!--noindex-->
-          
-            <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/bpf_kernel/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-
-    
-    
-    
-
-    
-
-    
-      
-    
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  
-
-  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_hardware_events/">
-
-    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="pwl999">
-      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
-      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="pwl999's blog">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                
-                <a href="/2018/12/21/perf_hardware_events/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Perf 1.4、hardware events</a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-
-          
-
-        <span class="post-time">
-
-            
-            
-            
-
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-
-              
-                
-              
-
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:00:27" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：10:57:44" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -1865,9 +1509,9 @@ el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
                 <span class="post-meta-item-icon">
                   <i class="fa fa-comment-o"></i>
                 </span>
-                <a href="/2018/12/21/perf_hardware_events/#comments" itemprop="discussionUrl">
+                <a href="/2018/12/21/perf_simpleperf/#comments" itemprop="discussionUrl">
                 
-                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_hardware_events/" itemprop="commentCount"></span>
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_simpleperf/" itemprop="commentCount"></span>
                 </a>
               </span>
             
@@ -1897,15 +1541,14 @@ el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
       
         
           
-          可以通过perf list命令来查看系统中的hardware event：
-1234567# simpleperf list hwList of hardware events:  cpu-cycles  instructions  cache-references  cache-misses  branch-misses
-还有hardware-cache event：
-12345678910# simpleperf list cacheList of hw-cache events:  L1-
+          因为perf原生的用户态工具(kerneldir/tools/perf)交叉编译出错较多，用户态源码分析改用android 7.0简化版simpleperf来分析。simpleperf支持完整perf命令中的一些常见子命令。
+1、命令框架源码入口在system/extras/simpleperf/main.cpp:
+1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/perf_hardware_events/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/perf_simpleperf/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -1965,7 +1608,7 @@ el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/bpf_reference_guide/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/bpf_kernel_doc/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -1985,7 +1628,7 @@ el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
           <h1 class="post-title" itemprop="name headline">
                 
                 
-                <a href="/2018/12/21/bpf_reference_guide/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux BPF 3.2、BPF and XDP Reference Guide</a>
+                <a href="/2018/12/21/bpf_kernel_doc/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux BPF 3.1、Berkeley Packet Filter (BPF) (Kernel Document)</a>
               
             
           </h1>
@@ -2013,7 +1656,7 @@ el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
                 
               
 
-              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:27:20" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:28:08" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
@@ -2069,17 +1712,383 @@ el0_svc为用户态系统调用的入口，arch\arm64\kernel\entry.S：
       
         
           
-          开源软件Cilium深度的使用了BPF来做网络安全，它的文档中使用了一个章节专门的来介绍BPF的原理和使用。
-参考原文：BPF and XDP Reference Guide
-
-注意：本文档部分针对的是希望深入了解BPF和XDP的开发人员和用户。尽管阅读本参考指南可能有助于拓宽你对Cilium的理解，但使用Cilium并不是必须的。请参考入门指南和概念以获得更高级别的介绍。
-
-BPF是Linux内核中高度灵活和高效的类似虚拟机的构造，允许以安全的方式在各种挂起点执行字节码。它被用于许多Linux
+          关于bpf最早是应用于network的filter，后续才被应用到trace，所以kernel中关于bpf的文档是”Documentation/networking/filter.txt”。
+参考原文：Linux Socket Filtering aka Berkeley Packet Filter (BPF)
+1、简介：LSF(Linux Socket Filtering)是从BPF(Berkeley Packet Filter)派生而来。尽管BSD和Linux kernel的过滤(filte
           ...
           <!--noindex-->
           
             <div class="post-button text-center">
-              <a class="btn" href="/2018/12/21/bpf_reference_guide/#more" rel="contents">
+              <a class="btn" href="/2018/12/21/bpf_kernel_doc/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_use_trace_event/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                
+                <a href="/2018/12/21/ftrace_use_trace_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 2.2、trace event的使用</a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:21:33" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/ftrace_use_trace_event/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/ftrace_use_trace_event/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+          参考原文：Event Tracing
+1、Introduction：Tracepoints用来创建event tracing框架，而不需要使用创建模块来注册probe函数。
+不是所有的tracpoint都能够使用event tracing系统来跟踪。内核开发者必须提供代码定义信息怎么保存到tracing buffer、已经信息怎么打印出来。
+2、 Using Event Tracing2.1、Via the ‘set_event’ interface有哪些有效的trace event，可以查看“
+          ...
+          <!--noindex-->
+          
+            <div class="post-button text-center">
+              <a class="btn" href="/2018/12/21/ftrace_use_trace_event/#more" rel="contents">
+                阅读全文 &raquo;
+              </a>
+            </div>
+          
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_use_kprobe_event/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+                
+                
+                <a href="/2018/12/21/ftrace_use_kprobe_event/" class="post-title-link" itemprop="http://yoursite.com/page/2/index.html">Linux Ftrace 2.3、kprobe event的使用</a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:21:53" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/ftrace_use_kprobe_event/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/ftrace_use_kprobe_event/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          
+          原始的trace event插桩是静态的：使用TRACE_EVENT()定义tracepoint，并且在代码中显式调用tracepoint。而kprobe机制可以实现在内核运行时动态的插桩，利用kprobe机制我们可以动态的插入trace event，实现和静态trace event同样的功能。
+参考原文：Kprobe-based Event Tracing
+1、Overview这些event和基于tracepoint的event非常类似，使用kprobe机制来替代tracepoint机制。所以
+          ...
+          <!--noindex-->
+          
+            <div class="post-button text-center">
+              <a class="btn" href="/2018/12/21/ftrace_use_kprobe_event/#more" rel="contents">
                 阅读全文 &raquo;
               </a>
             </div>
@@ -2192,8 +2201,6 @@ BPF是Linux内核中高度灵活和高效的类似虚拟机的构造，允许以
                     
                       
                     
-                      
-                    
                     <span class="site-state-item-count">3</span>
                     <span class="site-state-item-name">分类</span>
                   </a>
@@ -2206,14 +2213,6 @@ BPF是Linux内核中高度灵活和高效的类似虚拟机的构造，允许以
                 <div class="site-state-item site-state-tags">
                   <a href="/tags/index.html">
                     
-                    
-                      
-                    
-                      
-                    
-                      
-                    
-                      
                     
                       
                     
