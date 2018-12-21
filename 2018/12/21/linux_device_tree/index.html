@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="1、DTS语法对于DeviceTree的来历和用处大部分人都已经非常了解了，DeviceTree发源于PowerPC架构，为了消除代码中冗余的各种device注册代码而产生的，现在已经成为了linux的通用机制。 DeviceTree的结构非常简单，由两种元素组成：Node(节点)、Property(属性)。下图是一个真实的简单的DeviceTree树形结构图。   Node节点。在DTS中使用一">
+<meta name="keywords" content="DTS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Device Tree 详解">
+<meta property="og:url" content="http://yoursite.com/2018/12/21/linux_device_tree/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="1、DTS语法对于DeviceTree的来历和用处大部分人都已经非常了解了，DeviceTree发源于PowerPC架构，为了消除代码中冗余的各种device注册代码而产生的，现在已经成为了linux的通用机制。 DeviceTree的结构非常简单，由两种元素组成：Node(节点)、Property(属性)。下图是一个真实的简单的DeviceTree树形结构图。   Node节点。在DTS中使用一">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/dts/DeviceTree.png">
+<meta property="og:image" content="http://yoursite.com/images/dts/interrupt_tree.png">
+<meta property="og:image" content="http://yoursite.com/images/dts/dtb_struct.png">
+<meta property="og:image" content="http://yoursite.com/images/dts/dtb_hex_example.png">
+<meta property="og:updated_time" content="2018-12-21T03:13:07.518Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Device Tree 详解">
+<meta name="twitter:description" content="1、DTS语法对于DeviceTree的来历和用处大部分人都已经非常了解了，DeviceTree发源于PowerPC架构，为了消除代码中冗余的各种device注册代码而产生的，现在已经成为了linux的通用机制。 DeviceTree的结构非常简单，由两种元素组成：Node(节点)、Property(属性)。下图是一个真实的简单的DeviceTree树形结构图。   Node节点。在DTS中使用一">
+<meta name="twitter:image" content="http://yoursite.com/images/dts/DeviceTree.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/12/21/linux_device_tree/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Device Tree 详解 | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/linux_device_tree/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Device Tree 详解
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+            <i class="fa fa-thumb-tack"></i>
+            <font color="7D26CD">置顶</font>
+            <span class="post-meta-divider">|</span>
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:13:07" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/linux_device_tree/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/linux_device_tree/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="1、DTS语法"><a href="#1、DTS语法" class="headerlink" title="1、DTS语法"></a>1、DTS语法</h1><p>对于DeviceTree的来历和用处大部分人都已经非常了解了，DeviceTree发源于PowerPC架构，为了消除代码中冗余的各种device注册代码而产生的，现在已经成为了linux的通用机制。</p>
+<p>DeviceTree的结构非常简单，由两种元素组成：Node(节点)、Property(属性)。下图是一个真实的简单的DeviceTree树形结构图。</p>
+<p><img src="/images/dts/DeviceTree.png" alt="image"></p>
+<ul>
+<li>Node节点。在DTS中使用一对花括号”node-name{}”来定义;</li>
+<li>Property属性。在Node中使用”property-name=value”字符串来定义；</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">/ &#123;</span><br><span class="line">	model = &quot;mt6799&quot;;</span><br><span class="line">	compatible = &quot;mediatek,mt6799&quot;;</span><br><span class="line">	interrupt-parent = &lt;&amp;gic&gt;;</span><br><span class="line">	#address-cells = &lt;2&gt;;</span><br><span class="line">	#size-cells = &lt;2&gt;;</span><br><span class="line"></span><br><span class="line">	/* chosen */</span><br><span class="line">	chosen &#123;</span><br><span class="line">		bootargs = &quot;console=tty0 console=ttyMT0,921600n1 root=/dev/ram&quot;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述例子中定义了一个根节点”/“和一个子节点“chosen”，其他的字符串“model = “mt6799”;”、“compatible = “mediatek,mt6799”;”都是property。</p>
+<p>Node、Property的名字和值都是可以自定义的，没有太大限制。但是DeviceTree的标准还是预定义了一些标准的Node和Property，在标准Node和Property之间还定义了一些约束规则。关于这些描述在 <a href="https://www.devicetree.org/" target="_blank" rel="noopener">The DeviceTree Specification</a>官方spec中有详细描述。这里为了方便大家，还是重复做一些搬运。</p>
+<h2 id="1-1、标准Property"><a href="#1-1、标准Property" class="headerlink" title="1.1、标准Property"></a>1.1、标准Property</h2><p>Property的格式为”property-name=value”，其中value的取值类型如下：</p>
+<table border="1"><br><caption> Property values： </caption><br><br><tr><br><th style="width: 200px;">Value</th><br><th style="width: 600px;">Description</th><br></tr><br><br><tr><br><td> <empty> </empty></td><br><td><br>Value is empty. Used for conveying true-false information, when the presence of<br>absence of the property itself is sufficiently descriptive.<br><br><br>Property值为空，用property本身出现或者不出现来表示一个treue/false值。<br></td><br></tr><br><br><tr><br><td> <u32> </u32></td><br><td><br>A 32-bit integer in big-endian format. Example: the 32-bit value 0x11223344 would be represented in memory as: <br><br>address 11<br><br>address+1 22<br><br>address+2 33<br><br>address+3 44<br><br><br>32bit的值，用大端格式存储。<br></td><br></tr><br><br><tr><br><td> <u64> </u64></td><br><td><br>Represents a 64-bit integer in big-endian format. Consists of two <u32> values where the first value contains the most significant bits of the integer and the second value contains the least significant bits.<br><br>Example: the 64-bit value 0x1122334455667788 would be represented as two cells as: <0x11223344 0x55667788="">. <br><br>The value would be represented in memory as:<br><br>address 11<br><br>address+1 22<br><br>address+2 33<br><br>address+3 44<br><br>address+4 55<br><br>address+5 66<br><br>address+6 77<br><br>address+7 88<br><br><br>64bit的值，用大端格式存储。<br></0x11223344></u32></td><br></tr><br><br><tr><br><td> <string> </string></td><br><td><br>Strings are printable and null-terminated. Example: the string “hello” would be represented in memory as:<br><br>address 68 ‘h’<br><br>address+1 65 ‘e’<br><br>address+2 6C ‘l’<br><br>address+3 6C ‘l’<br><br>address+4 6F ‘o’<br><br>address+5 00 ‘\0’<br><br><br>字符串。<br></td><br></tr><br><br><tr><br><td> <prop-encoded-array> </prop-encoded-array></td><br><td><br>Format is specific to the property. See the property definition.<br><br><br>混合编码，自定义property的值。<br></td><br></tr><br><br><tr><br><td> <phandle> </phandle></td><br><td><br>A <u32> value. A phandle value is a way to reference another node in the devicetree.<br><br>Any node that can be referenced defines a phandle property with a unique <u32><br>value. That number is used for the value of properties with a phandle value type.<br><br><br>作为一个句柄指向一个Node，用来引用Node。<br></u32></u32></td><br></tr><br><br><tr><br><td> <stringlist> </stringlist></td><br><td><br>A list of <string> values concatenated together.<br><br>Example: The string list “hello”,”world” would be represented in memory as:<br><br>address 68 ‘h’<br><br>address+1 65 ‘e’<br><br>address+2 6C ‘l’<br><br>address+3 6C ‘l’<br><br>address+4 6F ‘o’<br><br>address+5 00 ‘\0’<br><br>address+6 77 ‘w’<br><br>address+7 6f ‘o’<br><br>address+8 72 ‘r’<br><br>address+9 6C ‘l’<br><br>address+10 64 ‘d’<br><br>address+11 00 ‘\0’<br><br><br>字符串数组。<br></string></td><br></tr><br><br></table>
+
+<h3 id="1-1-1、compatible"><a href="#1-1-1、compatible" class="headerlink" title="1.1.1、compatible"></a>1.1.1、compatible</h3><ul>
+<li>“compatible”属性通常用来device和driver的适配，推荐的格式为”manufacturer,model”。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">compatible</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <stringlist> </stringlist></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The compatible property value consists of one or more strings that define the specific programming model for the device. This list of strings should be used by a client program for device driver selection. The property value consists of a concatenated list of null terminated strings, from most specific to most general. They allow a device to express its compatibility with a family of similar devices, potentially allowing a single device driver to match against several devices.<br><br>The recommended format is “manufacturer,model”, where manufacturer is a string describing the name of the manufacturer (such as a stock ticker symbol), and model specifies the model number.<br><br><br></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>compatible = “fsl,mpc8641”, “ns16550”; <br><br><br>In this example, an operating system would first try to locate a device driver that supported fsl,mpc8641. If a driver was not found, it would then try to locate a driver that supported the more general ns16550 device type.<br><br><br>在这个例子中，device首先尝试去适配”fsl,mpc8641”driver，如果失败再去尝试适配”ns16550”driver。<br></td><br></tr><br><br></table>
+
+<h3 id="1-1-2、model"><a href="#1-1-2、model" class="headerlink" title="1.1.2、model"></a>1.1.2、model</h3><ul>
+<li>“model”属性只是简单的表示型号，root节点用其来传递值给machine_desc_str。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">model</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <stringlist> </stringlist></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The model property value is a <string> that specifies the manufacturer’s model number of the device.<br><br>The recommended format is: “manufacturer,model”, where manufacturer is a string describing the name of the manufacturer (such as a stock ticker symbol), and model specifies the model number.<br></string></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>model = “fsl,MPC8349EMITX”;<br></td><br></tr><br><br></table>
+
+<h3 id="1-1-3、phandle"><a href="#1-1-3、phandle" class="headerlink" title="1.1.3、phandle"></a>1.1.3、phandle</h3><ul>
+<li>“phandle”属性通用一个唯一的id来标识一个Node，在property可以使用这个id来引用Node。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">phandle</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <u32> </u32></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The phandle property specifies a numerical identifier for a node that is unique within the devicetree. The phandle property value is used by other nodes that need to refer to the node associated with the property.<br></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>See the following devicetree excerpt:<br><br>pic@10000000 {<br><br>phandle = <1>;<br><br>interrupt-controller;<br><br>};<br><br><br>A phandle value of 1 is defined. Another device node could reference the pic node with a phandle value of 1:<br><br>another-device-node {<br><br>interrupt-parent = <1>;<br><br>};<br><br><br>Node“pic@10000000”定义了一个phandle属性，这个phandle有唯一id = <1>，在property“interrupt-parent”通过<1>对Node“pic@10000000”进行引用。<br></1></1></1></1></td><br></tr><br><br></table>
+
+<p>在DeviceTree中通过另一种方式进行phandle的定义和引用更加常见：</p>
+<ul>
+<li>定义一个“label：”来引用Node，在编译是系统会自动为node生成一个phandle属性。”cpu0”是一个label，用来引用node”cpu@0”：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">cpu0: cpu@0 &#123;</span><br><span class="line">	device_type = &quot;cpu&quot;;</span><br><span class="line">	compatible = &quot;arm,cortex-a35&quot;;</span><br><span class="line">	reg = &lt;0x000&gt;;</span><br><span class="line">	enable-method = &quot;psci&quot;;</span><br><span class="line">	cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">			  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">	cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">	clock-frequency = &lt;1248000000&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>使用”&amp;”来引用“label”，即是引用phandle。property”cpu”通过”&amp;cpu0”来对node”cpu@0”：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">cpu-map &#123;</span><br><span class="line">	cluster0 &#123;</span><br><span class="line">		core0 &#123;</span><br><span class="line">			cpu = &lt;&amp;cpu0&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">		core1 &#123;</span><br><span class="line">			cpu = &lt;&amp;cpu1&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		core2 &#123;</span><br><span class="line">			cpu = &lt;&amp;cpu2&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		core3 &#123;</span><br><span class="line">			cpu = &lt;&amp;cpu3&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">	&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="1-1-4、-address-cells-、-size-cells"><a href="#1-1-4、-address-cells-、-size-cells" class="headerlink" title="1.1.4、#address-cells 、 #size-cells"></a>1.1.4、#address-cells 、 #size-cells</h3><ul>
+<li>“#address-cells, #size-cells”属性用来定义当前node的子node中”reg”属性的解析格式。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">#address-cells, #size-cells</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <u32> </u32></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The #address-cells and #size-cells properties may be used in any device node that has children in the devicetree hierarchy and describes how child device nodes should be addressed. The #address-cells property defines the number of <u32> cells used to encode the address field in a child node’s reg property. The #size-cells property defines the number of <u32> cells used to encode the size field in a child node’s reg property.<br><br>The #address-cells and #size-cells properties are not inherited from ancestors in the devicetree. They shall be explicitly defined.<br><br>A DTSpec-compliant boot program shall supply #address-cells and #size-cells on all nodes that have children.<br><br>If missing, a client program should assume a default value of 2 for #address-cells, and a value of 1 for #size-cells.<br><br></u32></u32></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>See the following devicetree excerpt:<br><br>soc {<br><br>#address-cells = <1>;<br><br>#size-cells = <1>;<br><br>&nbsp;&nbsp;&nbsp;&nbsp;serial {<br><br>&nbsp;&nbsp;&nbsp;&nbsp;compatible = “ns16550”;<br><br>&nbsp;&nbsp;&nbsp;&nbsp;reg = <0x4600 0x100="">;<br><br>&nbsp;&nbsp;&nbsp;&nbsp;clock-frequency = <0>;<br><br>&nbsp;&nbsp;&nbsp;&nbsp;interrupts = <0xa 0x8="">;<br><br>&nbsp;&nbsp;&nbsp;&nbsp;interrupt-parent = &lt;&amp;ipic&gt;;<br><br>&nbsp;&nbsp;&nbsp;&nbsp;};<br><br>};<br><br><br><br>In this example, the #address-cells and #size-cells properties of the soc node are both set to 1. This setting specifies that one cell is required to represent an address and one cell is required to represent the size of nodes<br>that are children of this node.<br><br>The serial device reg property necessarily follows this specification set in the parent (soc) node—the address is represented by a single cell (0x4600), and the size is represented by a single cell (0x100).<br><br></0xa></0></0x4600></1></1></td><br></tr><br><br></table>
+
+
+<p>举例说明：</p>
+<ul>
+<li>1、如果node”soc”中”#address-cells=<1>“、”#size-cells=<1>“，那么子node”serial”中”reg”属性的解析为“addr1 = 0x0, size1 = 0x100, addr2 = 0x0, size2 = 0x200”：</1></1></li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">soc &#123;</span><br><span class="line">    #address-cells = &lt;1&gt;;</span><br><span class="line">    #size-cells = &lt;1&gt;;</span><br><span class="line">    serial &#123;</span><br><span class="line">        reg = &lt;0x0 0x100 0x0 0x200&gt;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>2、如果node”soc”中”#address-cells=<2>“、”#size-cells=<2>“，那么子node”serial”中”reg”属性的解析为“addr1 = 0x100, size1 = 0x200”：</2></2></li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">soc &#123;</span><br><span class="line">    #address-cells = &lt;2&gt;;</span><br><span class="line">    #size-cells = &lt;2&gt;;</span><br><span class="line">    serial &#123;</span><br><span class="line">        reg = &lt;0x0 0x100 0x0 0x200&gt;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>3、如果node”soc”中”#address-cells=<2>“、”#size-cells=<0>“，那么子node”serial”中”reg”属性的解析为“addr1 = 0x100, addr2 = 0x200”：</0></2></li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">soc &#123;</span><br><span class="line">    #address-cells = &lt;2&gt;;</span><br><span class="line">    #size-cells = &lt;0&gt;;</span><br><span class="line">    serial &#123;</span><br><span class="line">        reg = &lt;0x0 0x100 0x0 0x200&gt;;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="1-1-5、reg"><a href="#1-1-5、reg" class="headerlink" title="1.1.5、reg"></a>1.1.5、reg</h3><ul>
+<li>“reg”属性解析出”address,length”数字，解析格式依据父节点的”#address-cells、#size-cells”定义。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">reg</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <prop-encoded-array> encoded as an arbitrary number of (address, length) pairs. </prop-encoded-array></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The reg property describes the address of the device’s resources within the address space defined by its parent bus. Most commonly this means the offsets and lengths of memory-mapped IO register blocks, but may have a different meaning on some bus types. Addresses in the address space defined by the root node are CPU real addresses.<br><br>The value is a <prop-encoded-array>, composed of an arbitrary number of pairs of address and length, <address length="">. The number of <u32> cells required to specify the address and length are bus-specific and are specified by the #address-cells and #size-cells properties in the parent of the device node. If the parent node specifies a value of 0 for #size-cells, the length field in the value of reg shall be omitted.<br><br></u32></address></prop-encoded-array></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>Suppose a device within a system-on-a-chip had two blocks of registers, a 32-byte block at offset 0x3000 in the SOC and a 256-byte block at offset 0xFE00. The reg property would be encoded as follows (assuming #address-cells and #size-cells values of 1):<br><br><br>reg = <0x3000 0x20="" 0xfe00="" 0x100="">;<br></0x3000></td><br></tr><br><br></table>
+
+<h3 id="1-1-6、ranges"><a href="#1-1-6、ranges" class="headerlink" title="1.1.6、ranges"></a>1.1.6、ranges</h3><ul>
+<li>“ranges”属性用来做当前node和父node之间的地址映射，格式为(child-bus-address, parentbus-address, length)。其中child-bus-address的解析长度受当前node的#address-cells属性控制，parentbus-address的解析长度受父node的#address-cells属性控制length的解析长度受当前node的#size-cells属性控制。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">ranges</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <empty> or <prop-encoded-array> encoded as an arbitrary number of (child-bus-address, parentbus-address, length) triplets. </prop-encoded-array></empty></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The ranges property provides a means of defining a mapping or translation between the address space of the bus (the child address space) and the address space of the bus node’s parent (the parent address space).<br><br>The format of the value of the ranges property is an arbitrary number of triplets of (child-bus-address, parentbus-address, length)<br><br>• The child-bus-address is a physical address within the child bus’ address space. The number of cells to represent the address is bus dependent and can be determined from the #address-cells of this node (the node in which the ranges property appears).<br><br>• The parent-bus-address is a physical address within the parent bus’ address space. The number of cells to represent the parent address is bus dependent and can be determined from the #address-cells property of the node that defines the parent’s address space.<br><br>• The length specifies the size of the range in the child’s address space. The number of cells to represent the size can be determined from the #size-cells of this node (the node in which the ranges property appears).<br><br>If the property is defined with an <empty> value, it specifies that the parent and child address space is identical, and no address translation is required.<br><br>If the property is not present in a bus node, it is assumed that no mapping exists between children of the node and the parent address space.<br></empty></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>Address Translation Example:<br><br>soc {<br><br>compatible = “simple-bus”;<br><br>#address-cells = <1>;<br><br>#size-cells = <1>;<br><br>ranges = <0x0 0xe0000000="" 0x00100000="">;<br><br>serial {<br><br>device_type = “serial”;<br><br>compatible = “ns16550”;<br><br>reg = <0x4600 0x100="">;<br><br>clock-frequency = <0>;<br><br>interrupts = <0xa 0x8="">;<br><br>interrupt-parent = &lt;&amp;ipic&gt;;<br><br>};<br><br>};<br><br><br>The soc node specifies a ranges property of<br><br><0x0 0xe0000000="" 0x00100000="">;<br><br><br>This property value specifies that for an 1024KB range of address space, a child node addressed at physical 0x0 maps to a parent address of physical 0xe0000000. With this mapping, the serial device node can be addressed by a load or store at address 0xe0004600, an offset of 0x4600 (specified in reg) plus the 0xe0000000<br>mapping specified in ranges.<br></0x0></0xa></0></0x4600></0x0></1></1></td><br><br></tr><br><br></table>
+
+<h3 id="1-1-7、interrupt-property"><a href="#1-1-7、interrupt-property" class="headerlink" title="1.1.7、interrupt property"></a>1.1.7、interrupt property</h3><p>和中断相关的node可以分成3种：</p>
+<ul>
+<li>“Interrupt Generating Devices”，中断发生设备，这种设备可以发生中断。</li>
+<li>“Interrupt Controllers”，中断控制器，处理中断。</li>
+<li>“Interrupt Nexus”，中断联结，路由中断给中断控制器。</li>
+</ul>
+<p><img src="/images/dts/interrupt_tree.png" alt="image"></p>
+<h4 id="1-1-7-1、Interrupt-Generating-Devices-Property"><a href="#1-1-7-1、Interrupt-Generating-Devices-Property" class="headerlink" title="1.1.7.1、Interrupt Generating Devices Property"></a>1.1.7.1、Interrupt Generating Devices Property</h4><ul>
+<li>“interrupts”属性用来定义设备的中断解析，根据其”interrupt-parent”node中定义的“#interrupt-cells”来解析。比如#interrupt-cells=2，那根据2个cells为单位来解析”interrupts”属性。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">interrupts</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <prop-encoded-array> encoded as arbitrary number of interrupt specifiers </prop-encoded-array></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The interrupts property of a device node defines the interrupt or interrupts that are generated by the device.<br><br>The value of the interrupts property consists of an arbitrary number of interrupt specifiers. The format of an interrupt specifier is defined by the binding of the interrupt domain root.<br><br>interrupts is overridden by the interrupts-extended property and normally only one or the other should be used.<br><br></td><br></tr><br><br><tr><br><td> Example: </td><br><td><br>A common definition of an interrupt specifier in an open PIC–compatible interrupt domain consists of two cells; an interrupt number and level/sense information. See the following example, which defines a single<br>interrupt specifier, with an interrupt number of 0xA and level/sense encoding of 8.<br><br><br>interrupts = <0xa 8="">;<br><br></0xa></td><br><br></tr><br><br></table>
+
+
+<ul>
+<li>“interrupt-parent”属性用来制定当前设备的Interrupt Controllers/Interrupt Nexus，phandle指向对应的node。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">interrupt-parent</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <phandle> </phandle></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>Because the hierarchy of the nodes in the interrupt tree might not match the devicetree, the interrupt-parent property is available to make the definition of an interrupt parent explicit. The value is the phandle to the interrupt parent. If this property is missing from a device, its interrupt parent is assumed to be its devicetree parent.<br><br></td><br></tr><br><br></table>
+
+
+<h4 id="1-1-7-2、Interrupt-Controllers-Property"><a href="#1-1-7-2、Interrupt-Controllers-Property" class="headerlink" title="1.1.7.2、Interrupt Controllers Property"></a>1.1.7.2、Interrupt Controllers Property</h4><ul>
+<li>“#interrupt-cells”属性用来规定连接到该中断控制器上的设备的”interrupts”属性的解析长度。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">#interrupt-cells</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <u32> </u32></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The #interrupt-cells property defines the number of cells required to encode an interrupt specifier for an interrupt domain.<br><br></td><br></tr><br><br></table>
+
+<ul>
+<li>“interrupt-controller”属性用来声明当前node为中断控制器。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">interrupt-controller</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <empty> </empty></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The presence of an interrupt-controller property defines a node as an interrupt controller node.<br><br></td><br></tr><br><br></table>
+
+
+<h4 id="1-1-7-3、Interrupt-Nexus-Property"><a href="#1-1-7-3、Interrupt-Nexus-Property" class="headerlink" title="1.1.7.3、Interrupt Nexus Property"></a>1.1.7.3、Interrupt Nexus Property</h4><ul>
+<li>“#interrupt-cells”属性用来规定连接到该中断控制器上的设备的”interrupts”属性的解析长度。</li>
+</ul>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">#interrupt-cells</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <u32> </u32></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>The #interrupt-cells property defines the number of cells required to encode an interrupt specifier for an interrupt domain.<br><br></td><br></tr><br><br></table>
+
+
+<ul>
+<li>“interrupt-map”属性用来描述interrupt nexus设备对中断的路由。解析格式为5元素序列“child unit address, child interrupt specifier, interrupt-parent, parent unit address, parent interrupt specifier”。</li>
+</ul>
+<p>其中：</p>
+<p>“child unit address”的cells长度由子节点的“#address-cells”指定；<br>“child interrupt specifier”的cells长度由子节点的“#interrupt-cells”指定；<br>“interrupt-parent”phandle指向interrupt controller的引用；<br>“parent unit address”的cells长度由父节点的“#address-cells”指定；<br>“parent interrupt specifier”的cells长度由父节点的“#interrupt-cells”指定；</p>
+<table border="1"><br><br><tr><br><td style="width: 200px;">Property name:</td><br><td style="width: 600px;">interrupt-map</td><br></tr><br><br><tr><br><td> Value type: </td><br><td> <prop-encoded-array> encoded as an arbitrary number of interrupt mapping entries. </prop-encoded-array></td><br></tr><br><br><tr><br><td> Description: </td><br><td><br>An interrupt-map is a property on a nexus node that bridges one interrupt domain with a set of parent interrupt domains and specifies how interrupt specifiers in the child domain are mapped to their respective parent<br>domains.<br><br>The interrupt map is a table where each row is a mapping entry consisting of five components: <i>child unit address, child interrupt specifier, interrupt-parent, parent unit address, parent interrupt specifier.</i><br><br><b>child unit address</b> The unit address of the child node being mapped. The number of 32-bit cells required to specify this is described by the #address-cells property of the bus node on which the child is located.<br><br><b>child interrupt specifier</b> The interrupt specifier of the child node being mapped. The number of 32-bit cells required to specify this component is described by the #interrupt-cells property of this node—the nexus node containing the interrupt-map property.<br><br><b>interrupt-parent</b> A single <phandle> value that points to the interrupt parent to which the child domain is being mapped.<br><br><b>parent unit address</b> The unit address in the domain of the interrupt parent. The number of 32-bit cells required to specify this address is described by the #address-cells property of the node pointed to by the interrupt-parent field.<br><br><b>parent interrupt specifier</b> The interrupt specifier in the parent domain. The number of 32-bit cells required to specify this component is described by the #interrupt-cells property of the node pointed to by the interrupt-parent field.<br><br>Lookups are performed on the interrupt mapping table by matching a unit-address/interrupt specifier pair against the child components in the interrupt-map. Because some fields in the unit interrupt specifier may not be relevant, a mask is applied before the lookup is done. This mask is defined in the interrupt-map-mask property (see section 2.4.3.2).<br><br></phandle></td><br></tr><br><br></table>
+
+<p>举例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">soc &#123;</span><br><span class="line">    compatible = &quot;simple-bus&quot;;</span><br><span class="line">    #address-cells = &lt;1&gt;;</span><br><span class="line">    #size-cells = &lt;1&gt;;</span><br><span class="line">    open-pic &#123;</span><br><span class="line">        clock-frequency = &lt;0&gt;;</span><br><span class="line">        interrupt-controller;</span><br><span class="line">        #address-cells = &lt;0&gt;;</span><br><span class="line">        #interrupt-cells = &lt;2&gt;;</span><br><span class="line">    &#125;;</span><br><span class="line">    pci &#123;</span><br><span class="line">        #interrupt-cells = &lt;1&gt;;</span><br><span class="line">        #size-cells = &lt;2&gt;;</span><br><span class="line">        #address-cells = &lt;3&gt;;</span><br><span class="line">        interrupt-map-mask = &lt;0xf800 0 0 7&gt;;</span><br><span class="line">        interrupt-map = &lt;</span><br><span class="line">        /* IDSEL 0x11 - PCI slot 1 */</span><br><span class="line">        0x8800 0 0 1 &amp;open-pic 2 1 /* INTA */</span><br><span class="line">        0x8800 0 0 2 &amp;open-pic 3 1 /* INTB */</span><br><span class="line">        0x8800 0 0 3 &amp;open-pic 4 1 /* INTC */</span><br><span class="line">        0x8800 0 0 4 &amp;open-pic 1 1 /* INTD */</span><br><span class="line">        /* IDSEL 0x12 - PCI slot 2 */</span><br><span class="line">        0x9000 0 0 1 &amp;open-pic 3 1 /* INTA */</span><br><span class="line">        0x9000 0 0 2 &amp;open-pic 4 1 /* INTB */</span><br><span class="line">        0x9000 0 0 3 &amp;open-pic 1 1 /* INTC */</span><br><span class="line">        0x9000 0 0 4 &amp;open-pic 2 1 /* INTD */</span><br><span class="line">        &gt;;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">• For example, the first row of the interrupt-map table specifies the mapping for INTA of slot 1. The components of that row are shown here</span><br><span class="line">    child unit address: 0x8800 0 0</span><br><span class="line">    child interrupt specifier: 1</span><br><span class="line">    interrupt parent: &amp;open-pic</span><br><span class="line">    parent unit address: (empty because #address-cells = &lt;0&gt; in the open-pic node)</span><br><span class="line">    parent interrupt specifier: 2 1</span><br></pre></td></tr></table></figure>
+<h2 id="1-2、标准Node"><a href="#1-2、标准Node" class="headerlink" title="1.2、标准Node"></a>1.2、标准Node</h2><p>Node Name常常由两部分组成“node-name@unit-address”，主要是为了防止Node Name重复冲突：</p>
+<ul>
+<li>“node-name”是node的名字；</li>
+<li>“unit-address”是node中“reg”属性描述的开始地址；</li>
+</ul>
+<p>例如：”msdc@11240000”中node-name=“msdc”，unit-address=“11240000”。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">/ &#123;</span><br><span class="line">	model = &quot;mt6799&quot;;</span><br><span class="line">	compatible = &quot;mediatek,mt6799&quot;;</span><br><span class="line">	interrupt-parent = &lt;&amp;gic&gt;;</span><br><span class="line">	#address-cells = &lt;2&gt;;</span><br><span class="line">	#size-cells = &lt;2&gt;;</span><br><span class="line"></span><br><span class="line">	msdc0:msdc@11240000 &#123;</span><br><span class="line">		compatible = &quot;mediatek,msdc&quot;;</span><br><span class="line">		reg = &lt;0x0 0x11240000 0x0 0x10000</span><br><span class="line">		       0x0 0x10000e84 0x0 0x2&gt;;    /* FPGA PWR_GPIO, PWR_GPIO_EO */</span><br><span class="line">		interrupts = &lt;GIC_SPI 79 IRQ_TYPE_LEVEL_LOW&gt;;</span><br><span class="line">	&#125;;</span><br></pre></td></tr></table></figure>
+<p>下面主要介绍一下一些预先定义的标准Node。</p>
+<h3 id="1-2-1、Root-node"><a href="#1-2-1、Root-node" class="headerlink" title="1.2.1、Root node"></a>1.2.1、Root node</h3><p>每个DeviceTree只有一个根节点。根节点需要有以下必备属性：</p>
+<table border="1"><br><caption>  Root Node Properties </caption><br><br><tr><br><th style="width: 150px;">Property Name</th><br><th style="width: 100px;">Usage</th><br><th style="width: 150px;">Value Type</th><br><th style="width: 600px;">Definition</th><br></tr><br><br><tr><br><td> #address-cells </td><br><td> R </td><br><td> <u32> </u32></td><br><td><br>Specifies the number of <u32> cells to represent the address in the reg  property in children of root.<br></u32></td><br></tr><br><br><tr><br><td> #size-cells </td><br><td> R </td><br><td> <u32> </u32></td><br><td><br>Specifies the number of <u32> cells to represent the size in the reg property in children of root.<br></u32></td><br></tr><br><br><tr><br><td> model </td><br><td> R </td><br><td> <string> </string></td><br><td><br>Specifies a string that uniquely identifies the model of the system board. The recommended format is “manufacturer,model-number”.<br></td><br></tr><br><br><tr><br><td> compatible </td><br><td> R </td><br><td> <stringlist> </stringlist></td><br><td><br>Specifies a list of platform architectures with which this platform is compatible. This property can be used by operating systems in selecting<br>platform specific code. The recommended form of the property value is:<br><br>“manufacturer,model”<br><br><br>For example:<br><br>compatible = “fsl,mpc8572ds”<br><br></td><br></tr><br><br></table>
+
+<h3 id="1-2-2、-aliases-node"><a href="#1-2-2、-aliases-node" class="headerlink" title="1.2.2、/aliases node"></a>1.2.2、/aliases node</h3><p>用来给一些绝对路径定义别名：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">aliases &#123;</span><br><span class="line">    serial0 = &quot;/simple-bus@fe000000/serial@llc500&quot;;</span><br><span class="line">    ethernet0 = &quot;/simple-bus@fe000000/ethernet@31c000&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="1-2-3、-memory-node"><a href="#1-2-3、-memory-node" class="headerlink" title="1.2.3、/memory node"></a>1.2.3、/memory node</h3><p>用来传递内存布局：</p>
+<table border="1"><br><caption>  /memory Node Properties </caption><br><br><tr><br><th style="width: 150px;">Property Name</th><br><th style="width: 100px;">Usage</th><br><th style="width: 150px;">Value Type</th><br><th style="width: 600px;">Definition</th><br></tr><br><br><tr><br><td> device_type </td><br><td> R </td><br><td> <string> </string></td><br><td><br>Value shall be “memory”<br></td><br></tr><br><br><tr><br><td> reg </td><br><td> R </td><br><td> <prop-encoded-array> </prop-encoded-array></td><br><td><br>Consists of an arbitrary number of address and size pairs that specify the physical address and size of the memory ranges.<br></td><br></tr><br><br><tr><br><td> initial-mapped-area </td><br><td> O </td><br><td> <prop-encoded-array> </prop-encoded-array></td><br><td><br>Specifies the address and size of the Initial Mapped Area<br>Is a prop-encoded-array consisting of a triplet of (effective address, physical address, size).<br>The effective and physical address shall each be 64-bit (<u64> value), and the size shall be 32-bits (<u32> value).<br></u32></u64></td><br></tr><br><br></table>
+
+<p>举例：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">• RAM: starting address 0x0, length 0x80000000 (2GB)</span><br><span class="line">• RAM: starting address 0x100000000, length 0x100000000 (4GB)</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">\ &#123;</span><br><span class="line">    #address-cells = &lt;2&gt;;</span><br><span class="line">    #size-cells = &lt;2&gt;;</span><br><span class="line"></span><br><span class="line">    memory@0 &#123;</span><br><span class="line">        device_type = &quot;memory&quot;;</span><br><span class="line">        reg = &lt;0x000000000 0x00000000 0x00000000 0x80000000</span><br><span class="line">        0x000000001 0x00000000 0x00000001 0x00000000&gt;;</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="1-2-4、-chosen-node"><a href="#1-2-4、-chosen-node" class="headerlink" title="1.2.4、/chosen node"></a>1.2.4、/chosen node</h3><p>其中“bootargs”属性用来传递cmdline参数，“stdout-path”属性用来指定标准输出设备，“stdin-path”属性用来指定标准输入设备。</p>
+<table border="1"><br><caption>  /chosen Node Properties </caption><br><br><tr><br><th style="width: 150px;">Property Name</th><br><th style="width: 100px;">Usage</th><br><th style="width: 150px;">Value Type</th><br><th style="width: 600px;">Definition</th><br></tr><br><br><tr><br><td> bootargs </td><br><td> O </td><br><td> <string> </string></td><br><td><br>A string that specifies the boot arguments for the client program. The value could potentially be a null string if no boot arguments are required.<br></td><br></tr><br><br><tr><br><td> stdout-path </td><br><td> O </td><br><td> <string> </string></td><br><td><br>A string that specifies the full path to the node representing the device to be used for boot console output. If the character “:” is present in the value it terminates the path. The value may be an alias. If the stdin-path property is<br>not specified, stdout-path should be assumed to define the input device.<br></td><br></tr><br><br><tr><br><td> stdin-path </td><br><td> O </td><br><td> <string> </string></td><br><td><br>A string that specifies the full path to the node representing the device to be used for boot console input. If the character “:” is present in the value it terminates the path. The value may be an alias.<br></td><br></tr><br><br></table>
+
+<p>举例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">/* chosen */</span><br><span class="line">chosen &#123;</span><br><span class="line">	bootargs = &quot;console=tty0 console=ttyMT0,921600n1 root=/dev/ram&quot;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="1-2-5、-cpus-node"><a href="#1-2-5、-cpus-node" class="headerlink" title="1.2.5、/cpus node"></a>1.2.5、/cpus node</h3><p>/cpus节点也是必须的，下面举个具体例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br></pre></td><td class="code"><pre><span class="line">cpus &#123;</span><br><span class="line">	#address-cells = &lt;1&gt;;</span><br><span class="line">	#size-cells = &lt;0&gt;;</span><br><span class="line"></span><br><span class="line">	cpu0: cpu@0 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a35&quot;;</span><br><span class="line">		reg = &lt;0x000&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1248000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu1: cpu@001 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a35&quot;;</span><br><span class="line">		reg = &lt;0x001&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1248000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu2: cpu@002 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a35&quot;;</span><br><span class="line">		reg = &lt;0x002&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1248000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu3: cpu@003 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a35&quot;;</span><br><span class="line">		reg = &lt;0x003&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1248000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu4: cpu@100 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a53&quot;;</span><br><span class="line">		reg = &lt;0x100&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1378000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu5: cpu@101 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a53&quot;;</span><br><span class="line">		reg = &lt;0x101&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1378000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu6: cpu@102 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a53&quot;;</span><br><span class="line">		reg = &lt;0x102&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1378000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu7: cpu@103 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a53&quot;;</span><br><span class="line">		reg = &lt;0x103&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1378000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu8: cpu@200 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a73&quot;;</span><br><span class="line">		reg = &lt;0x200&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1638000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu9: cpu@201 &#123;</span><br><span class="line">		device_type = &quot;cpu&quot;;</span><br><span class="line">		compatible = &quot;arm,cortex-a73&quot;;</span><br><span class="line">		reg = &lt;0x201&gt;;</span><br><span class="line">		enable-method = &quot;psci&quot;;</span><br><span class="line">		cpu-idle-states = &lt;&amp;LEGACY_MCDI &amp;LEGACY_SODI &amp;LEGACY_SODI3 &amp;LEGACY_DPIDLE&gt;,</span><br><span class="line">				  &lt;&amp;LEGACY_SUSPEND &amp;MCDI &amp;SODI &amp;SODI3 &amp;DPIDLE &amp;SUSPEND&gt;;</span><br><span class="line">		cpu-release-addr = &lt;0x0 0x40000200&gt;;</span><br><span class="line">		clock-frequency = &lt;1638000000&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	cpu-map &#123;</span><br><span class="line">		cluster0 &#123;</span><br><span class="line">			core0 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu0&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">			core1 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu1&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">			core2 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu2&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">			core3 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu3&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		cluster1 &#123;</span><br><span class="line">			core0 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu4&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">			core1 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu5&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">			core2 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu6&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">			core3 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu7&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		cluster2 &#123;</span><br><span class="line">			core0 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu8&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">			core1 &#123;</span><br><span class="line">				cpu = &lt;&amp;cpu9&gt;;</span><br><span class="line">			&#125;;</span><br><span class="line"></span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	idle-states &#123;</span><br><span class="line">		entry-method = &quot;arm,psci&quot;;</span><br><span class="line"></span><br><span class="line">		LEGACY_MCDI: legacy-mcdi &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x0000001&gt;;</span><br><span class="line">			entry-latency-us = &lt;600&gt;;</span><br><span class="line">			exit-latency-us = &lt;600&gt;;</span><br><span class="line">			min-residency-us = &lt;1200&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		LEGACY_SODI: legacy-sodi &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x0000002&gt;;</span><br><span class="line">			entry-latency-us = &lt;600&gt;;</span><br><span class="line">			exit-latency-us = &lt;600&gt;;</span><br><span class="line">			min-residency-us = &lt;1200&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		LEGACY_SODI3: legacy-sodi3 &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x0000003&gt;;</span><br><span class="line">			entry-latency-us = &lt;600&gt;;</span><br><span class="line">			exit-latency-us = &lt;600&gt;;</span><br><span class="line">			min-residency-us = &lt;1200&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		LEGACY_DPIDLE: legacy-dpidle &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x0000004&gt;;</span><br><span class="line">			entry-latency-us = &lt;600&gt;;</span><br><span class="line">			exit-latency-us = &lt;600&gt;;</span><br><span class="line">			min-residency-us = &lt;1200&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		LEGACY_SUSPEND: legacy-suspend &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x0000005&gt;;</span><br><span class="line">			entry-latency-us = &lt;600&gt;;</span><br><span class="line">			exit-latency-us = &lt;600&gt;;</span><br><span class="line">			min-residency-us = &lt;1200&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		MCDI: mcdi &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x0010001&gt;;</span><br><span class="line">			entry-latency-us = &lt;600&gt;;</span><br><span class="line">			exit-latency-us = &lt;600&gt;;</span><br><span class="line">			min-residency-us = &lt;1200&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		SODI: sodi &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x1010002&gt;;</span><br><span class="line">			entry-latency-us = &lt;800&gt;;</span><br><span class="line">			exit-latency-us = &lt;1000&gt;;</span><br><span class="line">			min-residency-us = &lt;2000&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		SODI3: sodi3 &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x1010003&gt;;</span><br><span class="line">			entry-latency-us = &lt;800&gt;;</span><br><span class="line">			exit-latency-us = &lt;1000&gt;;</span><br><span class="line">			min-residency-us = &lt;2000&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		DPIDLE: dpidle &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x1010004&gt;;</span><br><span class="line">			entry-latency-us = &lt;800&gt;;</span><br><span class="line">			exit-latency-us = &lt;1000&gt;;</span><br><span class="line">			min-residency-us = &lt;2000&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		SUSPEND: suspend &#123;</span><br><span class="line">			compatible = &quot;arm,idle-state&quot;;</span><br><span class="line">			arm,psci-suspend-param = &lt;0x1010005&gt;;</span><br><span class="line">			entry-latency-us = &lt;800&gt;;</span><br><span class="line">			exit-latency-us = &lt;1000&gt;;</span><br><span class="line">			min-residency-us = &lt;2000&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h1 id="2、DTB"><a href="#2、DTB" class="headerlink" title="2、DTB"></a>2、DTB</h1><h2 id="2-1、DTB的编译"><a href="#2-1、DTB的编译" class="headerlink" title="2.1、DTB的编译"></a>2.1、DTB的编译</h2><p>DTB(Devicetree Blob)是DTS的二进制文件格式，Kernel使用DTC工具将DTS源文件编译成DTB，bootloader再将DTB文件传递给Kernel解析。</p>
+<p>不遵守标准书写的DTS文件在编译的时候会报错。</p>
+<h2 id="2-2、DTB的文件结构"><a href="#2-2、DTB的文件结构" class="headerlink" title="2.2、DTB的文件结构"></a>2.2、DTB的文件结构</h2><p><img src="/images/dts/dtb_struct.png" alt="image"></p>
+<p>DTB文件的结构如上图所示，主要在3部分：</p>
+<ul>
+<li>struct ftd_header。文件头结构；</li>
+<li>structure block。存放含Node和Property的Value；</li>
+<li>strings block。存放Property的Name；把Property Name单独分为一个区域的原因是，有很多Property Name是重复的，单独一个区域可以使用指针引用，节约空间。</li>
+</ul>
+<p>dtb中的fdt_header的数据结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">struct fdt_header &#123;</span><br><span class="line">    uint32_t magic;</span><br><span class="line">    uint32_t totalsize;</span><br><span class="line">    uint32_t off_dt_struct;</span><br><span class="line">    uint32_t off_dt_strings;</span><br><span class="line">    uint32_t off_mem_rsvmap;</span><br><span class="line">    uint32_t version;</span><br><span class="line">    uint32_t last_comp_version;</span><br><span class="line">    uint32_t boot_cpuid_phys;</span><br><span class="line">    uint32_t size_dt_strings;</span><br><span class="line">    uint32_t size_dt_struct;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>dtb中node header的数据结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">struct fdt_node_header &#123;</span><br><span class="line">	fdt32_t tag;</span><br><span class="line">	char name[0];   // node name 存放在structure block</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>dtb中property header的数据结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">struct fdt_property &#123;</span><br><span class="line">	fdt32_t tag;</span><br><span class="line">	fdt32_t len;</span><br><span class="line">	fdt32_t nameoff;    // perperty name存放在strings block</span><br><span class="line">	char data[0];</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>整个文件使用5种token来分割出node和property：</p>
+<ul>
+<li>FDT_BEGIN_NODE (0x00000001)</li>
+<li>FDT_END_NODE (0x00000002)</li>
+<li>FDT_PROP (0x00000003)</li>
+<li>FDT_NOP (0x00000004)</li>
+<li>FDT_END (0x00000009)</li>
+</ul>
+<p>可以使用hex编辑器来查看DTB文件的结构：</p>
+<p><img src="/images/dts/dtb_hex_example.png" alt="image"></p>
+<h2 id="2-3、Bootloader对DTB的传递"><a href="#2-3、Bootloader对DTB的传递" class="headerlink" title="2.3、Bootloader对DTB的传递"></a>2.3、Bootloader对DTB的传递</h2><p>没有仔细去看</p>
+<h1 id="3、Kernel解析"><a href="#3、Kernel解析" class="headerlink" title="3、Kernel解析"></a>3、Kernel解析</h1><h2 id="3-1、DTB解析"><a href="#3-1、DTB解析" class="headerlink" title="3.1、DTB解析"></a>3.1、DTB解析</h2><h3 id="3-1-1-setup-machine-fdt"><a href="#3-1-1-setup-machine-fdt" class="headerlink" title="3.1.1 setup_machine_fdt()"></a>3.1.1 setup_machine_fdt()</h3><p>直接在dtb中解析根节点的一些属性和子节点给系统早期使用。</p>
+<ul>
+<li>解析”/“节点的model”属性给machine_desc赋值；</li>
+<li>解析”/chosen”node中的”bootargs”属性给boot_command_line；</li>
+<li>解析”/“节点的”#size-cells”、”#address-cells”属性；</li>
+<li>解析”/memory”node中的”reg”属性，并将memory区域加入到系统；</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line">start_kernel() -&gt; setup_arch() -&gt; setup_machine_fdt():</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void __init setup_machine_fdt(phys_addr_t dt_phys)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 映射dtb内存，到使之可以访问 */</span><br><span class="line">	void *dt_virt = fixmap_remap_fdt(dt_phys);</span><br><span class="line"></span><br><span class="line">    /* (2) 早期扫描device tree中的一些node和property */</span><br><span class="line">	if (!dt_virt || !early_init_dt_scan(dt_virt)) &#123;</span><br><span class="line">		pr_crit(&quot;\n&quot;</span><br><span class="line">			&quot;Error: invalid device tree blob at physical address %pa (virtual address 0x%p)\n&quot;</span><br><span class="line">			&quot;The dtb must be 8-byte aligned and must not exceed 2 MB in size\n&quot;</span><br><span class="line">			&quot;\nPlease check your bootloader.&quot;,</span><br><span class="line">			&amp;dt_phys, dt_virt);</span><br><span class="line"></span><br><span class="line">		while (true)</span><br><span class="line">			cpu_relax();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (3) 使用device tree中root node的&quot;model/compatible&quot;属性给machine_desc赋值 */</span><br><span class="line">	machine_desc_set(of_flat_dt_get_machine_name());</span><br><span class="line">	dump_stack_set_arch_desc(&quot;%s (DT)&quot;, of_flat_dt_get_machine_name());</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">bool __init early_init_dt_scan(void *params)</span><br><span class="line">&#123;</span><br><span class="line">	bool status;</span><br><span class="line"></span><br><span class="line">    /* (2.1)校验dtb数据 */</span><br><span class="line">	status = early_init_dt_verify(params);</span><br><span class="line">	if (!status)</span><br><span class="line">		return false;</span><br><span class="line"></span><br><span class="line">    /* (2.2) */</span><br><span class="line">	early_init_dt_scan_nodes();</span><br><span class="line">	return true;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">void __init early_init_dt_scan_nodes(void)</span><br><span class="line">&#123;</span><br><span class="line">    /* (2.2.1) 解析&quot;/chosen&quot;node中的&quot;bootargs&quot;属性 */</span><br><span class="line">	/* Retrieve various information from the /chosen node */</span><br><span class="line">	of_scan_flat_dt(early_init_dt_scan_chosen, boot_command_line);</span><br><span class="line"></span><br><span class="line">    /* (2.2.2) 解析&quot;/&quot;node中的&quot;#size-cells&quot;、&quot;#address-cells&quot;属性 */</span><br><span class="line">	/* Initialize &#123;size,address&#125;-cells info */</span><br><span class="line">	of_scan_flat_dt(early_init_dt_scan_root, NULL);</span><br><span class="line"></span><br><span class="line">    /* (2.2.3) 解析&quot;/memory&quot;node中的&quot;reg&quot;属性，并将memory区域加入到系统 */</span><br><span class="line">	/* Setup memory, calling early_init_dt_add_memory_arch */</span><br><span class="line">	of_scan_flat_dt(early_init_dt_scan_memory, NULL);</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">early_init_dt_scan_memory() -&gt; early_init_dt_add_memory_arch() -&gt; memblock_add()</span><br></pre></td></tr></table></figure>
+<h3 id="3-1-2-unflatten-device-tree"><a href="#3-1-2-unflatten-device-tree" class="headerlink" title="3.1.2 unflatten_device_tree()"></a>3.1.2 unflatten_device_tree()</h3><p>将DTB完全解析为内核使用的的device_node、property结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br></pre></td><td class="code"><pre><span class="line">start_kernel() -&gt; setup_arch() -&gt; unflatten_device_tree():</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">void __init unflatten_device_tree(void)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 解析dtb数据到kernel中 */</span><br><span class="line">	__unflatten_device_tree(initial_boot_params, &amp;of_root,</span><br><span class="line">				early_init_dt_alloc_memory_arch);</span><br><span class="line"></span><br><span class="line">    /* (2) 扫描&quot;/aliases&quot;、&quot;/chosen&quot;节点来进行一些预制值的配置 */</span><br><span class="line">	/* Get pointer to &quot;/chosen&quot; and &quot;/aliases&quot; nodes for use everywhere */</span><br><span class="line">	of_alias_scan(early_init_dt_alloc_memory_arch);</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void __unflatten_device_tree(const void *blob,</span><br><span class="line">			     struct device_node **mynodes,</span><br><span class="line">			     void * (*dt_alloc)(u64 size, u64 align))</span><br><span class="line">&#123;</span><br><span class="line">	unsigned long size;</span><br><span class="line">	int start;</span><br><span class="line">	void *mem;</span><br><span class="line"></span><br><span class="line">	pr_debug(&quot; -&gt; unflatten_device_tree()\n&quot;);</span><br><span class="line"></span><br><span class="line">	if (!blob) &#123;</span><br><span class="line">		pr_debug(&quot;No device tree pointer\n&quot;);</span><br><span class="line">		return;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	pr_debug(&quot;Unflattening device tree:\n&quot;);</span><br><span class="line">	pr_debug(&quot;magic: %08x\n&quot;, fdt_magic(blob));</span><br><span class="line">	pr_debug(&quot;size: %08x\n&quot;, fdt_totalsize(blob));</span><br><span class="line">	pr_debug(&quot;version: %08x\n&quot;, fdt_version(blob));</span><br><span class="line"></span><br><span class="line">	if (fdt_check_header(blob)) &#123;</span><br><span class="line">		pr_err(&quot;Invalid device tree blob header\n&quot;);</span><br><span class="line">		return;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (1.1) 第一遍扫描，计算dtb解析需要的内存空间 */</span><br><span class="line">	/* First pass, scan for size */</span><br><span class="line">	start = 0;</span><br><span class="line">	size = (unsigned long)unflatten_dt_node(blob, NULL, &amp;start, NULL, NULL, 0, true);</span><br><span class="line">	size = ALIGN(size, 4);</span><br><span class="line"></span><br><span class="line">	pr_debug(&quot;  size is %lx, allocating...\n&quot;, size);</span><br><span class="line"></span><br><span class="line">    /* (1.2) 分配所需内存 */</span><br><span class="line">	/* Allocate memory for the expanded device tree */</span><br><span class="line">	mem = dt_alloc(size + 4, __alignof__(struct device_node));</span><br><span class="line">	memset(mem, 0, size);</span><br><span class="line"></span><br><span class="line">	*(__be32 *)(mem + size) = cpu_to_be32(0xdeadbeef);</span><br><span class="line"></span><br><span class="line">	pr_debug(&quot;  unflattening %p...\n&quot;, mem);</span><br><span class="line"></span><br><span class="line">    /* (1.3)第二遍扫描，在分配的内存中创建device_node、property树形结构来存储dtb的解析 */</span><br><span class="line">	/* Second pass, do actual unflattening */</span><br><span class="line">	start = 0;</span><br><span class="line">	unflatten_dt_node(blob, mem, &amp;start, NULL, mynodes, 0, false);</span><br><span class="line">	if (be32_to_cpup(mem + size) != 0xdeadbeef)</span><br><span class="line">		pr_warning(&quot;End of tree marker overwritten: %08x\n&quot;,</span><br><span class="line">			   be32_to_cpup(mem + size));</span><br><span class="line"></span><br><span class="line">	pr_debug(&quot; &lt;- unflatten_device_tree()\n&quot;);</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void * unflatten_dt_node(const void *blob,</span><br><span class="line">				void *mem,</span><br><span class="line">				int *poffset,</span><br><span class="line">				struct device_node *dad,</span><br><span class="line">				struct device_node **nodepp,</span><br><span class="line">				unsigned long fpsize,</span><br><span class="line">				bool dryrun)</span><br><span class="line">&#123;</span><br><span class="line">	const __be32 *p;</span><br><span class="line">	struct device_node *np;</span><br><span class="line">	struct property *pp, **prev_pp = NULL;</span><br><span class="line">	const char *pathp;</span><br><span class="line">	unsigned int l, allocl;</span><br><span class="line">	static int depth;</span><br><span class="line">	int old_depth;</span><br><span class="line">	int offset;</span><br><span class="line">	int has_name = 0;</span><br><span class="line">	int new_format = 0;</span><br><span class="line"></span><br><span class="line">    /* (1.1.1) 解析node，解析node中的name值 */</span><br><span class="line">	pathp = fdt_get_name(blob, *poffset, &amp;l);</span><br><span class="line">	if (!pathp)</span><br><span class="line">		return mem;</span><br><span class="line"></span><br><span class="line">	allocl = ++l;	/* l 为当前路径的长度 */</span><br><span class="line"></span><br><span class="line">	/* version 0x10 has a more compact unit name here instead of the full</span><br><span class="line">	 * path. we accumulate the full path size using &quot;fpsize&quot;, we&apos;ll rebuild</span><br><span class="line">	 * it later. We detect this because the first character of the name is</span><br><span class="line">	 * not &apos;/&apos;.</span><br><span class="line">	 */</span><br><span class="line">	if ((*pathp) != &apos;/&apos;) &#123;</span><br><span class="line">		new_format = 1;</span><br><span class="line">		if (fpsize == 0) &#123;</span><br><span class="line">			/* root node: special case. fpsize accounts for path</span><br><span class="line">			 * plus terminating zero. root node only has &apos;/&apos;, so</span><br><span class="line">			 * fpsize should be 2, but we want to avoid the first</span><br><span class="line">			 * level nodes to have two &apos;/&apos; so we use fpsize 1 here</span><br><span class="line">			 */</span><br><span class="line">			fpsize = 1;</span><br><span class="line">			allocl = 2;</span><br><span class="line">			l = 1;</span><br><span class="line">			pathp = &quot;&quot;;</span><br><span class="line">		&#125; else &#123;</span><br><span class="line">			/* account for &apos;/&apos; and path size minus terminal 0</span><br><span class="line">			 * already in &apos;l&apos;</span><br><span class="line">			 */</span><br><span class="line">			fpsize += l;	/* 当前full path的长度 = 上一次full path的长度 + 当前node nam的长度 l */</span><br><span class="line">			allocl = fpsize;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* 计算解析当前node节点需要的内存大小 = device_node + full path  */</span><br><span class="line">	np = unflatten_dt_alloc(&amp;mem, sizeof(struct device_node) + allocl,</span><br><span class="line">				__alignof__(struct device_node));</span><br><span class="line">    /*  dryrun = true，只进行长度计算</span><br><span class="line">     dryrun = fasle，进行实际的赋值  */</span><br><span class="line">	if (!dryrun) &#123;</span><br><span class="line">		char *fn;</span><br><span class="line">		of_node_init(np);</span><br><span class="line">		np-&gt;full_name = fn = ((char *)np) + sizeof(*np);	 /* device_node-&gt;full_name，指向device_node结构体的结尾 */ </span><br><span class="line">		if (new_format) &#123;</span><br><span class="line">			/* rebuild full path for new format */</span><br><span class="line">			if (dad &amp;&amp; dad-&gt;parent) &#123;</span><br><span class="line">                 /* 先拷入上次的full name */</span><br><span class="line">				strcpy(fn, dad-&gt;full_name);</span><br><span class="line">#ifdef DEBUG</span><br><span class="line">				if ((strlen(fn) + l + 1) != allocl) &#123;</span><br><span class="line">					pr_debug(&quot;%s: p: %d, l: %d, a: %d\n&quot;,</span><br><span class="line">						pathp, (int)strlen(fn),</span><br><span class="line">						l, allocl);</span><br><span class="line">				&#125;</span><br><span class="line">#endif</span><br><span class="line">				fn += strlen(fn);</span><br><span class="line">			&#125;</span><br><span class="line">            /* 再加上 &apos;/&apos; */</span><br><span class="line">			*(fn++) = &apos;/&apos;;</span><br><span class="line">		&#125;</span><br><span class="line">        /* 最后加上当前node的name */</span><br><span class="line">		memcpy(fn, pathp, l);</span><br><span class="line"></span><br><span class="line">		prev_pp = &amp;np-&gt;properties;</span><br><span class="line">        /* node和node之间树形结构的创建 */</span><br><span class="line">		if (dad != NULL) &#123;	</span><br><span class="line">			np-&gt;parent = dad;</span><br><span class="line">			np-&gt;sibling = dad-&gt;child;</span><br><span class="line">			dad-&gt;child = np;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (1.1.2) 解析node中的property */</span><br><span class="line">	/* process properties */</span><br><span class="line">	for (offset = fdt_first_property_offset(blob, *poffset);</span><br><span class="line">	     (offset &gt;= 0);</span><br><span class="line">	     (offset = fdt_next_property_offset(blob, offset))) &#123;</span><br><span class="line">		const char *pname;</span><br><span class="line">		u32 sz;</span><br><span class="line"></span><br><span class="line">        /* 解析一个property：</span><br><span class="line">          p：property中的data</span><br><span class="line">          pname：property的name指针，实际存储位置在dt_strings区域中</span><br><span class="line">         sz：property data的长度</span><br><span class="line">        */</span><br><span class="line">		if (!(p = fdt_getprop_by_offset(blob, offset, &amp;pname, &amp;sz))) &#123;</span><br><span class="line">			offset = -FDT_ERR_INTERNAL;</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		if (pname == NULL) &#123;</span><br><span class="line">			pr_info(&quot;Can&apos;t find property name in list !\n&quot;);</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line">		if (strcmp(pname, &quot;name&quot;) == 0)</span><br><span class="line">			has_name = 1;</span><br><span class="line">        /* 计算解析当前property的内存大小 = property */</span><br><span class="line">		pp = unflatten_dt_alloc(&amp;mem, sizeof(struct property),</span><br><span class="line">					__alignof__(struct property));</span><br><span class="line">        /* 实际的property赋值 */</span><br><span class="line">		if (!dryrun) &#123;</span><br><span class="line">			/* We accept flattened tree phandles either in</span><br><span class="line">			 * ePAPR-style &quot;phandle&quot; properties, or the</span><br><span class="line">			 * legacy &quot;linux,phandle&quot; properties.  If both</span><br><span class="line">			 * appear and have different values, things</span><br><span class="line">			 * will get weird.  Don&apos;t do that. */</span><br><span class="line">            /* 如果property为&quot;phandle&quot;，设置父node的device_node-&gt;phandle为当前属性的值 */</span><br><span class="line">			if ((strcmp(pname, &quot;phandle&quot;) == 0) ||</span><br><span class="line">			    (strcmp(pname, &quot;linux,phandle&quot;) == 0)) &#123;</span><br><span class="line">				if (np-&gt;phandle == 0)</span><br><span class="line">					np-&gt;phandle = be32_to_cpup(p);</span><br><span class="line">			&#125;</span><br><span class="line">			/* And we process the &quot;ibm,phandle&quot; property</span><br><span class="line">			 * used in pSeries dynamic device tree</span><br><span class="line">			 * stuff */</span><br><span class="line">			if (strcmp(pname, &quot;ibm,phandle&quot;) == 0)</span><br><span class="line">				np-&gt;phandle = be32_to_cpup(p);</span><br><span class="line">            /* 给property的其他字段赋值：（DTB的空间没有释放，被property成员指针引用）</span><br><span class="line">            property-&gt;name：指针指向dtb strings blcok区域中的属性name</span><br><span class="line">            property-&gt;length：属性data的长度</span><br><span class="line">            property-&gt;value：指针指向dtb stucture block区域中的属性data</span><br><span class="line">             */</span><br><span class="line">			pp-&gt;name = (char *)pname;</span><br><span class="line">			pp-&gt;length = sz;</span><br><span class="line">			pp-&gt;value = (__be32 *)p;</span><br><span class="line">			*prev_pp = pp;</span><br><span class="line">			prev_pp = &amp;pp-&gt;next;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	/* with version 0x10 we may not have the name property, recreate</span><br><span class="line">	 * it here from the unit name if absent</span><br><span class="line">	 */</span><br><span class="line">	if (!has_name) &#123;</span><br><span class="line">		const char *p1 = pathp, *ps = pathp, *pa = NULL;</span><br><span class="line">		int sz;</span><br><span class="line"></span><br><span class="line">		while (*p1) &#123;</span><br><span class="line">			if ((*p1) == &apos;@&apos;)</span><br><span class="line">				pa = p1;</span><br><span class="line">			if ((*p1) == &apos;/&apos;)</span><br><span class="line">				ps = p1 + 1;</span><br><span class="line">			p1++;</span><br><span class="line">		&#125;</span><br><span class="line">		if (pa &lt; ps)</span><br><span class="line">			pa = p1;</span><br><span class="line">		sz = (pa - ps) + 1;</span><br><span class="line">		pp = unflatten_dt_alloc(&amp;mem, sizeof(struct property) + sz,</span><br><span class="line">					__alignof__(struct property));</span><br><span class="line">		if (!dryrun) &#123;</span><br><span class="line">			pp-&gt;name = &quot;name&quot;;</span><br><span class="line">			pp-&gt;length = sz;</span><br><span class="line">			pp-&gt;value = pp + 1;</span><br><span class="line">			*prev_pp = pp;</span><br><span class="line">			prev_pp = &amp;pp-&gt;next;</span><br><span class="line">			memcpy(pp-&gt;value, ps, sz - 1);</span><br><span class="line">			((char *)pp-&gt;value)[sz - 1] = 0;</span><br><span class="line">			pr_debug(&quot;fixed up name for %s -&gt; %s\n&quot;, pathp,</span><br><span class="line">				(char *)pp-&gt;value);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">    /* 根据&quot;name&quot;、 &quot;device_type&quot;属性，来给device_node结构中的name、type成员赋值 */</span><br><span class="line">	if (!dryrun) &#123;</span><br><span class="line">		*prev_pp = NULL;</span><br><span class="line">		np-&gt;name = of_get_property(np, &quot;name&quot;, NULL);</span><br><span class="line">		np-&gt;type = of_get_property(np, &quot;device_type&quot;, NULL);</span><br><span class="line"></span><br><span class="line">		if (!np-&gt;name)</span><br><span class="line">			np-&gt;name = &quot;&lt;NULL&gt;&quot;;</span><br><span class="line">		if (!np-&gt;type)</span><br><span class="line">			np-&gt;type = &quot;&lt;NULL&gt;&quot;;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (1.1.3)如果还有子node的存在，递归解析 */</span><br><span class="line">	old_depth = depth;</span><br><span class="line">	*poffset = fdt_next_node(blob, *poffset, &amp;depth);</span><br><span class="line">	if (depth &lt; 0)</span><br><span class="line">		depth = 0;</span><br><span class="line">	while (*poffset &gt; 0 &amp;&amp; depth &gt; old_depth)</span><br><span class="line">		mem = unflatten_dt_node(blob, mem, poffset, np, NULL,</span><br><span class="line">					fpsize, dryrun);</span><br><span class="line"></span><br><span class="line">	if (*poffset &lt; 0 &amp;&amp; *poffset != -FDT_ERR_NOTFOUND)</span><br><span class="line">		pr_err(&quot;unflatten: error %d processing FDT\n&quot;, *poffset);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Reverse the child list. Some drivers assumes node order matches .dts</span><br><span class="line">	 * node order</span><br><span class="line">	 */</span><br><span class="line">	if (!dryrun &amp;&amp; np-&gt;child) &#123;</span><br><span class="line">		struct device_node *child = np-&gt;child;</span><br><span class="line">		np-&gt;child = NULL;</span><br><span class="line">		while (child) &#123;</span><br><span class="line">			struct device_node *next = child-&gt;sibling;</span><br><span class="line">			child-&gt;sibling = np-&gt;child;</span><br><span class="line">			np-&gt;child = child;</span><br><span class="line">			child = next;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (nodepp)</span><br><span class="line">		*nodepp = np;</span><br><span class="line"></span><br><span class="line">	return mem;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-2、Device创建"><a href="#3-2、Device创建" class="headerlink" title="3.2、Device创建"></a>3.2、Device创建</h2><h3 id="3-2-1-of-platform-populate"><a href="#3-2-1-of-platform-populate" class="headerlink" title="3.2.1 of_platform_populate()"></a>3.2.1 of_platform_populate()</h3><p>首先root节点下的第1级子节点创建成platform device。</p>
+<ul>
+<li>对root节点下的第1级子节点，如果有”compatible”属性创建对应platform device；</li>
+<li>如果”compatible”属性等于of_default_bus_match_table(“simple-bus”/“simple-mfd”/“arm,amba-bus”)中任意一种，继续对其子节点进行platform device创建。</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br></pre></td><td class="code"><pre><span class="line">start_kernel() -&gt; ... -&gt;do_initcalls() -&gt; arm64_device_init():</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">const struct of_device_id of_default_bus_match_table[] = &#123;</span><br><span class="line">	&#123; .compatible = &quot;simple-bus&quot;, &#125;,</span><br><span class="line">	&#123; .compatible = &quot;simple-mfd&quot;, &#125;,</span><br><span class="line">#ifdef CONFIG_ARM_AMBA</span><br><span class="line">	&#123; .compatible = &quot;arm,amba-bus&quot;, &#125;,</span><br><span class="line">#endif /* CONFIG_ARM_AMBA */</span><br><span class="line">	&#123;&#125; /* Empty terminated list */</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static int __init arm64_device_init(void)</span><br><span class="line">&#123;</span><br><span class="line">	if (of_have_populated_dt()) &#123;</span><br><span class="line">		of_iommu_init();</span><br><span class="line">		of_platform_populate(NULL, of_default_bus_match_table,</span><br><span class="line">				     NULL, NULL);</span><br><span class="line">	&#125; else if (acpi_disabled) &#123;</span><br><span class="line">		pr_crit(&quot;Device tree not populated\n&quot;);</span><br><span class="line">	&#125;</span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">int of_platform_populate(struct device_node *root,</span><br><span class="line">			const struct of_device_id *matches,</span><br><span class="line">			const struct of_dev_auxdata *lookup,</span><br><span class="line">			struct device *parent)</span><br><span class="line">&#123;</span><br><span class="line">	struct device_node *child;</span><br><span class="line">	int rc = 0;</span><br><span class="line"></span><br><span class="line">    /* (1) 获取dts中的root node */</span><br><span class="line">	root = root ? of_node_get(root) : of_find_node_by_path(&quot;/&quot;);</span><br><span class="line">	if (!root)</span><br><span class="line">		return -EINVAL;</span><br><span class="line"></span><br><span class="line">    /* (2) 对root node的child node进行platform device创建 */</span><br><span class="line">	for_each_child_of_node(root, child) &#123;</span><br><span class="line">		rc = of_platform_bus_create(child, matches, lookup, parent, true);</span><br><span class="line">		if (rc) &#123;</span><br><span class="line">			of_node_put(child);</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	of_node_set_flag(root, OF_POPULATED_BUS);</span><br><span class="line"></span><br><span class="line">	of_node_put(root);</span><br><span class="line">	return rc;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int of_platform_bus_create(struct device_node *bus,</span><br><span class="line">				  const struct of_device_id *matches,</span><br><span class="line">				  const struct of_dev_auxdata *lookup,</span><br><span class="line">				  struct device *parent, bool strict)</span><br><span class="line">&#123;</span><br><span class="line">	const struct of_dev_auxdata *auxdata;</span><br><span class="line">	struct device_node *child;</span><br><span class="line">	struct platform_device *dev;</span><br><span class="line">	const char *bus_id = NULL;</span><br><span class="line">	void *platform_data = NULL;</span><br><span class="line">	int rc = 0;</span><br><span class="line"></span><br><span class="line">    /* (2.1) 确保要创建为platform device的node，拥有&quot;compatible&quot;属性 */</span><br><span class="line">	/* Make sure it has a compatible property */</span><br><span class="line">	if (strict &amp;&amp; (!of_get_property(bus, &quot;compatible&quot;, NULL))) &#123;</span><br><span class="line">		pr_debug(&quot;%s() - skipping %s, no compatible prop\n&quot;,</span><br><span class="line">			 __func__, bus-&gt;full_name);</span><br><span class="line">		return 0;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	auxdata = of_dev_lookup(lookup, bus);</span><br><span class="line">	if (auxdata) &#123;</span><br><span class="line">		bus_id = auxdata-&gt;name;</span><br><span class="line">		platform_data = auxdata-&gt;platform_data;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (of_device_is_compatible(bus, &quot;arm,primecell&quot;)) &#123;</span><br><span class="line">		/*</span><br><span class="line">		 * Don&apos;t return an error here to keep compatibility with older</span><br><span class="line">		 * device tree files.</span><br><span class="line">		 */</span><br><span class="line">		of_amba_device_create(bus, bus_id, platform_data, parent);</span><br><span class="line">		return 0;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (2.2) 对当前的node创建platform device */</span><br><span class="line">	dev = of_platform_device_create_pdata(bus, bus_id, platform_data, parent);</span><br><span class="line">    /* (2.3) 根据of_default_bus_match_table，如果node中含有以下属性：</span><br><span class="line">    compatible = &quot;simple-bus&quot;</span><br><span class="line">    compatible = &quot;simple-mfd&quot;</span><br><span class="line">    compatible = &quot;arm,amba-bus&quot;</span><br><span class="line">    则继续对node的子node进行platform device创建</span><br><span class="line">     */</span><br><span class="line">	if (!dev || !of_match_node(matches, bus))</span><br><span class="line">		return 0;</span><br><span class="line"></span><br><span class="line">    /* (2.4) 递归对本node的child node进行platform device创建 */</span><br><span class="line">	for_each_child_of_node(bus, child) &#123;</span><br><span class="line">		pr_debug(&quot;   create child: %s\n&quot;, child-&gt;full_name);</span><br><span class="line">		rc = of_platform_bus_create(child, matches, lookup, &amp;dev-&gt;dev, strict);</span><br><span class="line">		if (rc) &#123;</span><br><span class="line">			of_node_put(child);</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	of_node_set_flag(bus, OF_POPULATED_BUS);</span><br><span class="line">	return rc;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static struct platform_device *of_platform_device_create_pdata(</span><br><span class="line">					struct device_node *np,</span><br><span class="line">					const char *bus_id,</span><br><span class="line">					void *platform_data,</span><br><span class="line">					struct device *parent)</span><br><span class="line">&#123;</span><br><span class="line">	struct platform_device *dev;</span><br><span class="line"></span><br><span class="line">	if (!of_device_is_available(np) ||</span><br><span class="line">	    of_node_test_and_set_flag(np, OF_POPULATED))</span><br><span class="line">		return NULL;</span><br><span class="line"></span><br><span class="line">    /* (2.2.1) 分配node对应的platform_device结构，</span><br><span class="line">     并且解析node中的&quot;reg&quot;、&quot;interrupts&quot;属性，</span><br><span class="line">    作为platform_device-&gt;resource */</span><br><span class="line">	dev = of_device_alloc(np, bus_id, parent);</span><br><span class="line">	if (!dev)</span><br><span class="line">		goto err_clear_flag;</span><br><span class="line"></span><br><span class="line">    /* (2.2.2) device对应的bus为platform_bus_type  */</span><br><span class="line">	dev-&gt;dev.bus = &amp;platform_bus_type;</span><br><span class="line">	dev-&gt;dev.platform_data = platform_data;</span><br><span class="line">	of_dma_configure(&amp;dev-&gt;dev, dev-&gt;dev.of_node);</span><br><span class="line">	of_msi_configure(&amp;dev-&gt;dev, dev-&gt;dev.of_node);</span><br><span class="line"></span><br><span class="line">    /* (2.2.3) 注册platform_device-&gt;dev为标准的device */</span><br><span class="line">	if (of_device_add(dev) != 0) &#123;</span><br><span class="line">		of_dma_deconfigure(&amp;dev-&gt;dev);</span><br><span class="line">		platform_device_put(dev);</span><br><span class="line">		goto err_clear_flag;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return dev;</span><br><span class="line"></span><br><span class="line">err_clear_flag:</span><br><span class="line">	of_node_clear_flag(np, OF_POPULATED);</span><br><span class="line">	return NULL;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">struct platform_device *of_device_alloc(struct device_node *np,</span><br><span class="line">				  const char *bus_id,</span><br><span class="line">				  struct device *parent)</span><br><span class="line">&#123;</span><br><span class="line">	struct platform_device *dev;</span><br><span class="line">	int rc, i, num_reg = 0, num_irq;</span><br><span class="line">	struct resource *res, temp_res;</span><br><span class="line"></span><br><span class="line">    /* (2.2.1.1) 分配platform_device空间  */</span><br><span class="line">	dev = platform_device_alloc(&quot;&quot;, -1);</span><br><span class="line">	if (!dev)</span><br><span class="line">		return NULL;</span><br><span class="line"></span><br><span class="line">    /* (2.2.1.2) 计算node中&quot;reg&quot;属性中&quot;address、size&quot;resource的个数  */</span><br><span class="line">	/* count the io and irq resources */</span><br><span class="line">	while (of_address_to_resource(np, num_reg, &amp;temp_res) == 0)</span><br><span class="line">		num_reg++;</span><br><span class="line">	num_irq = of_irq_count(np); /* 计算node中&quot;interrupts&quot;属性中irq的个数 */</span><br><span class="line"></span><br><span class="line">    /* (2.2.1.3) 给resource分配空间并解析值 */</span><br><span class="line">	/* Populate the resource table */</span><br><span class="line">	if (num_irq || num_reg) &#123;</span><br><span class="line">		res = kzalloc(sizeof(*res) * (num_irq + num_reg), GFP_KERNEL);</span><br><span class="line">		if (!res) &#123;</span><br><span class="line">			platform_device_put(dev);</span><br><span class="line">			return NULL;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		dev-&gt;num_resources = num_reg + num_irq;</span><br><span class="line">		dev-&gt;resource = res;</span><br><span class="line">		for (i = 0; i &lt; num_reg; i++, res++) &#123;</span><br><span class="line">			rc = of_address_to_resource(np, i, res);</span><br><span class="line">			WARN_ON(rc);</span><br><span class="line">		&#125;</span><br><span class="line">		if (of_irq_to_resource_table(np, res, num_irq) != num_irq)</span><br><span class="line">			pr_debug(&quot;not all legacy IRQ resources mapped for %s\n&quot;,</span><br><span class="line">				 np-&gt;name);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (2.2.1.4) 根据device能够找到of node  */</span><br><span class="line">	dev-&gt;dev.of_node = of_node_get(np);</span><br><span class="line">	dev-&gt;dev.parent = parent ? : &amp;platform_bus;</span><br><span class="line"></span><br><span class="line">    /* (2.2.1.5) 配置device的那么，基本命名规则为：</span><br><span class="line">    dev_set_name(dev, dev_name(dev) ? &quot;%llx.%s:%s&quot; : &quot;%llx.%s&quot;,</span><br><span class="line">    				     (unsigned long long)addr, node-&gt;name,</span><br><span class="line">    				     dev_name(dev))</span><br><span class="line">    */</span><br><span class="line">	if (bus_id)</span><br><span class="line">		dev_set_name(&amp;dev-&gt;dev, &quot;%s&quot;, bus_id);</span><br><span class="line">	else</span><br><span class="line">		of_device_make_bus_id(&amp;dev-&gt;dev);</span><br><span class="line"></span><br><span class="line">	return dev;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-2-2-mt-i2c-driver"><a href="#3-2-2-mt-i2c-driver" class="headerlink" title="3.2.2 mt_i2c_driver"></a>3.2.2 mt_i2c_driver</h3><p>因为第1级子节点会被注册成platform device，例如i2c/spi控制器，那么对应也需要注册platform driver。已i2c控制器驱动为例：</p>
+<ul>
+<li>控制器首先会创建对应platform driver，把adapter注册成i2c device；</li>
+<li>在adapter的probe过程中，会调用of_i2c_register_devices()函数遍历控制器下挂的i2c设备的DTS节点，并将其注册成i2c_client；</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br><span class="line">333</span><br><span class="line">334</span><br><span class="line">335</span><br><span class="line">336</span><br><span class="line">337</span><br><span class="line">338</span><br><span class="line">339</span><br><span class="line">340</span><br><span class="line">341</span><br><span class="line">342</span><br><span class="line">343</span><br><span class="line">344</span><br><span class="line">345</span><br><span class="line">346</span><br><span class="line">347</span><br><span class="line">348</span><br></pre></td><td class="code"><pre><span class="line">drivers\i2c\busses\i2c-mtk.c:</span><br><span class="line"></span><br><span class="line">static const struct of_device_id mtk_i2c_of_match[] = &#123;</span><br><span class="line">	&#123; .compatible = &quot;mediatek,mt6735-i2c&quot;, .data = &amp;mt6735_compat &#125;,</span><br><span class="line">	&#123; .compatible = &quot;mediatek,mt6797-i2c&quot;, .data = &amp;mt6797_compat &#125;,</span><br><span class="line">	&#123; .compatible = &quot;mediatek,mt6757-i2c&quot;, .data = &amp;mt6757_compat &#125;,</span><br><span class="line">	&#123; .compatible = &quot;mediatek,mt6799-i2c&quot;, .data = &amp;mt6799_compat &#125;,</span><br><span class="line">	&#123; .compatible = &quot;mediatek,elbrus-i2c&quot;, .data = &amp;elbrus_compat &#125;,</span><br><span class="line">	&#123;&#125;,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static struct platform_driver mt_i2c_driver = &#123;</span><br><span class="line">	.probe = mt_i2c_probe,</span><br><span class="line">	.remove = mt_i2c_remove,</span><br><span class="line">	.driver = &#123;</span><br><span class="line">		.name = I2C_DRV_NAME,</span><br><span class="line">		.owner = THIS_MODULE,</span><br><span class="line">		.of_match_table = of_match_ptr(mtk_i2c_of_match),</span><br><span class="line">	&#125;,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static int mt_i2c_probe(struct platform_device *pdev)</span><br><span class="line">&#123;</span><br><span class="line">	int ret = 0;</span><br><span class="line">	struct mt_i2c *i2c;</span><br><span class="line">	unsigned int clk_src_in_hz;</span><br><span class="line">	struct resource *res;</span><br><span class="line">	const struct of_device_id *of_id;</span><br><span class="line"></span><br><span class="line">	i2c = devm_kzalloc(&amp;pdev-&gt;dev, sizeof(struct mt_i2c), GFP_KERNEL);</span><br><span class="line">	if (i2c == NULL)</span><br><span class="line">		return -ENOMEM;</span><br><span class="line"></span><br><span class="line">	ret = mt_i2c_parse_dt(pdev-&gt;dev.of_node, i2c);</span><br><span class="line">	if (ret)</span><br><span class="line">		return -EINVAL;</span><br><span class="line"></span><br><span class="line">	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);</span><br><span class="line"></span><br><span class="line">	i2c-&gt;base = devm_ioremap_resource(&amp;pdev-&gt;dev, res);</span><br><span class="line">	if (IS_ERR(i2c-&gt;base))</span><br><span class="line">		return PTR_ERR(i2c-&gt;base);</span><br><span class="line"></span><br><span class="line">	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);</span><br><span class="line"></span><br><span class="line">	i2c-&gt;pdmabase = devm_ioremap_resource(&amp;pdev-&gt;dev, res);</span><br><span class="line">	if (IS_ERR(i2c-&gt;pdmabase))</span><br><span class="line">		return PTR_ERR(i2c-&gt;pdmabase);</span><br><span class="line"></span><br><span class="line">	i2c-&gt;irqnr = platform_get_irq(pdev, 0);</span><br><span class="line">	if (i2c-&gt;irqnr &lt;= 0)</span><br><span class="line">		return -EINVAL;</span><br><span class="line">	init_waitqueue_head(&amp;i2c-&gt;wait);</span><br><span class="line"></span><br><span class="line">	ret = devm_request_irq(&amp;pdev-&gt;dev, i2c-&gt;irqnr, mt_i2c_irq,</span><br><span class="line">#ifdef CONFIG_MEIZU_BSP</span><br><span class="line">		IRQF_NO_SUSPEND | IRQF_TRIGGER_NONE, I2C_DRV_NAME, i2c);</span><br><span class="line">#else</span><br><span class="line">		IRQF_TRIGGER_NONE, I2C_DRV_NAME, i2c);</span><br><span class="line">#endif /*CONFIG_MEIZU_BSP*/</span><br><span class="line">	if (ret &lt; 0) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev,</span><br><span class="line">			&quot;Request I2C IRQ %d fail\n&quot;, i2c-&gt;irqnr);</span><br><span class="line">		return ret;</span><br><span class="line">	&#125;</span><br><span class="line">	of_id = of_match_node(mtk_i2c_of_match, pdev-&gt;dev.of_node);</span><br><span class="line">	if (!of_id)</span><br><span class="line">		return -EINVAL;</span><br><span class="line"></span><br><span class="line">	i2c-&gt;dev_comp = of_id-&gt;data;</span><br><span class="line">	i2c-&gt;adap.dev.of_node = pdev-&gt;dev.of_node;</span><br><span class="line">	i2c-&gt;dev = &amp;i2c-&gt;adap.dev;</span><br><span class="line">	i2c-&gt;adap.dev.parent = &amp;pdev-&gt;dev;</span><br><span class="line">	i2c-&gt;adap.owner = THIS_MODULE;</span><br><span class="line">	i2c-&gt;adap.algo = &amp;mt_i2c_algorithm;</span><br><span class="line">	i2c-&gt;adap.algo_data = NULL;</span><br><span class="line">	i2c-&gt;adap.timeout = 2 * HZ;</span><br><span class="line">	i2c-&gt;adap.retries = 1;</span><br><span class="line">	i2c-&gt;adap.nr = i2c-&gt;id;</span><br><span class="line">	spin_lock_init(&amp;i2c-&gt;cg_lock);</span><br><span class="line"></span><br><span class="line">	if (i2c-&gt;dev_comp-&gt;dma_support == 2) &#123;</span><br><span class="line">		if (dma_set_mask(&amp;pdev-&gt;dev, DMA_BIT_MASK(33))) &#123;</span><br><span class="line">			dev_err(&amp;pdev-&gt;dev, &quot;dma_set_mask return error.\n&quot;);</span><br><span class="line">			return -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; else if (i2c-&gt;dev_comp-&gt;dma_support == 3) &#123;</span><br><span class="line">		if (dma_set_mask(&amp;pdev-&gt;dev, DMA_BIT_MASK(36))) &#123;</span><br><span class="line">			dev_err(&amp;pdev-&gt;dev, &quot;dma_set_mask return error.\n&quot;);</span><br><span class="line">			return -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">#if !defined(CONFIG_MT_I2C_FPGA_ENABLE)</span><br><span class="line">	i2c-&gt;clk_main = devm_clk_get(&amp;pdev-&gt;dev, &quot;main&quot;);</span><br><span class="line">	if (IS_ERR(i2c-&gt;clk_main)) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev, &quot;cannot get main clock\n&quot;);</span><br><span class="line">		return PTR_ERR(i2c-&gt;clk_main);</span><br><span class="line">	&#125;</span><br><span class="line">	i2c-&gt;clk_dma = devm_clk_get(&amp;pdev-&gt;dev, &quot;dma&quot;);</span><br><span class="line">	if (IS_ERR(i2c-&gt;clk_dma)) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev, &quot;cannot get dma clock\n&quot;);</span><br><span class="line">		return PTR_ERR(i2c-&gt;clk_dma);</span><br><span class="line">	&#125;</span><br><span class="line">	i2c-&gt;clk_arb = devm_clk_get(&amp;pdev-&gt;dev, &quot;arb&quot;);</span><br><span class="line">	if (IS_ERR(i2c-&gt;clk_arb))</span><br><span class="line">		i2c-&gt;clk_arb = NULL;</span><br><span class="line">	else</span><br><span class="line">		dev_dbg(&amp;pdev-&gt;dev, &quot;i2c%d has the relevant arbitrator clk.\n&quot;, i2c-&gt;id);</span><br><span class="line">#endif</span><br><span class="line"></span><br><span class="line">	if (i2c-&gt;have_pmic) &#123;</span><br><span class="line">		i2c-&gt;clk_pmic = devm_clk_get(&amp;pdev-&gt;dev, &quot;pmic&quot;);</span><br><span class="line">		if (IS_ERR(i2c-&gt;clk_pmic)) &#123;</span><br><span class="line">			dev_err(&amp;pdev-&gt;dev, &quot;cannot get pmic clock\n&quot;);</span><br><span class="line">			return PTR_ERR(i2c-&gt;clk_pmic);</span><br><span class="line">		&#125;</span><br><span class="line">		clk_src_in_hz = clk_get_rate(i2c-&gt;clk_pmic) / i2c-&gt;clk_src_div;</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		clk_src_in_hz = clk_get_rate(i2c-&gt;clk_main) / i2c-&gt;clk_src_div;</span><br><span class="line">	&#125;</span><br><span class="line">	dev_dbg(&amp;pdev-&gt;dev, &quot;clock source %p,clock src frequency %d\n&quot;,</span><br><span class="line">		i2c-&gt;clk_main, clk_src_in_hz);</span><br><span class="line"></span><br><span class="line">	strlcpy(i2c-&gt;adap.name, I2C_DRV_NAME, sizeof(i2c-&gt;adap.name));</span><br><span class="line">	mutex_init(&amp;i2c-&gt;i2c_mutex);</span><br><span class="line">	ret = i2c_set_speed(i2c, clk_src_in_hz);</span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev, &quot;Failed to set the speed\n&quot;);</span><br><span class="line">		return -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line">	ret = mt_i2c_clock_enable(i2c);</span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev, &quot;clock enable failed!\n&quot;);</span><br><span class="line">		return ret;</span><br><span class="line">	&#125;</span><br><span class="line">	mt_i2c_init_hw(i2c);</span><br><span class="line">	mt_i2c_clock_disable(i2c);</span><br><span class="line">	i2c-&gt;dma_buf.vaddr = dma_alloc_coherent(&amp;pdev-&gt;dev,</span><br><span class="line">		PAGE_SIZE, &amp;i2c-&gt;dma_buf.paddr, GFP_KERNEL);</span><br><span class="line">	if (i2c-&gt;dma_buf.vaddr == NULL) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev, &quot;dma_alloc_coherent fail\n&quot;);</span><br><span class="line">		return -ENOMEM;</span><br><span class="line">	&#125;</span><br><span class="line">	i2c_set_adapdata(&amp;i2c-&gt;adap, i2c);</span><br><span class="line">	/* ret = i2c_add_adapter(&amp;i2c-&gt;adap); */</span><br><span class="line">	ret = i2c_add_numbered_adapter(&amp;i2c-&gt;adap);</span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		dev_err(&amp;pdev-&gt;dev, &quot;Failed to add i2c bus to i2c core\n&quot;);</span><br><span class="line">		free_i2c_dma_bufs(i2c);</span><br><span class="line">		return ret;</span><br><span class="line">	&#125;</span><br><span class="line">	platform_set_drvdata(pdev, i2c);</span><br><span class="line"></span><br><span class="line">	if (!map_cg_regs(i2c))</span><br><span class="line">		pr_warn(&quot;Map cg regs successfully.\n&quot;);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">i2c_add_numbered_adapter() -&gt; __i2c_add_numbered_adapter() -&gt; </span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int i2c_register_adapter(struct i2c_adapter *adap)</span><br><span class="line">&#123;</span><br><span class="line">	int res = 0;</span><br><span class="line"></span><br><span class="line">	/* Can&apos;t register until after driver model init */</span><br><span class="line">	if (unlikely(WARN_ON(!i2c_bus_type.p))) &#123;</span><br><span class="line">		res = -EAGAIN;</span><br><span class="line">		goto out_list;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/* Sanity checks */</span><br><span class="line">	if (unlikely(adap-&gt;name[0] == &apos;\0&apos;)) &#123;</span><br><span class="line">		pr_err(&quot;i2c-core: Attempt to register an adapter with &quot;</span><br><span class="line">		       &quot;no name!\n&quot;);</span><br><span class="line">		return -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line">	if (unlikely(!adap-&gt;algo)) &#123;</span><br><span class="line">		pr_err(&quot;i2c-core: Attempt to register adapter &apos;%s&apos; with &quot;</span><br><span class="line">		       &quot;no algo!\n&quot;, adap-&gt;name);</span><br><span class="line">		return -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	rt_mutex_init(&amp;adap-&gt;bus_lock);</span><br><span class="line">	mutex_init(&amp;adap-&gt;userspace_clients_lock);</span><br><span class="line">	INIT_LIST_HEAD(&amp;adap-&gt;userspace_clients);</span><br><span class="line"></span><br><span class="line">	/* Set default timeout to 1 second if not already set */</span><br><span class="line">	if (adap-&gt;timeout == 0)</span><br><span class="line">		adap-&gt;timeout = HZ;</span><br><span class="line"></span><br><span class="line">    /* 注册adapter为i2c_bus上的device */</span><br><span class="line">	dev_set_name(&amp;adap-&gt;dev, &quot;i2c-%d&quot;, adap-&gt;nr);</span><br><span class="line">	adap-&gt;dev.bus = &amp;i2c_bus_type;</span><br><span class="line">	adap-&gt;dev.type = &amp;i2c_adapter_type;</span><br><span class="line">	res = device_register(&amp;adap-&gt;dev);</span><br><span class="line">	if (res)</span><br><span class="line">		goto out_list;</span><br><span class="line"></span><br><span class="line">	dev_dbg(&amp;adap-&gt;dev, &quot;adapter [%s] registered\n&quot;, adap-&gt;name);</span><br><span class="line"></span><br><span class="line">	pm_runtime_no_callbacks(&amp;adap-&gt;dev);</span><br><span class="line"></span><br><span class="line">#ifdef CONFIG_I2C_COMPAT</span><br><span class="line">	res = class_compat_create_link(i2c_adapter_compat_class, &amp;adap-&gt;dev,</span><br><span class="line">				       adap-&gt;dev.parent);</span><br><span class="line">	if (res)</span><br><span class="line">		dev_warn(&amp;adap-&gt;dev,</span><br><span class="line">			 &quot;Failed to create compatibility class link\n&quot;);</span><br><span class="line">#endif</span><br><span class="line"></span><br><span class="line">	/* bus recovery specific initialization */</span><br><span class="line">	if (adap-&gt;bus_recovery_info) &#123;</span><br><span class="line">		struct i2c_bus_recovery_info *bri = adap-&gt;bus_recovery_info;</span><br><span class="line"></span><br><span class="line">		if (!bri-&gt;recover_bus) &#123;</span><br><span class="line">			dev_err(&amp;adap-&gt;dev, &quot;No recover_bus() found, not using recovery\n&quot;);</span><br><span class="line">			adap-&gt;bus_recovery_info = NULL;</span><br><span class="line">			goto exit_recovery;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		/* Generic GPIO recovery */</span><br><span class="line">		if (bri-&gt;recover_bus == i2c_generic_gpio_recovery) &#123;</span><br><span class="line">			if (!gpio_is_valid(bri-&gt;scl_gpio)) &#123;</span><br><span class="line">				dev_err(&amp;adap-&gt;dev, &quot;Invalid SCL gpio, not using recovery\n&quot;);</span><br><span class="line">				adap-&gt;bus_recovery_info = NULL;</span><br><span class="line">				goto exit_recovery;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			if (gpio_is_valid(bri-&gt;sda_gpio))</span><br><span class="line">				bri-&gt;get_sda = get_sda_gpio_value;</span><br><span class="line">			else</span><br><span class="line">				bri-&gt;get_sda = NULL;</span><br><span class="line"></span><br><span class="line">			bri-&gt;get_scl = get_scl_gpio_value;</span><br><span class="line">			bri-&gt;set_scl = set_scl_gpio_value;</span><br><span class="line">		&#125; else if (!bri-&gt;set_scl || !bri-&gt;get_scl) &#123;</span><br><span class="line">			/* Generic SCL recovery */</span><br><span class="line">			dev_err(&amp;adap-&gt;dev, &quot;No &#123;get|set&#125;_gpio() found, not using recovery\n&quot;);</span><br><span class="line">			adap-&gt;bus_recovery_info = NULL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">exit_recovery:</span><br><span class="line">	/* create pre-declared device nodes */</span><br><span class="line">    /* 循环遍历adapter node下挂载的其他子node，注册成为i2c bus的device */</span><br><span class="line">	of_i2c_register_devices(adap);</span><br><span class="line">	acpi_i2c_register_devices(adap);</span><br><span class="line">	acpi_i2c_install_space_handler(adap);</span><br><span class="line"></span><br><span class="line">	if (adap-&gt;nr &lt; __i2c_first_dynamic_bus_num)</span><br><span class="line">		i2c_scan_static_board_info(adap);</span><br><span class="line"></span><br><span class="line">	/* Notify drivers */</span><br><span class="line">	mutex_lock(&amp;core_lock);</span><br><span class="line">	bus_for_each_drv(&amp;i2c_bus_type, NULL, adap, __process_new_adapter);</span><br><span class="line">	mutex_unlock(&amp;core_lock);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line"></span><br><span class="line">out_list:</span><br><span class="line">	mutex_lock(&amp;core_lock);</span><br><span class="line">	idr_remove(&amp;i2c_adapter_idr, adap-&gt;nr);</span><br><span class="line">	mutex_unlock(&amp;core_lock);</span><br><span class="line">	return res;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void of_i2c_register_devices(struct i2c_adapter *adap)</span><br><span class="line">&#123;</span><br><span class="line">	struct device_node *node;</span><br><span class="line"></span><br><span class="line">	/* Only register child devices if the adapter has a node pointer set */</span><br><span class="line">	if (!adap-&gt;dev.of_node)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	dev_dbg(&amp;adap-&gt;dev, &quot;of_i2c: walking child nodes\n&quot;);</span><br><span class="line"></span><br><span class="line">    /* 遍历adapter node下的子node，并创建标准的i2c bus的device */</span><br><span class="line">	for_each_available_child_of_node(adap-&gt;dev.of_node, node) &#123;</span><br><span class="line">		if (of_node_test_and_set_flag(node, OF_POPULATED))</span><br><span class="line">			continue;</span><br><span class="line">		of_i2c_register_device(adap, node);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static struct i2c_client *of_i2c_register_device(struct i2c_adapter *adap,</span><br><span class="line">						 struct device_node *node)</span><br><span class="line">&#123;</span><br><span class="line">	struct i2c_client *result;</span><br><span class="line">	struct i2c_board_info info = &#123;&#125;;</span><br><span class="line">	struct dev_archdata dev_ad = &#123;&#125;;</span><br><span class="line">	const __be32 *addr_be;</span><br><span class="line">	u32 addr;</span><br><span class="line">	int len;</span><br><span class="line"></span><br><span class="line">	dev_dbg(&amp;adap-&gt;dev, &quot;of_i2c: register %s\n&quot;, node-&gt;full_name);</span><br><span class="line"></span><br><span class="line">	if (of_modalias_node(node, info.type, sizeof(info.type)) &lt; 0) &#123;</span><br><span class="line">		dev_err(&amp;adap-&gt;dev, &quot;of_i2c: modalias failure on %s\n&quot;,</span><br><span class="line">			node-&gt;full_name);</span><br><span class="line">		return ERR_PTR(-EINVAL);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	addr_be = of_get_property(node, &quot;reg&quot;, &amp;len);</span><br><span class="line">	if (!addr_be || (len &lt; sizeof(*addr_be))) &#123;</span><br><span class="line">		dev_err(&amp;adap-&gt;dev, &quot;of_i2c: invalid reg on %s\n&quot;,</span><br><span class="line">			node-&gt;full_name);</span><br><span class="line">		return ERR_PTR(-EINVAL);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	addr = be32_to_cpup(addr_be);</span><br><span class="line">	if (addr &amp; I2C_TEN_BIT_ADDRESS) &#123;</span><br><span class="line">		addr &amp;= ~I2C_TEN_BIT_ADDRESS;</span><br><span class="line">		info.flags |= I2C_CLIENT_TEN;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (addr &amp; I2C_OWN_SLAVE_ADDRESS) &#123;</span><br><span class="line">		addr &amp;= ~I2C_OWN_SLAVE_ADDRESS;</span><br><span class="line">		info.flags |= I2C_CLIENT_SLAVE;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (i2c_check_addr_validity(addr, info.flags)) &#123;</span><br><span class="line">		dev_err(&amp;adap-&gt;dev, &quot;of_i2c: invalid addr=%x on %s\n&quot;,</span><br><span class="line">			info.addr, node-&gt;full_name);</span><br><span class="line">		return ERR_PTR(-EINVAL);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	info.addr = addr;</span><br><span class="line">	info.of_node = of_node_get(node);</span><br><span class="line">	info.archdata = &amp;dev_ad;</span><br><span class="line"></span><br><span class="line">	if (of_get_property(node, &quot;wakeup-source&quot;, NULL))</span><br><span class="line">		info.flags |= I2C_CLIENT_WAKE;</span><br><span class="line"></span><br><span class="line">	result = i2c_new_device(adap, &amp;info);</span><br><span class="line">	if (result == NULL) &#123;</span><br><span class="line">		dev_err(&amp;adap-&gt;dev, &quot;of_i2c: Failure registering %s\n&quot;,</span><br><span class="line">			node-&gt;full_name);</span><br><span class="line">		of_node_put(node);</span><br><span class="line">		return ERR_PTR(-EINVAL);</span><br><span class="line">	&#125;</span><br><span class="line">	return result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="3-2-1-mz-mag-driver"><a href="#3-2-1-mz-mag-driver" class="headerlink" title="3.2.1 mz_mag_driver"></a>3.2.1 mz_mag_driver</h3><p>具体的I2c设备驱动，在总线驱动使用of_i2c_register_devices()创建设备以后，就可以适配工作了。</p>
+<p>dts：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">arch\arm64\boot\dts\mediatek\mt6799.dtsi:</span><br><span class="line">	i2c1: i2c@11090000 &#123;</span><br><span class="line">		compatible = &quot;mediatek,mt6799-i2c&quot;;</span><br><span class="line">		id = &lt;1&gt;;</span><br><span class="line">		reg = &lt;0 0x11090000 0 0x1000&gt;,</span><br><span class="line">			&lt;0 0x11000100 0 0x80&gt;;</span><br><span class="line">		interrupts = &lt;GIC_SPI 85 IRQ_TYPE_LEVEL_LOW&gt;;</span><br><span class="line">		clocks = &lt;&amp;pericfg CLK_PERICFG_RG_I2C1_BCLK&gt;, &lt;&amp;pericfg CLK_PERICFG_RG_AP_DM&gt;;</span><br><span class="line">		clock-names = &quot;main&quot;, &quot;dma&quot;;</span><br><span class="line">		clock-div = &lt;5&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">arch\arm64\boot\dts\mediatek\mz6799_6m_v2_2k_n.dtsi:</span><br><span class="line">&amp;i2c1 &#123;</span><br><span class="line">	apds9922:apds9922@53 &#123;</span><br><span class="line">		compatible = &quot;mediatek,apds9922&quot;;</span><br><span class="line">		interrupt-parent = &lt;&amp;eintc&gt;;</span><br><span class="line">		interrupts = &lt; 8 IRQ_TYPE_EDGE_FALLING&gt;;</span><br><span class="line">		debounce = &lt;8 0&gt;;</span><br><span class="line">		gpio = &lt; 8 &gt;;</span><br><span class="line">		reg = &lt;0x53&gt;;</span><br><span class="line">		status = &quot;okay&quot;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>driver：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">drivers\iio\magnetometer\mz_mag.c:</span><br><span class="line">static const struct i2c_device_id mz_mag_id[] = &#123;</span><br><span class="line">	&#123;&quot;mediatek,mmc3530&quot;, 0 &#125;,</span><br><span class="line">	&#123;&quot;mediatek,akm09911&quot;, 1 &#125;,</span><br><span class="line">	&#123; &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static struct i2c_driver mz_mag_driver = &#123;</span><br><span class="line">	.probe     = mz_mag_probe,</span><br><span class="line">	.id_table  = mz_mag_id,</span><br><span class="line">	.driver = &#123;</span><br><span class="line">		.name  = MZ_MAG_DEV_NAME,</span><br><span class="line">		.owner = THIS_MODULE,</span><br><span class="line">		#ifdef CONFIG_OF</span><br><span class="line">    	.of_match_table = of_match_ptr(msensor_of_match),</span><br><span class="line">		#endif</span><br><span class="line">	&#125;,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/DTS/" rel="tag"># DTS</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/21/ftrace_ringbuffer/" rel="next" title="Linux Ftrace 1.1、ring buffer">
+                <i class="fa fa-chevron-left"></i> Linux Ftrace 1.1、ring buffer
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/21/perf_simpleperf/" rel="prev" title="Linux Perf 2.1、simpleperf">
+                Linux Perf 2.1、simpleperf <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、DTS语法"><span class="nav-number">1.</span> <span class="nav-text">1、DTS语法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1、标准Property"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、标准Property</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-1、compatible"><span class="nav-number">1.1.1.</span> <span class="nav-text">1.1.1、compatible</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-2、model"><span class="nav-number">1.1.2.</span> <span class="nav-text">1.1.2、model</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-3、phandle"><span class="nav-number">1.1.3.</span> <span class="nav-text">1.1.3、phandle</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-4、-address-cells-、-size-cells"><span class="nav-number">1.1.4.</span> <span class="nav-text">1.1.4、#address-cells 、 #size-cells</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-5、reg"><span class="nav-number">1.1.5.</span> <span class="nav-text">1.1.5、reg</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-6、ranges"><span class="nav-number">1.1.6.</span> <span class="nav-text">1.1.6、ranges</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-7、interrupt-property"><span class="nav-number">1.1.7.</span> <span class="nav-text">1.1.7、interrupt property</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1-7-1、Interrupt-Generating-Devices-Property"><span class="nav-number">1.1.7.1.</span> <span class="nav-text">1.1.7.1、Interrupt Generating Devices Property</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1-7-2、Interrupt-Controllers-Property"><span class="nav-number">1.1.7.2.</span> <span class="nav-text">1.1.7.2、Interrupt Controllers Property</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1-7-3、Interrupt-Nexus-Property"><span class="nav-number">1.1.7.3.</span> <span class="nav-text">1.1.7.3、Interrupt Nexus Property</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2、标准Node"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、标准Node</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-1、Root-node"><span class="nav-number">1.2.1.</span> <span class="nav-text">1.2.1、Root node</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-2、-aliases-node"><span class="nav-number">1.2.2.</span> <span class="nav-text">1.2.2、/aliases node</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-3、-memory-node"><span class="nav-number">1.2.3.</span> <span class="nav-text">1.2.3、/memory node</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-4、-chosen-node"><span class="nav-number">1.2.4.</span> <span class="nav-text">1.2.4、/chosen node</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-5、-cpus-node"><span class="nav-number">1.2.5.</span> <span class="nav-text">1.2.5、/cpus node</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、DTB"><span class="nav-number">2.</span> <span class="nav-text">2、DTB</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1、DTB的编译"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、DTB的编译</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2、DTB的文件结构"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、DTB的文件结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3、Bootloader对DTB的传递"><span class="nav-number">2.3.</span> <span class="nav-text">2.3、Bootloader对DTB的传递</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、Kernel解析"><span class="nav-number">3.</span> <span class="nav-text">3、Kernel解析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1、DTB解析"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、DTB解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-1-setup-machine-fdt"><span class="nav-number">3.1.1.</span> <span class="nav-text">3.1.1 setup_machine_fdt()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-2-unflatten-device-tree"><span class="nav-number">3.1.2.</span> <span class="nav-text">3.1.2 unflatten_device_tree()</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2、Device创建"><span class="nav-number">3.2.</span> <span class="nav-text">3.2、Device创建</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-1-of-platform-populate"><span class="nav-number">3.2.1.</span> <span class="nav-text">3.2.1 of_platform_populate()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-2-mt-i2c-driver"><span class="nav-number">3.2.2.</span> <span class="nav-text">3.2.2 mt_i2c_driver</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-1-mz-mag-driver"><span class="nav-number">3.2.3.</span> <span class="nav-text">3.2.1 mz_mag_driver</span></a></li></ol></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/12/21/linux_device_tree/";
+        this.page.identifier = "2018/12/21/linux_device_tree/";
+        this.page.title = 'Device Tree 详解';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

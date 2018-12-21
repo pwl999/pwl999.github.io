@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="可以通过perf list命令来查看系统中的software event： 1234567891011# simpleperf list swList of software events:  cpu-clock  task-clock  page-faults  context-switches  cpu-migrations  minor-faults  major-faults  align">
+<meta name="keywords" content="perf">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux Perf 1.3、software events">
+<meta property="og:url" content="http://yoursite.com/2018/12/21/perf_software_events/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="可以通过perf list命令来查看系统中的software event： 1234567891011# simpleperf list swList of software events:  cpu-clock  task-clock  page-faults  context-switches  cpu-migrations  minor-faults  major-faults  align">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_sw_provide_data.png">
+<meta property="og:updated_time" content="2018-12-21T02:52:41.484Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux Perf 1.3、software events">
+<meta name="twitter:description" content="可以通过perf list命令来查看系统中的software event： 1234567891011# simpleperf list swList of software events:  cpu-clock  task-clock  page-faults  context-switches  cpu-migrations  minor-faults  major-faults  align">
+<meta name="twitter:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_sw_provide_data.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/12/21/perf_software_events/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Linux Perf 1.3、software events | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/perf_software_events/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux Perf 1.3、software events
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：10:52:41" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/perf_software_events/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/perf_software_events/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>可以通过perf list命令来查看系统中的software event：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf list sw</span><br><span class="line">List of software events:</span><br><span class="line">  cpu-clock</span><br><span class="line">  task-clock</span><br><span class="line">  page-faults</span><br><span class="line">  context-switches</span><br><span class="line">  cpu-migrations</span><br><span class="line">  minor-faults</span><br><span class="line">  major-faults</span><br><span class="line">  alignment-faults</span><br><span class="line">  emulation-faults</span><br></pre></td></tr></table></figure>
+<h1 id="1、原理介绍："><a href="#1、原理介绍：" class="headerlink" title="1、原理介绍："></a>1、原理介绍：</h1><p>software pmu的trace数据抓取分为两类：“cpu-clock”、“task-clock”为采样法，其他为插桩法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">enum perf_sw_ids &#123;</span><br><span class="line">	PERF_COUNT_SW_CPU_CLOCK			= 0,</span><br><span class="line">	PERF_COUNT_SW_TASK_CLOCK		= 1,</span><br><span class="line">	PERF_COUNT_SW_PAGE_FAULTS		= 2,</span><br><span class="line">	PERF_COUNT_SW_CONTEXT_SWITCHES		= 3,</span><br><span class="line">	PERF_COUNT_SW_CPU_MIGRATIONS		= 4,</span><br><span class="line">	PERF_COUNT_SW_PAGE_FAULTS_MIN		= 5,</span><br><span class="line">	PERF_COUNT_SW_PAGE_FAULTS_MAJ		= 6,</span><br><span class="line">	PERF_COUNT_SW_ALIGNMENT_FAULTS		= 7,</span><br><span class="line">	PERF_COUNT_SW_EMULATION_FAULTS		= 8,</span><br><span class="line">	PERF_COUNT_SW_DUMMY			= 9,</span><br><span class="line">	PERF_COUNT_SW_BPF_OUTPUT		= 10,</span><br><span class="line"></span><br><span class="line">	PERF_COUNT_SW_MAX,			/* non-ABI */</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="1-1、插桩法"><a href="#1-1、插桩法" class="headerlink" title="1.1、插桩法"></a>1.1、插桩法</h2><p>插桩法的software event和tracepoint event本质上是一样的，只是tracepoint event是复用trace_event，而software event是重新创建的插桩点。</p>
+<ul>
+<li>1、“page-faults”的插桩点：</li>
+</ul>
+<p>el0_sync() -&gt; el0_da() -&gt; do_mem_abort() -&gt; do_mem_abort() -&gt; do_page_fault():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,</span><br><span class="line">				   struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    /* “context-switches”的插桩点，被命中时上报数据 */</span><br><span class="line">    perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS, 1, regs, addr);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>2、“context-switches”的插桩点：</li>
+</ul>
+<p>context_switch() -&gt; prepare_task_switch() -&gt; perf_event_task_sched_out():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">static inline void perf_event_task_sched_out(struct task_struct *prev,</span><br><span class="line">					     struct task_struct *next)</span><br><span class="line">&#123;</span><br><span class="line">    /* “context-switches”的插桩点，被命中时上报数据 */</span><br><span class="line">	perf_sw_event_sched(PERF_COUNT_SW_CONTEXT_SWITCHES, 1, 0);</span><br><span class="line"></span><br><span class="line">	if (static_key_false(&amp;perf_sched_events.key))</span><br><span class="line">		__perf_event_task_sched_out(prev, next);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>3、“cpu-migrations”的插桩点：</li>
+</ul>
+<p>context_switch() -&gt; finish_task_switch() -&gt; perf_event_task_sched_in():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">static inline void perf_event_task_sched_in(struct task_struct *prev,</span><br><span class="line">					    struct task_struct *task)</span><br><span class="line">&#123;</span><br><span class="line">	if (static_key_false(&amp;perf_sched_events.key))</span><br><span class="line">		__perf_event_task_sched_in(prev, task);</span><br><span class="line"></span><br><span class="line">    /* “cpu-migrations”的插桩点，被命中时上报数据 */</span><br><span class="line">	if (perf_sw_migrate_enabled() &amp;&amp; task-&gt;sched_migrated) &#123;</span><br><span class="line">		struct pt_regs *regs = this_cpu_ptr(&amp;__perf_regs[0]);</span><br><span class="line"></span><br><span class="line">		perf_fetch_caller_regs(regs);</span><br><span class="line">		___perf_sw_event(PERF_COUNT_SW_CPU_MIGRATIONS, 1, regs, 0);</span><br><span class="line">		task-&gt;sched_migrated = 0;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>4、“minor-faults”&amp;“major-faults”的插桩点：</li>
+</ul>
+<p>el0_sync() -&gt; el0_da() -&gt; do_mem_abort() -&gt; do_mem_abort() -&gt; do_page_fault():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">static int __kprobes do_page_fault(unsigned long addr, unsigned int esr,</span><br><span class="line">				   struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">	perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS, 1, regs, addr);</span><br><span class="line">	if (mm_flags &amp; FAULT_FLAG_ALLOW_RETRY) &#123;</span><br><span class="line">		if (fault &amp; VM_FAULT_MAJOR) &#123;</span><br><span class="line">			tsk-&gt;maj_flt++;</span><br><span class="line">			/* “major-faults”的插桩点，被命中时上报数据 */</span><br><span class="line">			perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS_MAJ, 1, regs,</span><br><span class="line">				      addr);</span><br><span class="line">		&#125; else &#123;</span><br><span class="line">			tsk-&gt;min_flt++;</span><br><span class="line">			/* “minor-faults”的插桩点，被命中时上报数据 */</span><br><span class="line">			perf_sw_event(PERF_COUNT_SW_PAGE_FAULTS_MIN, 1, regs,</span><br><span class="line">				      addr);</span><br><span class="line">		&#125;</span><br><span class="line">		if (fault &amp; VM_FAULT_RETRY) &#123;</span><br><span class="line">			/*</span><br><span class="line">			 * Clear FAULT_FLAG_ALLOW_RETRY to avoid any risk of</span><br><span class="line">			 * starvation.</span><br><span class="line">			 */</span><br><span class="line">			mm_flags &amp;= ~FAULT_FLAG_ALLOW_RETRY;</span><br><span class="line">			mm_flags |= FAULT_FLAG_TRIED;</span><br><span class="line">			goto retry;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>5、“alignment-faults”的插桩点：</li>
+</ul>
+<p>arm64没有插桩点</p>
+<ul>
+<li>6、“emulation-faults”的插桩点：</li>
+</ul>
+<p>cp15barrier_handler():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">static int cp15barrier_handler(struct pt_regs *regs, u32 instr)</span><br><span class="line">&#123;</span><br><span class="line">	perf_sw_event(PERF_COUNT_SW_EMULATION_FAULTS, 1, regs, regs-&gt;pc);</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="1-2、采样法"><a href="#1-2、采样法" class="headerlink" title="1.2、采样法"></a>1.2、采样法</h2><p>采样法是间隔多少事件去采样，事件可以是指令数、时间、cache miss次数等。一般使用专门的硬件pmu来采样，“cpu-clock”、“task-clock”使用软件的hrtimer来采样。</p>
+<p>在硬件PMU不支持的情况下，也可以参考hrtimer的采样值。</p>
+<h1 id="2、event-init"><a href="#2、event-init" class="headerlink" title="2、event init"></a>2、event init</h1><h2 id="2-1、”software”"><a href="#2-1、”software”" class="headerlink" title="2.1、”software”"></a>2.1、”software”</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">static struct pmu perf_swevent = &#123;</span><br><span class="line">	.task_ctx_nr	= perf_sw_context,</span><br><span class="line"></span><br><span class="line">	.capabilities	= PERF_PMU_CAP_NO_NMI,</span><br><span class="line"></span><br><span class="line">	.event_init	= perf_swevent_init,</span><br><span class="line">	.add		= perf_swevent_add,</span><br><span class="line">	.del		= perf_swevent_del,</span><br><span class="line">	.start		= perf_swevent_start,</span><br><span class="line">	.stop		= perf_swevent_stop,</span><br><span class="line">	.read		= perf_swevent_read,</span><br><span class="line"></span><br><span class="line">	.events_across_hotplug = 1,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>对应初始化函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line">static int perf_swevent_init(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	u64 event_id = event-&gt;attr.config;</span><br><span class="line"></span><br><span class="line">	if (event-&gt;attr.type != PERF_TYPE_SOFTWARE)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * no branch sampling for software events</span><br><span class="line">	 */</span><br><span class="line">	if (has_branch_stack(event))</span><br><span class="line">		return -EOPNOTSUPP;</span><br><span class="line"></span><br><span class="line">	switch (event_id) &#123;</span><br><span class="line">	case PERF_COUNT_SW_CPU_CLOCK:</span><br><span class="line">	case PERF_COUNT_SW_TASK_CLOCK:</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	default:</span><br><span class="line">		break;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (event_id &gt;= PERF_COUNT_SW_MAX)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	if (!event-&gt;parent) &#123;</span><br><span class="line">		int err;</span><br><span class="line"></span><br><span class="line">        /* (1) 确保per_cpu的hash表已经创建 */</span><br><span class="line">		err = swevent_hlist_get(event);</span><br><span class="line">		if (err)</span><br><span class="line">			return err;</span><br><span class="line"></span><br><span class="line">        /* (2) 打开event_id对应event的开关 */</span><br><span class="line">		static_key_slow_inc(&amp;perf_swevent_enabled[event_id]);</span><br><span class="line">		event-&gt;destroy = sw_perf_event_destroy;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int swevent_hlist_get(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	int err;</span><br><span class="line">	int cpu, failed_cpu;</span><br><span class="line"></span><br><span class="line">	get_online_cpus();</span><br><span class="line">	for_each_possible_cpu(cpu) &#123;</span><br><span class="line">		err = swevent_hlist_get_cpu(event, cpu);</span><br><span class="line">		if (err) &#123;</span><br><span class="line">			failed_cpu = cpu;</span><br><span class="line">			goto fail;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	put_online_cpus();</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">fail:</span><br><span class="line">	for_each_possible_cpu(cpu) &#123;</span><br><span class="line">		if (cpu == failed_cpu)</span><br><span class="line">			break;</span><br><span class="line">		swevent_hlist_put_cpu(event, cpu);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	put_online_cpus();</span><br><span class="line">	return err;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int swevent_hlist_get_cpu(struct perf_event *event, int cpu)</span><br><span class="line">&#123;</span><br><span class="line">	struct swevent_htable *swhash = &amp;per_cpu(swevent_htable, cpu);</span><br><span class="line">	int err = 0;</span><br><span class="line"></span><br><span class="line">	mutex_lock(&amp;swhash-&gt;hlist_mutex);</span><br><span class="line">	</span><br><span class="line">	/* (1.1) 确保per_cpu的hash表已经分配 */</span><br><span class="line">	if (!swevent_hlist_deref(swhash) &amp;&amp; cpu_online(cpu)) &#123;</span><br><span class="line">		struct swevent_hlist *hlist;</span><br><span class="line"></span><br><span class="line">		hlist = kzalloc(sizeof(*hlist), GFP_KERNEL);</span><br><span class="line">		if (!hlist) &#123;</span><br><span class="line">			err = -ENOMEM;</span><br><span class="line">			goto exit;</span><br><span class="line">		&#125;</span><br><span class="line">		rcu_assign_pointer(swhash-&gt;swevent_hlist, hlist);</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	/* (1.2) 增加对hash表的引用 */</span><br><span class="line">	swhash-&gt;hlist_refcount++;</span><br><span class="line">exit:</span><br><span class="line">	mutex_unlock(&amp;swhash-&gt;hlist_mutex);</span><br><span class="line"></span><br><span class="line">	return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这里的核心是一个默认256大小的hash链表，稍后会根据(type+config)的hash键值把event链接进去。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">#define SWEVENT_HLIST_BITS		8</span><br><span class="line">#define SWEVENT_HLIST_SIZE		(1 &lt;&lt; SWEVENT_HLIST_BITS)</span><br><span class="line"></span><br><span class="line">struct swevent_hlist &#123;</span><br><span class="line">	struct hlist_head		heads[SWEVENT_HLIST_SIZE];</span><br><span class="line">	struct rcu_head			rcu_head;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h2 id="2-2、“cpu-clock”"><a href="#2-2、“cpu-clock”" class="headerlink" title="2.2、“cpu-clock”"></a>2.2、“cpu-clock”</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">static struct pmu perf_cpu_clock = &#123;</span><br><span class="line">	.task_ctx_nr	= perf_sw_context,</span><br><span class="line"></span><br><span class="line">	.capabilities	= PERF_PMU_CAP_NO_NMI,</span><br><span class="line"></span><br><span class="line">	.event_init	= cpu_clock_event_init,</span><br><span class="line">	.add		= cpu_clock_event_add,</span><br><span class="line">	.del		= cpu_clock_event_del,</span><br><span class="line">	.start		= cpu_clock_event_start,</span><br><span class="line">	.stop		= cpu_clock_event_stop,</span><br><span class="line">	.read		= cpu_clock_event_read,</span><br><span class="line"></span><br><span class="line">	.events_across_hotplug = 1,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>对应初始化函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">static int cpu_clock_event_init(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	if (event-&gt;attr.type != PERF_TYPE_SOFTWARE)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	if (event-&gt;attr.config != PERF_COUNT_SW_CPU_CLOCK)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * no branch sampling for software events</span><br><span class="line">	 */</span><br><span class="line">	if (has_branch_stack(event))</span><br><span class="line">		return -EOPNOTSUPP;</span><br><span class="line"></span><br><span class="line">	perf_swevent_init_hrtimer(event);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void perf_swevent_init_hrtimer(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line"></span><br><span class="line">	if (!is_sampling_event(event))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (1) 初始化对应hrtimer */</span><br><span class="line">	hrtimer_init(&amp;hwc-&gt;hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);</span><br><span class="line">	hwc-&gt;hrtimer.function = perf_swevent_hrtimer;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Since hrtimers have a fixed rate, we can do a static freq-&gt;period</span><br><span class="line">	 * mapping and avoid the whole period adjust feedback stuff.</span><br><span class="line">	 */</span><br><span class="line">	/* (2) 如果是freq模式，根据freq计算period </span><br><span class="line">	    在这种模式下-&gt;period_left不为负，等于-&gt;sample_period</span><br><span class="line">	 */</span><br><span class="line">	if (event-&gt;attr.freq) &#123;</span><br><span class="line">		long freq = event-&gt;attr.sample_freq;</span><br><span class="line"></span><br><span class="line">		event-&gt;attr.sample_period = NSEC_PER_SEC / freq;</span><br><span class="line">		hwc-&gt;sample_period = event-&gt;attr.sample_period;</span><br><span class="line">		local64_set(&amp;hwc-&gt;period_left, hwc-&gt;sample_period);</span><br><span class="line">		hwc-&gt;last_period = hwc-&gt;sample_period;</span><br><span class="line">		event-&gt;attr.freq = 0;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-3、“task-clock”"><a href="#2-3、“task-clock”" class="headerlink" title="2.3、“task-clock”"></a>2.3、“task-clock”</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">static struct pmu perf_task_clock = &#123;</span><br><span class="line">	.task_ctx_nr	= perf_sw_context,</span><br><span class="line"></span><br><span class="line">	.capabilities	= PERF_PMU_CAP_NO_NMI,</span><br><span class="line"></span><br><span class="line">	.event_init	= task_clock_event_init,</span><br><span class="line">	.add		= task_clock_event_add,</span><br><span class="line">	.del		= task_clock_event_del,</span><br><span class="line">	.start		= task_clock_event_start,</span><br><span class="line">	.stop		= task_clock_event_stop,</span><br><span class="line">	.read		= task_clock_event_read,</span><br><span class="line"></span><br><span class="line">	.events_across_hotplug = 1,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>对应初始化函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">static int task_clock_event_init(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	if (event-&gt;attr.type != PERF_TYPE_SOFTWARE)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	if (event-&gt;attr.config != PERF_COUNT_SW_TASK_CLOCK)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * no branch sampling for software events</span><br><span class="line">	 */</span><br><span class="line">	if (has_branch_stack(event))</span><br><span class="line">		return -EOPNOTSUPP;</span><br><span class="line"></span><br><span class="line">	perf_swevent_init_hrtimer(event);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="3、event-add-del"><a href="#3、event-add-del" class="headerlink" title="3、event add/del"></a>3、event add/del</h1><p>在上一章“perf_event内核框架”中已经阐明，task维度的perf_event需要和task一起调度，其回调函数最后控制的就是perf_event的启动和停止。</p>
+<ul>
+<li>start函数调用路径：context_switch() -&gt; finish_task_switch() -&gt; perf_event_task_sched_in() -&gt; __perf_event_task_sched_in() -&gt; perf_event_context_sched_in() -&gt; perf_event_sched_in() -&gt; ctx_sched_in() -&gt; ctx_pinned_sched_in()/ctx_flexible_sched_in() -&gt; group_sched_in() -&gt; event_sched_in() -&gt; pmu-&gt;add(event, PERF_EF_START) -&gt; xxx_add():</li>
+</ul>
+<ul>
+<li>stop函数调用路径：context_switch() -&gt; prepare_task_switch() -&gt; perf_event_task_sched_out() -&gt; __perf_event_task_sched_out() -&gt; perf_event_context_sched_out() -&gt; ctx_sched_out() -&gt; group_sched_out() -&gt; event_sched_out() -&gt; pmu-&gt;del() -&gt; xxx_del():</li>
+</ul>
+<h2 id="3-1、”software”"><a href="#3-1、”software”" class="headerlink" title="3.1、”software”"></a>3.1、”software”</h2><p><img src="/images/perf_k/perf_k_pmu_sw_provide_data.png" alt="perf_k_pmu_sw_provide_data"></p>
+<p>这种模式下，控制”software”event的启动和停止，实际上就是把event加入/移除到hash链表上。</p>
+<ul>
+<li>perf_swevent_add():</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">static int perf_swevent_add(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	struct swevent_htable *swhash = this_cpu_ptr(&amp;swevent_htable);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	struct hlist_head *head;</span><br><span class="line"></span><br><span class="line">    /* (1) 重新计算period参数 */</span><br><span class="line">	if (is_sampling_event(event)) &#123;</span><br><span class="line">		hwc-&gt;last_period = hwc-&gt;sample_period;</span><br><span class="line">		perf_swevent_set_period(event);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	hwc-&gt;state = !(flags &amp; PERF_EF_START);</span><br><span class="line"></span><br><span class="line">    /* (2) 根据event的(type+config)计算在hash表中的链表head */</span><br><span class="line">	head = find_swevent_head(swhash, event);</span><br><span class="line">	if (WARN_ON_ONCE(!head))</span><br><span class="line">		return -EINVAL;</span><br><span class="line"></span><br><span class="line">    /* (3) 将event加入链表 */</span><br><span class="line">	hlist_add_head_rcu(&amp;event-&gt;hlist_entry, head);</span><br><span class="line">	perf_event_update_userpage(event);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>perf_swevent_del():</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">static void perf_swevent_del(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 将event从链表中移除 */</span><br><span class="line">	hlist_del_rcu(&amp;event-&gt;hlist_entry);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-2、“cpu-clock”"><a href="#3-2、“cpu-clock”" class="headerlink" title="3.2、“cpu-clock”"></a>3.2、“cpu-clock”</h2><p>每个event一个独立的hrtimer，所有就没有什么链表之类的了。</p>
+<ul>
+<li>cpu_clock_event_add():</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">static int cpu_clock_event_add(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	if (flags &amp; PERF_EF_START)</span><br><span class="line">		cpu_clock_event_start(event, flags);</span><br><span class="line">	perf_event_update_userpage(event);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void cpu_clock_event_start(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 记下当前的cpu time值 */</span><br><span class="line">	local64_set(&amp;event-&gt;hw.prev_count, local_clock());</span><br><span class="line">	</span><br><span class="line">	/* (2) 启动hrtimer */</span><br><span class="line">	perf_swevent_start_hrtimer(event);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void perf_swevent_start_hrtimer(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	s64 period;</span><br><span class="line"></span><br><span class="line">	if (!is_sampling_event(event))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (2.1) hrtimer的周期为10ms和-&gt;sample_period两者中的较大值 */</span><br><span class="line">	period = local64_read(&amp;hwc-&gt;period_left);</span><br><span class="line">	if (period) &#123;</span><br><span class="line">		if (period &lt; 0)</span><br><span class="line">			period = 10000;</span><br><span class="line"></span><br><span class="line">		local64_set(&amp;hwc-&gt;period_left, 0);</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		period = max_t(u64, 10000, hwc-&gt;sample_period);</span><br><span class="line">	&#125;</span><br><span class="line">	hrtimer_start(&amp;hwc-&gt;hrtimer, ns_to_ktime(period),</span><br><span class="line">		      HRTIMER_MODE_REL_PINNED);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>hrtimer到期后的执行函数为perf_swevent_hrtimer()，它会定期的上报sample数据。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">static enum hrtimer_restart perf_swevent_hrtimer(struct hrtimer *hrtimer)</span><br><span class="line">&#123;</span><br><span class="line">	enum hrtimer_restart ret = HRTIMER_RESTART;</span><br><span class="line">	struct perf_sample_data data;</span><br><span class="line">	struct pt_regs *regs;</span><br><span class="line">	struct perf_event *event;</span><br><span class="line">	u64 period;</span><br><span class="line"></span><br><span class="line">	event = container_of(hrtimer, struct perf_event, hw.hrtimer);</span><br><span class="line"></span><br><span class="line">	if (event-&gt;state != PERF_EVENT_STATE_ACTIVE)</span><br><span class="line">		return HRTIMER_NORESTART;</span><br><span class="line"></span><br><span class="line">	event-&gt;pmu-&gt;read(event);</span><br><span class="line"></span><br><span class="line">	perf_sample_data_init(&amp;data, 0, event-&gt;hw.last_period);</span><br><span class="line">	regs = get_irq_regs();</span><br><span class="line"></span><br><span class="line">	if (regs &amp;&amp; !perf_exclude_event(event, regs)) &#123;</span><br><span class="line">		if (!(event-&gt;attr.exclude_idle &amp;&amp; is_idle_task(current)))</span><br><span class="line">			if (__perf_event_overflow(event, 1, &amp;data, regs))</span><br><span class="line">				ret = HRTIMER_NORESTART;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	period = max_t(u64, 10000, event-&gt;hw.sample_period);</span><br><span class="line">	hrtimer_forward_now(hrtimer, ns_to_ktime(period));</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>cpu_clock_event_del()：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">static void cpu_clock_event_del(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	cpu_clock_event_stop(event, flags);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void cpu_clock_event_stop(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 停止hrtimer */</span><br><span class="line">	perf_swevent_cancel_hrtimer(event);</span><br><span class="line">	</span><br><span class="line">	/* (2) 计算cpu time的差值，用来更新event的count值 */</span><br><span class="line">	cpu_clock_event_update(event);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void cpu_clock_event_update(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	s64 prev;</span><br><span class="line">	u64 now;</span><br><span class="line"></span><br><span class="line">	now = local_clock();</span><br><span class="line">	prev = local64_xchg(&amp;event-&gt;hw.prev_count, now);</span><br><span class="line">	</span><br><span class="line">	/* (2.1) 使用差值来更新count值 */</span><br><span class="line">	local64_add(now - prev, &amp;event-&gt;count);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-3、“task-clock”"><a href="#3-3、“task-clock”" class="headerlink" title="3.3、“task-clock”"></a>3.3、“task-clock”</h2><p>“task-clock”和“cpu-clock”基本一致，只是它计算的count值是event所在context time的差值。</p>
+<ul>
+<li>task_clock_event_add():</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">static int task_clock_event_add(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	if (flags &amp; PERF_EF_START)</span><br><span class="line">		task_clock_event_start(event, flags);</span><br><span class="line">	perf_event_update_userpage(event);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void task_clock_event_start(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	local64_set(&amp;event-&gt;hw.prev_count, event-&gt;ctx-&gt;time);</span><br><span class="line">	perf_swevent_start_hrtimer(event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>task_clock_event_del():</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">static void task_clock_event_del(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	task_clock_event_stop(event, PERF_EF_UPDATE);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void task_clock_event_stop(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	perf_swevent_cancel_hrtimer(event);</span><br><span class="line">	task_clock_event_update(event, event-&gt;ctx-&gt;time);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void task_clock_event_update(struct perf_event *event, u64 now)</span><br><span class="line">&#123;</span><br><span class="line">	u64 prev;</span><br><span class="line">	s64 delta;</span><br><span class="line"></span><br><span class="line">	prev = local64_xchg(&amp;event-&gt;hw.prev_count, now);</span><br><span class="line">	delta = now - prev;</span><br><span class="line">	local64_add(delta, &amp;event-&gt;count);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="4、event-数据采集"><a href="#4、event-数据采集" class="headerlink" title="4、event 数据采集"></a>4、event 数据采集</h1><h2 id="4-1、”software”"><a href="#4-1、”software”" class="headerlink" title="4.1、”software”"></a>4.1、”software”</h2><p>在插桩点被触发后，累加count数据，并且上报sample数据。以“context-switches”为例：</p>
+<p>context_switch() -&gt; prepare_task_switch() -&gt; perf_event_task_sched_out():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line">static inline void perf_event_task_sched_out(struct task_struct *prev,</span><br><span class="line">					     struct task_struct *next)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) “context-switches”的插桩点，被命中时上报数据 */</span><br><span class="line">	perf_sw_event_sched(PERF_COUNT_SW_CONTEXT_SWITCHES, 1, 0);</span><br><span class="line"></span><br><span class="line">	if (static_key_false(&amp;perf_sched_events.key))</span><br><span class="line">		__perf_event_task_sched_out(prev, next);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static __always_inline void</span><br><span class="line">perf_sw_event_sched(u32 event_id, u64 nr, u64 addr)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1.1) event开关在init时被使能 */</span><br><span class="line">	if (static_key_false(&amp;perf_swevent_enabled[event_id])) &#123;</span><br><span class="line">		struct pt_regs *regs = this_cpu_ptr(&amp;__perf_regs[0]);</span><br><span class="line"></span><br><span class="line">		perf_fetch_caller_regs(regs);</span><br><span class="line">		___perf_sw_event(event_id, nr, regs, addr);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">void ___perf_sw_event(u32 event_id, u64 nr, struct pt_regs *regs, u64 addr)</span><br><span class="line">&#123;</span><br><span class="line">	struct perf_sample_data data;</span><br><span class="line"></span><br><span class="line">	if (WARN_ON_ONCE(!regs))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	perf_sample_data_init(&amp;data, addr, 0);</span><br><span class="line">	do_perf_sw_event(PERF_TYPE_SOFTWARE, event_id, nr, &amp;data, regs);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void do_perf_sw_event(enum perf_type_id type, u32 event_id,</span><br><span class="line">				    u64 nr,</span><br><span class="line">				    struct perf_sample_data *data,</span><br><span class="line">				    struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	struct swevent_htable *swhash = this_cpu_ptr(&amp;swevent_htable);</span><br><span class="line">	struct perf_event *event;</span><br><span class="line">	struct hlist_head *head;</span><br><span class="line"></span><br><span class="line">	rcu_read_lock();</span><br><span class="line">	</span><br><span class="line">	/* (1.1.1) 找出pmu在hash表中的event链表 */</span><br><span class="line">	head = find_swevent_head_rcu(swhash, type, event_id);</span><br><span class="line">	if (!head)</span><br><span class="line">		goto end;</span><br><span class="line"></span><br><span class="line">    /* (1.1.2) 逐个向event发送数据 */</span><br><span class="line">	hlist_for_each_entry_rcu(event, head, hlist_entry) &#123;</span><br><span class="line">	    </span><br><span class="line">	    /* (1.1.3) 因为key(type+config)在hash中可能重复，再进行精确判断 */</span><br><span class="line">		if (perf_swevent_match(event, type, event_id, data, regs))</span><br><span class="line">			perf_swevent_event(event, nr, data, regs);</span><br><span class="line">	&#125;</span><br><span class="line">end:</span><br><span class="line">	rcu_read_unlock();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void perf_swevent_event(struct perf_event *event, u64 nr,</span><br><span class="line">			       struct perf_sample_data *data,</span><br><span class="line">			       struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line"></span><br><span class="line">    /* (1.1.2.1) 更新count数据 */</span><br><span class="line">	local64_add(nr, &amp;event-&gt;count);</span><br><span class="line"></span><br><span class="line">	if (!regs)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	if (!is_sampling_event(event))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (1.1.2.2) 上报采样数据，具体可以参考&quot;tracepoint events&quot;一章 */</span><br><span class="line">	if ((event-&gt;attr.sample_type &amp; PERF_SAMPLE_PERIOD) &amp;&amp; !event-&gt;attr.freq) &#123;</span><br><span class="line">		data-&gt;period = nr;</span><br><span class="line">		return perf_swevent_overflow(event, 1, data, regs);</span><br><span class="line">	&#125; else</span><br><span class="line">		data-&gt;period = event-&gt;hw.last_period;</span><br><span class="line"></span><br><span class="line">	if (nr == 1 &amp;&amp; hwc-&gt;sample_period == 1 &amp;&amp; !event-&gt;attr.freq)</span><br><span class="line">		return perf_swevent_overflow(event, 1, data, regs);</span><br><span class="line"></span><br><span class="line">	if (local64_add_negative(nr, &amp;hwc-&gt;period_left))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	perf_swevent_overflow(event, 0, data, regs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="4-2、“cpu-clock”"><a href="#4-2、“cpu-clock”" class="headerlink" title="4.2、“cpu-clock”"></a>4.2、“cpu-clock”</h2><ul>
+<li>在del()操作时，计算count差值：</li>
+</ul>
+<p>cpu_clock_event_del() -&gt; cpu_clock_event_stop() -&gt; cpu_clock_event_update():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">static void cpu_clock_event_update(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	s64 prev;</span><br><span class="line">	u64 now;</span><br><span class="line"></span><br><span class="line">	now = local_clock();</span><br><span class="line">	prev = local64_xchg(&amp;event-&gt;hw.prev_count, now);</span><br><span class="line">	</span><br><span class="line">	/* 增加count值 */</span><br><span class="line">	local64_add(now - prev, &amp;event-&gt;count);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>在hrtimer中，定时上报sample数据：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">static enum hrtimer_restart perf_swevent_hrtimer(struct hrtimer *hrtimer)</span><br><span class="line">&#123;</span><br><span class="line">	enum hrtimer_restart ret = HRTIMER_RESTART;</span><br><span class="line">	struct perf_sample_data data;</span><br><span class="line">	struct pt_regs *regs;</span><br><span class="line">	struct perf_event *event;</span><br><span class="line">	u64 period;</span><br><span class="line"></span><br><span class="line">	event = container_of(hrtimer, struct perf_event, hw.hrtimer);</span><br><span class="line"></span><br><span class="line">	if (event-&gt;state != PERF_EVENT_STATE_ACTIVE)</span><br><span class="line">		return HRTIMER_NORESTART;</span><br><span class="line"></span><br><span class="line">	event-&gt;pmu-&gt;read(event);</span><br><span class="line"></span><br><span class="line">	perf_sample_data_init(&amp;data, 0, event-&gt;hw.last_period);</span><br><span class="line">	regs = get_irq_regs();</span><br><span class="line"></span><br><span class="line">	if (regs &amp;&amp; !perf_exclude_event(event, regs)) &#123;</span><br><span class="line">		if (!(event-&gt;attr.exclude_idle &amp;&amp; is_idle_task(current)))</span><br><span class="line">		</span><br><span class="line">		    /* 上报sample值 */</span><br><span class="line">			if (__perf_event_overflow(event, 1, &amp;data, regs))</span><br><span class="line">				ret = HRTIMER_NORESTART;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	period = max_t(u64, 10000, event-&gt;hw.sample_period);</span><br><span class="line">	hrtimer_forward_now(hrtimer, ns_to_ktime(period));</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="4-3、“task-clock”"><a href="#4-3、“task-clock”" class="headerlink" title="4.3、“task-clock”"></a>4.3、“task-clock”</h2><p>在del()操作时，计算count差值：</p>
+<p>task_clock_event_del() -&gt; task_clock_event_stop() -&gt; task_clock_event_update():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">static void task_clock_event_update(struct perf_event *event, u64 now)</span><br><span class="line">&#123;</span><br><span class="line">	u64 prev;</span><br><span class="line">	s64 delta;</span><br><span class="line"></span><br><span class="line">	prev = local64_xchg(&amp;event-&gt;hw.prev_count, now);</span><br><span class="line">	delta = now - prev;</span><br><span class="line">	</span><br><span class="line">	/* 增加count值 */</span><br><span class="line">	local64_add(delta, &amp;event-&gt;count);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在hrtimer中，定时上报sample数据：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">static enum hrtimer_restart perf_swevent_hrtimer(struct hrtimer *hrtimer)</span><br><span class="line">&#123;</span><br><span class="line">	enum hrtimer_restart ret = HRTIMER_RESTART;</span><br><span class="line">	struct perf_sample_data data;</span><br><span class="line">	struct pt_regs *regs;</span><br><span class="line">	struct perf_event *event;</span><br><span class="line">	u64 period;</span><br><span class="line"></span><br><span class="line">	event = container_of(hrtimer, struct perf_event, hw.hrtimer);</span><br><span class="line"></span><br><span class="line">	if (event-&gt;state != PERF_EVENT_STATE_ACTIVE)</span><br><span class="line">		return HRTIMER_NORESTART;</span><br><span class="line"></span><br><span class="line">	event-&gt;pmu-&gt;read(event);</span><br><span class="line"></span><br><span class="line">	perf_sample_data_init(&amp;data, 0, event-&gt;hw.last_period);</span><br><span class="line">	regs = get_irq_regs();</span><br><span class="line"></span><br><span class="line">	if (regs &amp;&amp; !perf_exclude_event(event, regs)) &#123;</span><br><span class="line">		if (!(event-&gt;attr.exclude_idle &amp;&amp; is_idle_task(current)))</span><br><span class="line">		</span><br><span class="line">		    /* 上报sample值 */</span><br><span class="line">			if (__perf_event_overflow(event, 1, &amp;data, regs))</span><br><span class="line">				ret = HRTIMER_NORESTART;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	period = max_t(u64, 10000, event-&gt;hw.sample_period);</span><br><span class="line">	hrtimer_forward_now(hrtimer, ns_to_ktime(period));</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/perf/" rel="tag"># perf</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/21/ftrace_syscall_event/" rel="next" title="Linux Ftrace 1.5、syscall event">
+                <i class="fa fa-chevron-left"></i> Linux Ftrace 1.5、syscall event
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/21/linux_process_stop/" rel="prev" title="Linux 进程的Stop,Park,Freeze">
+                Linux 进程的Stop,Park,Freeze <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、原理介绍："><span class="nav-number">1.</span> <span class="nav-text">1、原理介绍：</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1、插桩法"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、插桩法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2、采样法"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、采样法</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、event-init"><span class="nav-number">2.</span> <span class="nav-text">2、event init</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1、”software”"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、”software”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2、“cpu-clock”"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、“cpu-clock”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3、“task-clock”"><span class="nav-number">2.3.</span> <span class="nav-text">2.3、“task-clock”</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、event-add-del"><span class="nav-number">3.</span> <span class="nav-text">3、event add/del</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1、”software”"><span class="nav-number">3.1.</span> <span class="nav-text">3.1、”software”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2、“cpu-clock”"><span class="nav-number">3.2.</span> <span class="nav-text">3.2、“cpu-clock”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3、“task-clock”"><span class="nav-number">3.3.</span> <span class="nav-text">3.3、“task-clock”</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4、event-数据采集"><span class="nav-number">4.</span> <span class="nav-text">4、event 数据采集</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1、”software”"><span class="nav-number">4.1.</span> <span class="nav-text">4.1、”software”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2、“cpu-clock”"><span class="nav-number">4.2.</span> <span class="nav-text">4.2、“cpu-clock”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-3、“task-clock”"><span class="nav-number">4.3.</span> <span class="nav-text">4.3、“task-clock”</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/12/21/perf_software_events/";
+        this.page.identifier = "2018/12/21/perf_software_events/";
+        this.page.title = 'Linux Perf 1.3、software events';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

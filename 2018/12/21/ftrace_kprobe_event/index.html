@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="从前面几章看：trace event使用静态tracepoint插桩，function tracer使用“bl _mcount”的插桩点来动态插桩。既然都是插桩，为什么我们不使用功能强大的kprobe机制？ kprobe event就是这样的产物。krpobe event和trace event的功能一样，但是因为它采用的是kprobe插桩机制，所以它不需要预留插桩位置，可以动态的在任何位置进行插">
+<meta name="keywords" content="kprobe">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux Ftrace 1.4、kprobe event">
+<meta property="og:url" content="http://yoursite.com/2018/12/21/ftrace_kprobe_event/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="从前面几章看：trace event使用静态tracepoint插桩，function tracer使用“bl _mcount”的插桩点来动态插桩。既然都是插桩，为什么我们不使用功能强大的kprobe机制？ kprobe event就是这样的产物。krpobe event和trace event的功能一样，但是因为它采用的是kprobe插桩机制，所以它不需要预留插桩位置，可以动态的在任何位置进行插">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/ftrace_kprobe_event/kprobe_event_stub.png">
+<meta property="og:image" content="http://yoursite.com/images/ftrace_kprobe_event/entry_kprobe_event.png">
+<meta property="og:image" content="http://yoursite.com/images/ftrace_kprobe_event/entry_kretprobe_event.png">
+<meta property="og:updated_time" content="2018-12-21T03:25:59.510Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux Ftrace 1.4、kprobe event">
+<meta name="twitter:description" content="从前面几章看：trace event使用静态tracepoint插桩，function tracer使用“bl _mcount”的插桩点来动态插桩。既然都是插桩，为什么我们不使用功能强大的kprobe机制？ kprobe event就是这样的产物。krpobe event和trace event的功能一样，但是因为它采用的是kprobe插桩机制，所以它不需要预留插桩位置，可以动态的在任何位置进行插">
+<meta name="twitter:image" content="http://yoursite.com/images/ftrace_kprobe_event/kprobe_event_stub.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/12/21/ftrace_kprobe_event/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Linux Ftrace 1.4、kprobe event | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/ftrace_kprobe_event/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux Ftrace 1.4、kprobe event
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:25:59" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>从前面几章看：trace event使用静态tracepoint插桩，function tracer使用“bl _mcount”的插桩点来动态插桩。既然都是插桩，为什么我们不使用功能强大的kprobe机制？</p>
+<p>kprobe event就是这样的产物。krpobe event和trace event的功能一样，但是因为它采用的是kprobe插桩机制，所以它不需要预留插桩位置，可以动态的在任何位置进行插桩。开销会大一点，但是非常灵活，是一个非常方便的补充机制。</p>
+<h1 id="1、函数插桩"><a href="#1、函数插桩" class="headerlink" title="1、函数插桩"></a>1、函数插桩</h1><h2 id="1-1、插桩原理"><a href="#1-1、插桩原理" class="headerlink" title="1.1、插桩原理"></a>1.1、插桩原理</h2><p>kprobe的主要原理是使用“断点异常”和“单步异常”两种异常指令来对任意地址进行插桩，在此基础之上实现了三种机制：</p>
+<ul>
+<li>kprobe。可以被插入到内核的任何指令位置，在被插入指令之前调用kp.pre_handler()，在被插入指令之后调用kp.post_handler()；</li>
+<li>jprobe。只支持对函数进行插入。</li>
+<li>kretprobe。和jprobe类似，机制略有不同，会替换被探测函数的返回地址，让函数先执行插入的钩子函数，再恢复。</li>
+</ul>
+<p>具体的kprobe原理可以参考：<a href="https://blog.csdn.net/pwl999/article/details/78225858" target="_blank" rel="noopener">Linux kprobe(内核探针 x86)</a>。</p>
+<blockquote>
+<p>需要注意的是arm64在kernel 4.9版本以后才支持kprobe。</p>
+</blockquote>
+<h2 id="1-2、kprobe-event的使用"><a href="#1-2、kprobe-event的使用" class="headerlink" title="1.2、kprobe event的使用"></a>1.2、kprobe event的使用</h2><p>kprobe event的使用指南可以参考：<a href="https://blog.csdn.net/pwl999/article/details/80431344" target="_blank" rel="noopener">kprobe event的使用</a>。简单描述如下：</p>
+<ul>
+<li>1、可以向“/sys/kernel/debug/tracing/kprobe_events”文件中echo命令的形式来创建krpobe event。新的event创建成功后，可以在“/sys/kernel/debug/tracing/events/”文件夹下看到新的“subsystem/event”，操作方法和普通event一样。</li>
+<li>2、命令格式为：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"> p[:[GRP/]EVENT] [MOD:]SYM[+offs]|MEMADDR [FETCHARGS]  : Set a probe</span><br><span class="line"> r[MAXACTIVE][:[GRP/]EVENT] [MOD:]SYM[+0] [FETCHARGS]  : Set a return probe</span><br><span class="line"> -:[GRP/]EVENT                                         : Clear a probe</span><br><span class="line"></span><br><span class="line">GRP            : Group name. If omitted, use &quot;kprobes&quot; for it.</span><br><span class="line">EVENT          : Event name. If omitted, the event name is generated</span><br><span class="line">                 based on SYM+offs or MEMADDR.</span><br><span class="line">MOD            : Module name which has given SYM.</span><br><span class="line">SYM[+offs]     : Symbol+offset where the probe is inserted.</span><br><span class="line">MEMADDR        : Address where the probe is inserted.</span><br><span class="line">MAXACTIVE      : Maximum number of instances of the specified function that</span><br><span class="line">                 can be probed simultaneously, or 0 for the default value</span><br><span class="line">                 as defined in Documentation/kprobes.txt section 1.3.1.</span><br><span class="line"></span><br><span class="line">FETCHARGS      : Arguments. Each probe can have up to 128 args.</span><br><span class="line"> %REG          : Fetch register REG</span><br><span class="line"> @ADDR         : Fetch memory at ADDR (ADDR should be in kernel)</span><br><span class="line"> @SYM[+|-offs] : Fetch memory at SYM +|- offs (SYM should be a data symbol)</span><br><span class="line"> $stackN       : Fetch Nth entry of stack (N &gt;= 0)</span><br><span class="line"> $stack        : Fetch stack address.</span><br><span class="line"> $retval       : Fetch return value.(*)</span><br><span class="line"> $comm         : Fetch current task comm.</span><br><span class="line"> +|-offs(FETCHARG) : Fetch memory at FETCHARG +|- offs address.(**)</span><br><span class="line"> NAME=FETCHARG : Set NAME as the argument name of FETCHARG.</span><br><span class="line"> FETCHARG:TYPE : Set TYPE as the type of FETCHARG. Currently, basic types</span><br><span class="line">                 (u8/u16/u32/u64/s8/s16/s32/s64), hexadecimal types</span><br><span class="line">                 (x8/x16/x32/x64), &quot;string&quot; and bitfield are supported.</span><br><span class="line"></span><br><span class="line"> (*) only for return probe.</span><br><span class="line"> (**) this is useful for fetching a field of data structures.</span><br></pre></td></tr></table></figure>
+<ul>
+<li>3、实例，在do_sys_open()函数之上创建一个kprobe，对应的“myprobe” event用来记录4个参数的：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo &apos;p:myprobe do_sys_open dfd=%ax filename=%dx flags=%cx mode=+4($stack)&apos; &gt; /sys/kernel/debug/tracing/kprobe_events</span><br></pre></td></tr></table></figure>
+<p>创建成功后，可以通过“ /sys/kernel/debug/tracing/events/kprobes//format”查看event的输出格式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/tracing/events/kprobes/myprobe/format</span><br><span class="line">name: myprobe</span><br><span class="line">ID: 780</span><br><span class="line">format:</span><br><span class="line">        field:unsigned short common_type;       offset:0;       size:2; signed:0;</span><br><span class="line">        field:unsigned char common_flags;       offset:2;       size:1; signed:0;</span><br><span class="line">        field:unsigned char common_preempt_count;       offset:3; size:1;signed:0;</span><br><span class="line">        field:int common_pid;   offset:4;       size:4; signed:1;</span><br><span class="line"></span><br><span class="line">        field:unsigned long __probe_ip; offset:12;      size:4; signed:0;</span><br><span class="line">        field:int __probe_nargs;        offset:16;      size:4; signed:1;</span><br><span class="line">        field:unsigned long dfd;        offset:20;      size:4; signed:0;</span><br><span class="line">        field:unsigned long filename;   offset:24;      size:4; signed:0;</span><br><span class="line">        field:unsigned long flags;      offset:28;      size:4; signed:0;</span><br><span class="line">        field:unsigned long mode;       offset:32;      size:4; signed:0;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">print fmt: &quot;(%lx) dfd=%lx filename=%lx flags=%lx mode=%lx&quot;, REC-&gt;__probe_ip,</span><br><span class="line">REC-&gt;dfd, REC-&gt;filename, REC-&gt;flags, REC-&gt;mode</span><br></pre></td></tr></table></figure>
+<p>需要其工作的时候，enable对应的event：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 1 &gt; /sys/kernel/debug/tracing/events/kprobes/myprobe/enable</span><br></pre></td></tr></table></figure>
+<p>还在do_sys_open()函数非返回点设置了一个kretprobe，对应的“myretprobe” event用来记录返回值：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo &apos;r:myretprobe do_sys_open $retval&apos; &gt;&gt; /sys/kernel/debug/tracing/kprobe_events</span><br></pre></td></tr></table></figure>
+<h2 id="1-3、kprobe-event的创建"><a href="#1-3、kprobe-event的创建" class="headerlink" title="1.3、kprobe event的创建"></a>1.3、kprobe event的创建</h2><p><img src="/images/ftrace_kprobe_event/kprobe_event_stub.png" alt="image"></p>
+<p>krpobe event和trace event的功能一样，那么大部分的实现是一样的，最关键的不同就是怎么使用新的插桩方法来创建event。使用向“/sys/kernel/debug/tracing/kprobe_events”文件中echo命令的形式来创建krpobe event。</p>
+<p>我们来查看具体的代码实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br><span class="line">333</span><br><span class="line">334</span><br><span class="line">335</span><br><span class="line">336</span><br><span class="line">337</span><br><span class="line">338</span><br><span class="line">339</span><br><span class="line">340</span><br><span class="line">341</span><br><span class="line">342</span><br><span class="line">343</span><br><span class="line">344</span><br><span class="line">345</span><br><span class="line">346</span><br><span class="line">347</span><br><span class="line">348</span><br><span class="line">349</span><br><span class="line">350</span><br><span class="line">351</span><br><span class="line">352</span><br><span class="line">353</span><br><span class="line">354</span><br><span class="line">355</span><br><span class="line">356</span><br><span class="line">357</span><br><span class="line">358</span><br><span class="line">359</span><br><span class="line">360</span><br><span class="line">361</span><br><span class="line">362</span><br><span class="line">363</span><br><span class="line">364</span><br><span class="line">365</span><br><span class="line">366</span><br><span class="line">367</span><br><span class="line">368</span><br><span class="line">369</span><br><span class="line">370</span><br><span class="line">371</span><br><span class="line">372</span><br><span class="line">373</span><br><span class="line">374</span><br><span class="line">375</span><br><span class="line">376</span><br><span class="line">377</span><br><span class="line">378</span><br><span class="line">379</span><br><span class="line">380</span><br><span class="line">381</span><br><span class="line">382</span><br><span class="line">383</span><br><span class="line">384</span><br><span class="line">385</span><br><span class="line">386</span><br><span class="line">387</span><br><span class="line">388</span><br><span class="line">389</span><br><span class="line">390</span><br><span class="line">391</span><br><span class="line">392</span><br><span class="line">393</span><br><span class="line">394</span><br><span class="line">395</span><br><span class="line">396</span><br><span class="line">397</span><br><span class="line">398</span><br><span class="line">399</span><br><span class="line">400</span><br><span class="line">401</span><br><span class="line">402</span><br><span class="line">403</span><br><span class="line">404</span><br><span class="line">405</span><br><span class="line">406</span><br><span class="line">407</span><br><span class="line">408</span><br><span class="line">409</span><br><span class="line">410</span><br><span class="line">411</span><br><span class="line">412</span><br><span class="line">413</span><br><span class="line">414</span><br><span class="line">415</span><br><span class="line">416</span><br><span class="line">417</span><br><span class="line">418</span><br><span class="line">419</span><br><span class="line">420</span><br><span class="line">421</span><br><span class="line">422</span><br><span class="line">423</span><br><span class="line">424</span><br><span class="line">425</span><br><span class="line">426</span><br><span class="line">427</span><br><span class="line">428</span><br><span class="line">429</span><br><span class="line">430</span><br><span class="line">431</span><br><span class="line">432</span><br><span class="line">433</span><br><span class="line">434</span><br><span class="line">435</span><br><span class="line">436</span><br><span class="line">437</span><br><span class="line">438</span><br><span class="line">439</span><br><span class="line">440</span><br><span class="line">441</span><br><span class="line">442</span><br><span class="line">443</span><br><span class="line">444</span><br><span class="line">445</span><br><span class="line">446</span><br><span class="line">447</span><br><span class="line">448</span><br><span class="line">449</span><br><span class="line">450</span><br><span class="line">451</span><br><span class="line">452</span><br><span class="line">453</span><br><span class="line">454</span><br><span class="line">455</span><br></pre></td><td class="code"><pre><span class="line">entry = tracefs_create_file(&quot;kprobe_events&quot;, 0644, d_tracer,</span><br><span class="line">			    NULL, &amp;kprobe_events_ops);</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static const struct file_operations kprobe_events_ops = &#123;</span><br><span class="line">	.owner          = THIS_MODULE,</span><br><span class="line">	.open           = probes_open,</span><br><span class="line">	.read           = seq_read,</span><br><span class="line">	.llseek         = seq_lseek,</span><br><span class="line">	.release        = seq_release,</span><br><span class="line">	.write		= probes_write,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static ssize_t probes_write(struct file *file, const char __user *buffer,</span><br><span class="line">			    size_t count, loff_t *ppos)</span><br><span class="line">&#123;</span><br><span class="line">    /* traceprobe_probes_write()把命令字符串进行分段，再来调用create_trace_kprobe() */</span><br><span class="line">	return traceprobe_probes_write(file, buffer, count, ppos,</span><br><span class="line">			create_trace_kprobe);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int create_trace_kprobe(int argc, char **argv)</span><br><span class="line">&#123;</span><br><span class="line">	/*</span><br><span class="line">	 * Argument syntax:</span><br><span class="line">	 *  - Add kprobe: p[:[GRP/]EVENT] [MOD:]KSYM[+OFFS]|KADDR [FETCHARGS]</span><br><span class="line">	 *  - Add kretprobe: r[:[GRP/]EVENT] [MOD:]KSYM[+0] [FETCHARGS]</span><br><span class="line">	 * Fetch args:</span><br><span class="line">	 *  $retval	: fetch return value</span><br><span class="line">	 *  $stack	: fetch stack address</span><br><span class="line">	 *  $stackN	: fetch Nth of stack (N:0-)</span><br><span class="line">	 *  @ADDR	: fetch memory at ADDR (ADDR should be in kernel)</span><br><span class="line">	 *  @SYM[+|-offs] : fetch memory at SYM +|- offs (SYM is a data symbol)</span><br><span class="line">	 *  %REG	: fetch register REG</span><br><span class="line">	 * Dereferencing memory fetch:</span><br><span class="line">	 *  +|-offs(ARG) : fetch memory at ARG +|- offs address.</span><br><span class="line">	 * Alias name of args:</span><br><span class="line">	 *  NAME=FETCHARG : set NAME as alias of FETCHARG.</span><br><span class="line">	 * Type of args:</span><br><span class="line">	 *  FETCHARG:TYPE : use TYPE instead of unsigned long.</span><br><span class="line">	 */</span><br><span class="line">	struct trace_kprobe *tk;</span><br><span class="line">	int i, ret = 0;</span><br><span class="line">	bool is_return = false, is_delete = false;</span><br><span class="line">	char *symbol = NULL, *event = NULL, *group = NULL;</span><br><span class="line">	char *arg;</span><br><span class="line">	unsigned long offset = 0;</span><br><span class="line">	void *addr = NULL;</span><br><span class="line">	char buf[MAX_EVENT_NAME_LEN];</span><br><span class="line"></span><br><span class="line">    /* (1) is_return 是否kretprobe？ </span><br><span class="line">        命令首字 == &apos;p&apos;，kprobe</span><br><span class="line">        命令首字 == &apos;r&apos;，kretprobe</span><br><span class="line">        命令首字 == &apos;-&apos;，删除命令，is_delete</span><br><span class="line">     */</span><br><span class="line">	/* argc must be &gt;= 1 */</span><br><span class="line">	if (argv[0][0] == &apos;p&apos;)</span><br><span class="line">		is_return = false;</span><br><span class="line">	else if (argv[0][0] == &apos;r&apos;)</span><br><span class="line">		is_return = true;</span><br><span class="line">	else if (argv[0][0] == &apos;-&apos;)</span><br><span class="line">		is_delete = true;</span><br><span class="line">	else &#123;</span><br><span class="line">		pr_info(&quot;Probe definition must be started with &apos;p&apos;, &apos;r&apos; or&quot;</span><br><span class="line">			&quot; &apos;-&apos;.\n&quot;);</span><br><span class="line">		return -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (2) event name 和 subsystem(group) name是否有指定？</span><br><span class="line">        没有指定的话，后面会给上默认值</span><br><span class="line">     */</span><br><span class="line">	if (argv[0][1] == &apos;:&apos;) &#123;</span><br><span class="line">		event = &amp;argv[0][2];</span><br><span class="line">		if (strchr(event, &apos;/&apos;)) &#123;</span><br><span class="line">			group = event;</span><br><span class="line">			event = strchr(group, &apos;/&apos;) + 1;</span><br><span class="line">			event[-1] = &apos;\0&apos;;</span><br><span class="line">			if (strlen(group) == 0) &#123;</span><br><span class="line">				pr_info(&quot;Group name is not specified\n&quot;);</span><br><span class="line">				return -EINVAL;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		if (strlen(event) == 0) &#123;</span><br><span class="line">			pr_info(&quot;Event name is not specified\n&quot;);</span><br><span class="line">			return -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	/* (2.1) 如果subsystem name没有指定，给默认值&quot;kprobes&quot; */</span><br><span class="line">	if (!group)</span><br><span class="line">		group = KPROBE_EVENT_SYSTEM;</span><br><span class="line"></span><br><span class="line">    /* (3) 删除已经配置的event */</span><br><span class="line">	if (is_delete) &#123;</span><br><span class="line">		if (!event) &#123;</span><br><span class="line">			pr_info(&quot;Delete command needs an event name.\n&quot;);</span><br><span class="line">			return -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">		mutex_lock(&amp;probe_lock);</span><br><span class="line">		tk = find_trace_kprobe(event, group);</span><br><span class="line">		if (!tk) &#123;</span><br><span class="line">			mutex_unlock(&amp;probe_lock);</span><br><span class="line">			pr_info(&quot;Event %s/%s doesn&apos;t exist.\n&quot;, group, event);</span><br><span class="line">			return -ENOENT;</span><br><span class="line">		&#125;</span><br><span class="line">		/* delete an event */</span><br><span class="line">		ret = unregister_trace_kprobe(tk);</span><br><span class="line">		if (ret == 0)</span><br><span class="line">			free_trace_kprobe(tk);</span><br><span class="line">		mutex_unlock(&amp;probe_lock);</span><br><span class="line">		return ret;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (argc &lt; 2) &#123;</span><br><span class="line">		pr_info(&quot;Probe point is not specified.\n&quot;);</span><br><span class="line">		return -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	/* (4.1) 探测地址使用的是“MEMADDR”格式 */</span><br><span class="line">	if (isdigit(argv[1][0])) &#123;</span><br><span class="line">		if (is_return) &#123;</span><br><span class="line">			pr_info(&quot;Return probe point must be a symbol.\n&quot;);</span><br><span class="line">			return -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">		/* an address specified */</span><br><span class="line">		ret = kstrtoul(&amp;argv[1][0], 0, (unsigned long *)&amp;addr);</span><br><span class="line">		if (ret) &#123;</span><br><span class="line">			pr_info(&quot;Failed to parse address.\n&quot;);</span><br><span class="line">			return ret;</span><br><span class="line">		&#125;</span><br><span class="line">	/* (4.2) 探测地址使用的是“SYM[+offs]”格式 */</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		/* a symbol specified */</span><br><span class="line">		symbol = argv[1];</span><br><span class="line">		/* TODO: support .init module functions */</span><br><span class="line">		ret = traceprobe_split_symbol_offset(symbol, &amp;offset);</span><br><span class="line">		if (ret) &#123;</span><br><span class="line">			pr_info(&quot;Failed to parse symbol.\n&quot;);</span><br><span class="line">			return ret;</span><br><span class="line">		&#125;</span><br><span class="line">		if (offset &amp;&amp; is_return) &#123;</span><br><span class="line">			pr_info(&quot;Return probe must be used without offset.\n&quot;);</span><br><span class="line">			return -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	argc -= 2; argv += 2;</span><br><span class="line"></span><br><span class="line">	/* setup a probe */</span><br><span class="line">	/* (2.2) 如果event name没有指定，给其组建一个默认值 */</span><br><span class="line">	if (!event) &#123;</span><br><span class="line">		/* Make a new event name */</span><br><span class="line">		if (symbol)</span><br><span class="line">			snprintf(buf, MAX_EVENT_NAME_LEN, &quot;%c_%s_%ld&quot;,</span><br><span class="line">				 is_return ? &apos;r&apos; : &apos;p&apos;, symbol, offset);</span><br><span class="line">		else</span><br><span class="line">			snprintf(buf, MAX_EVENT_NAME_LEN, &quot;%c_0x%p&quot;,</span><br><span class="line">				 is_return ? &apos;r&apos; : &apos;p&apos;, addr);</span><br><span class="line">		event = buf;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	/* (5) 分配新的trace_kprobe结构 */</span><br><span class="line">	tk = alloc_trace_kprobe(group, event, addr, symbol, offset, argc,</span><br><span class="line">			       is_return);</span><br><span class="line">	if (IS_ERR(tk)) &#123;</span><br><span class="line">		pr_info(&quot;Failed to allocate trace_probe.(%d)\n&quot;,</span><br><span class="line">			(int)PTR_ERR(tk));</span><br><span class="line">		return PTR_ERR(tk);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/* parse arguments */</span><br><span class="line">	ret = 0;</span><br><span class="line">	/* (6) 逐个解析需要trace的字段参数，存储到tk-&gt;tp.args[i] */</span><br><span class="line">	for (i = 0; i &lt; argc &amp;&amp; i &lt; MAX_TRACE_ARGS; i++) &#123;</span><br><span class="line">		struct probe_arg *parg = &amp;tk-&gt;tp.args[i];</span><br><span class="line"></span><br><span class="line">		/* Increment count for freeing args in error case */</span><br><span class="line">		tk-&gt;tp.nr_args++;</span><br><span class="line"></span><br><span class="line">        /* (6.1) 解析出arg name */</span><br><span class="line">		/* Parse argument name */</span><br><span class="line">		arg = strchr(argv[i], &apos;=&apos;);</span><br><span class="line">		if (arg) &#123;</span><br><span class="line">			*arg++ = &apos;\0&apos;;</span><br><span class="line">			parg-&gt;name = kstrdup(argv[i], GFP_KERNEL);</span><br><span class="line">		&#125; else &#123;</span><br><span class="line">			arg = argv[i];</span><br><span class="line">			/* If argument name is omitted, set &quot;argN&quot; */</span><br><span class="line">			snprintf(buf, MAX_EVENT_NAME_LEN, &quot;arg%d&quot;, i + 1);</span><br><span class="line">			parg-&gt;name = kstrdup(buf, GFP_KERNEL);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		if (!parg-&gt;name) &#123;</span><br><span class="line">			pr_info(&quot;Failed to allocate argument[%d] name.\n&quot;, i);</span><br><span class="line">			ret = -ENOMEM;</span><br><span class="line">			goto error;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		if (!is_good_name(parg-&gt;name)) &#123;</span><br><span class="line">			pr_info(&quot;Invalid argument[%d] name: %s\n&quot;,</span><br><span class="line">				i, parg-&gt;name);</span><br><span class="line">			ret = -EINVAL;</span><br><span class="line">			goto error;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		if (traceprobe_conflict_field_name(parg-&gt;name,</span><br><span class="line">							tk-&gt;tp.args, i)) &#123;</span><br><span class="line">			pr_info(&quot;Argument[%d] name &apos;%s&apos; conflicts with &quot;</span><br><span class="line">				&quot;another field.\n&quot;, i, argv[i]);</span><br><span class="line">			ret = -EINVAL;</span><br><span class="line">			goto error;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		/* Parse fetch argument */</span><br><span class="line">		/* (6.2) 解析出arg */</span><br><span class="line">		ret = traceprobe_parse_probe_arg(arg, &amp;tk-&gt;tp.size, parg,</span><br><span class="line">						is_return, true,</span><br><span class="line">						kprobes_fetch_type_table);</span><br><span class="line">		if (ret) &#123;</span><br><span class="line">			pr_info(&quot;Parse error at argument[%d]. (%d)\n&quot;, i, ret);</span><br><span class="line">			goto error;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (7) 注册trace_kprobe */</span><br><span class="line">	ret = register_trace_kprobe(tk);</span><br><span class="line">	if (ret)</span><br><span class="line">		goto error;</span><br><span class="line">	return 0;</span><br><span class="line"></span><br><span class="line">error:</span><br><span class="line">	free_trace_kprobe(tk);</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static struct trace_kprobe *alloc_trace_kprobe(const char *group,</span><br><span class="line">					     const char *event,</span><br><span class="line">					     void *addr,</span><br><span class="line">					     const char *symbol,</span><br><span class="line">					     unsigned long offs,</span><br><span class="line">					     int nargs, bool is_return)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_kprobe *tk;</span><br><span class="line">	int ret = -ENOMEM;</span><br><span class="line"></span><br><span class="line">	tk = kzalloc(SIZEOF_TRACE_KPROBE(nargs), GFP_KERNEL);</span><br><span class="line">	if (!tk)</span><br><span class="line">		return ERR_PTR(ret);</span><br><span class="line"></span><br><span class="line">	if (symbol) &#123;</span><br><span class="line">		tk-&gt;symbol = kstrdup(symbol, GFP_KERNEL);</span><br><span class="line">		if (!tk-&gt;symbol)</span><br><span class="line">			goto error;</span><br><span class="line">		tk-&gt;rp.kp.symbol_name = tk-&gt;symbol;</span><br><span class="line">		tk-&gt;rp.kp.offset = offs;</span><br><span class="line">	&#125; else</span><br><span class="line">		tk-&gt;rp.kp.addr = addr;</span><br><span class="line"></span><br><span class="line">    /* (5.1) kretprobe模式下的桩函数：kretprobe_dispatcher() */</span><br><span class="line">	if (is_return)</span><br><span class="line">		tk-&gt;rp.handler = kretprobe_dispatcher;</span><br><span class="line">	/* (5.2) kprobe模式下的桩函数：kprobe_dispatcher() */</span><br><span class="line">	else</span><br><span class="line">		tk-&gt;rp.kp.pre_handler = kprobe_dispatcher;</span><br><span class="line"></span><br><span class="line">	if (!event || !is_good_name(event)) &#123;</span><br><span class="line">		ret = -EINVAL;</span><br><span class="line">		goto error;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	tk-&gt;tp.call.class = &amp;tk-&gt;tp.class;</span><br><span class="line">	tk-&gt;tp.call.name = kstrdup(event, GFP_KERNEL);</span><br><span class="line">	if (!tk-&gt;tp.call.name)</span><br><span class="line">		goto error;</span><br><span class="line"></span><br><span class="line">	if (!group || !is_good_name(group)) &#123;</span><br><span class="line">		ret = -EINVAL;</span><br><span class="line">		goto error;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	tk-&gt;tp.class.system = kstrdup(group, GFP_KERNEL);</span><br><span class="line">	if (!tk-&gt;tp.class.system)</span><br><span class="line">		goto error;</span><br><span class="line"></span><br><span class="line">	INIT_LIST_HEAD(&amp;tk-&gt;list);</span><br><span class="line">	INIT_LIST_HEAD(&amp;tk-&gt;tp.files);</span><br><span class="line">	return tk;</span><br><span class="line">error:</span><br><span class="line">	kfree(tk-&gt;tp.call.name);</span><br><span class="line">	kfree(tk-&gt;symbol);</span><br><span class="line">	kfree(tk);</span><br><span class="line">	return ERR_PTR(ret);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">/* Register a trace_probe and probe_event */</span><br><span class="line">static int register_trace_kprobe(struct trace_kprobe *tk)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_kprobe *old_tk;</span><br><span class="line">	int ret;</span><br><span class="line"></span><br><span class="line">	mutex_lock(&amp;probe_lock);</span><br><span class="line"></span><br><span class="line">	/* Delete old (same name) event if exist */</span><br><span class="line">	old_tk = find_trace_kprobe(trace_event_name(&amp;tk-&gt;tp.call),</span><br><span class="line">			tk-&gt;tp.call.class-&gt;system);</span><br><span class="line">	if (old_tk) &#123;</span><br><span class="line">		ret = unregister_trace_kprobe(old_tk);</span><br><span class="line">		if (ret &lt; 0)</span><br><span class="line">			goto end;</span><br><span class="line">		free_trace_kprobe(old_tk);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/* Register new event */</span><br><span class="line">	/* (7.1) 注册trace_event_call部分 ：</span><br><span class="line">	    初始化call-&gt;event.funcs等成员</span><br><span class="line">	    使用trace_event_file把trace_event_call和trace_array中的ring buffer联系起来，并且创建trace_event_file对应的文件</span><br><span class="line">	 */</span><br><span class="line">	ret = register_kprobe_event(tk);</span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		pr_warning(&quot;Failed to register probe event(%d)\n&quot;, ret);</span><br><span class="line">		goto end;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/* Register k*probe */</span><br><span class="line">	/* (7.2) 注册kprobe部分:</span><br><span class="line">	    kprobe注册成功后，桩函数被插入：</span><br><span class="line">	    kretprobe模式下的桩函数：kretprobe_dispatcher()</span><br><span class="line">	    kprobe模式下的桩函数：kprobe_dispatcher()</span><br><span class="line">	 */</span><br><span class="line">	ret = __register_trace_kprobe(tk);</span><br><span class="line">	if (ret &lt; 0)</span><br><span class="line">		unregister_kprobe_event(tk);</span><br><span class="line">	else</span><br><span class="line">		list_add_tail(&amp;tk-&gt;list, &amp;probe_list);</span><br><span class="line"></span><br><span class="line">end:</span><br><span class="line">	mutex_unlock(&amp;probe_lock);</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static int register_kprobe_event(struct trace_kprobe *tk)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_event_call *call = &amp;tk-&gt;tp.call;</span><br><span class="line">	int ret;</span><br><span class="line"></span><br><span class="line">	/* Initialize trace_event_call */</span><br><span class="line">	/* (7.1.1) 初始化trace_event_call的一些成员 ：</span><br><span class="line">	    kretprobe_funcs/kprobe_funcs是格式化输出trace数据的函数</span><br><span class="line">	 */</span><br><span class="line">	INIT_LIST_HEAD(&amp;call-&gt;class-&gt;fields);</span><br><span class="line">	if (trace_kprobe_is_return(tk)) &#123;</span><br><span class="line">		call-&gt;event.funcs = &amp;kretprobe_funcs;</span><br><span class="line">		call-&gt;class-&gt;define_fields = kretprobe_event_define_fields;</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		call-&gt;event.funcs = &amp;kprobe_funcs;</span><br><span class="line">		call-&gt;class-&gt;define_fields = kprobe_event_define_fields;</span><br><span class="line">	&#125;</span><br><span class="line">	if (set_print_fmt(&amp;tk-&gt;tp, trace_kprobe_is_return(tk)) &lt; 0)</span><br><span class="line">		return -ENOMEM;</span><br><span class="line">	</span><br><span class="line">	/* (7.1.2) 给call-&gt;event-&gt;type分配一个id */</span><br><span class="line">	ret = register_trace_event(&amp;call-&gt;event);</span><br><span class="line">	if (!ret) &#123;</span><br><span class="line">		kfree(call-&gt;print_fmt);</span><br><span class="line">		return -ENODEV;</span><br><span class="line">	&#125;</span><br><span class="line">	call-&gt;flags = TRACE_EVENT_FL_KPROBE;</span><br><span class="line">	call-&gt;class-&gt;reg = kprobe_register;</span><br><span class="line">	call-&gt;data = tk;</span><br><span class="line">	</span><br><span class="line">	/* (7.1.3) 注册trace_event_call，并且创建其trace_event_file结构 */</span><br><span class="line">	ret = trace_add_event_call(call);</span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		pr_info(&quot;Failed to register kprobe event: %s\n&quot;,</span><br><span class="line">			trace_event_name(call));</span><br><span class="line">		kfree(call-&gt;print_fmt);</span><br><span class="line">		unregister_trace_event(&amp;call-&gt;event);</span><br><span class="line">	&#125;</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|||→</span><br><span class="line"></span><br><span class="line">int trace_add_event_call(struct trace_event_call *call)</span><br><span class="line">&#123;</span><br><span class="line">	int ret;</span><br><span class="line">	mutex_lock(&amp;trace_types_lock);</span><br><span class="line">	mutex_lock(&amp;event_mutex);</span><br><span class="line"></span><br><span class="line">    /* (7.1.3.1) 把trace_event_call加入到ftrace_events链表 */</span><br><span class="line">	ret = __register_event(call, NULL);</span><br><span class="line">	</span><br><span class="line">	/* (7.1.3.2) 使用trace_event_file把trace_event_call和trace_array中的ring buffer联系起来，</span><br><span class="line">	    并且创建trace_event_file对应的文件 </span><br><span class="line">	 */</span><br><span class="line">	if (ret &gt;= 0)</span><br><span class="line">		__add_event_to_tracers(call);</span><br><span class="line"></span><br><span class="line">	mutex_unlock(&amp;event_mutex);</span><br><span class="line">	mutex_unlock(&amp;trace_types_lock);</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static int __register_trace_kprobe(struct trace_kprobe *tk)</span><br><span class="line">&#123;</span><br><span class="line">	int i, ret;</span><br><span class="line"></span><br><span class="line">	if (trace_probe_is_registered(&amp;tk-&gt;tp))</span><br><span class="line">		return -EINVAL;</span><br><span class="line"></span><br><span class="line">	for (i = 0; i &lt; tk-&gt;tp.nr_args; i++)</span><br><span class="line">		traceprobe_update_arg(&amp;tk-&gt;tp.args[i]);</span><br><span class="line"></span><br><span class="line">	/* Set/clear disabled flag according to tp-&gt;flag */</span><br><span class="line">	if (trace_probe_is_enabled(&amp;tk-&gt;tp))</span><br><span class="line">		tk-&gt;rp.kp.flags &amp;= ~KPROBE_FLAG_DISABLED;</span><br><span class="line">	else</span><br><span class="line">		tk-&gt;rp.kp.flags |= KPROBE_FLAG_DISABLED;</span><br><span class="line"></span><br><span class="line">    /* (7.1.1) 注册kprobe/kretptobe */</span><br><span class="line">	if (trace_kprobe_is_return(tk))</span><br><span class="line">		ret = register_kretprobe(&amp;tk-&gt;rp);</span><br><span class="line">	else</span><br><span class="line">		ret = register_kprobe(&amp;tk-&gt;rp.kp);</span><br><span class="line"></span><br><span class="line">	if (ret == 0)</span><br><span class="line">		tk-&gt;tp.flags |= TP_FLAG_REGISTERED;</span><br><span class="line">	else &#123;</span><br><span class="line">		pr_warning(&quot;Could not insert probe at %s+%lu: %d\n&quot;,</span><br><span class="line">			   trace_kprobe_symbol(tk), trace_kprobe_offset(tk), ret);</span><br><span class="line">		if (ret == -ENOENT &amp;&amp; trace_kprobe_is_on_module(tk)) &#123;</span><br><span class="line">			pr_warning(&quot;This probe might be able to register after&quot;</span><br><span class="line">				   &quot;target module is loaded. Continue.\n&quot;);</span><br><span class="line">			ret = 0;</span><br><span class="line">		&#125; else if (ret == -EILSEQ) &#123;</span><br><span class="line">			pr_warning(&quot;Probing address(0x%p) is not an &quot;</span><br><span class="line">				   &quot;instruction boundary.\n&quot;,</span><br><span class="line">				   tk-&gt;rp.kp.addr);</span><br><span class="line">			ret = -EINVAL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>kprobe event被创建成功以后，系统处在这样一个状态：</p>
+<ul>
+<li>1、kprobe/kretprobe的探测点被插桩，桩函数为kprobe_dispatcher()/kretprobe_dispatcher()。桩函数等待着轮询tk-&gt;tp.files链表，把trace数据存到对应的ringbuffer当中；</li>
+<li>2、trace_event_call已经注册，并且创建了trace_event_file把trace_event_call和trace_array中的ring buffer联系了起来；</li>
+</ul>
+<p>但是此时，上述两步还没有建立起关系，tk-&gt;tp.files链表还是为空。</p>
+<p>在enable event的操作中，最后会调用call-&gt;class-&gt;reg即kprobe_register()函数，把trace_event_file加入到tk-&gt;tp.files链表。至此整个数据通道贯通，桩函数会进行trace数据的抓取。</p>
+<h2 id="1-4、kprobe-event的enable"><a href="#1-4、kprobe-event的enable" class="headerlink" title="1.4、kprobe event的enable"></a>1.4、kprobe event的enable</h2><p>event enable的执行路径为：ftrace_enable_fops -&gt; event_enable_write() -&gt; ftrace_event_enable_disable() -&gt; __ftrace_event_enable_disable() -&gt; call-&gt;class-&gt;reg(call, TRACE_REG_UNREGISTER/TRACE_REG_REGISTER, file);</p>
+<p>kprobe event的call-&gt;class-&gt;reg()为kprobe_register()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">static int kprobe_register(struct trace_event_call *event,</span><br><span class="line">			   enum trace_reg type, void *data)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_kprobe *tk = (struct trace_kprobe *)event-&gt;data;</span><br><span class="line">	struct trace_event_file *file = data;</span><br><span class="line"></span><br><span class="line">	switch (type) &#123;</span><br><span class="line">	case TRACE_REG_REGISTER:</span><br><span class="line">		return enable_trace_kprobe(tk, file);</span><br><span class="line">	case TRACE_REG_UNREGISTER:</span><br><span class="line">		return disable_trace_kprobe(tk, file);</span><br><span class="line"></span><br><span class="line">#ifdef CONFIG_PERF_EVENTS</span><br><span class="line">	case TRACE_REG_PERF_REGISTER:</span><br><span class="line">		return enable_trace_kprobe(tk, NULL);</span><br><span class="line">	case TRACE_REG_PERF_UNREGISTER:</span><br><span class="line">		return disable_trace_kprobe(tk, NULL);</span><br><span class="line">	case TRACE_REG_PERF_OPEN:</span><br><span class="line">	case TRACE_REG_PERF_CLOSE:</span><br><span class="line">	case TRACE_REG_PERF_ADD:</span><br><span class="line">	case TRACE_REG_PERF_DEL:</span><br><span class="line">		return 0;</span><br><span class="line">#endif</span><br><span class="line">	&#125;</span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int</span><br><span class="line">enable_trace_kprobe(struct trace_kprobe *tk, struct trace_event_file *file)</span><br><span class="line">&#123;</span><br><span class="line">	int ret = 0;</span><br><span class="line"></span><br><span class="line">    /* 把trace_event_file加入到tk-&gt;tp.files链表 */</span><br><span class="line">	if (file) &#123;</span><br><span class="line">		struct event_file_link *link;</span><br><span class="line"></span><br><span class="line">		link = kmalloc(sizeof(*link), GFP_KERNEL);</span><br><span class="line">		if (!link) &#123;</span><br><span class="line">			ret = -ENOMEM;</span><br><span class="line">			goto out;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		link-&gt;file = file;</span><br><span class="line">		list_add_tail_rcu(&amp;link-&gt;list, &amp;tk-&gt;tp.files);</span><br><span class="line"></span><br><span class="line">		tk-&gt;tp.flags |= TP_FLAG_TRACE;</span><br><span class="line">	&#125; else</span><br><span class="line">		tk-&gt;tp.flags |= TP_FLAG_PROFILE;</span><br><span class="line"></span><br><span class="line">	if (trace_probe_is_registered(&amp;tk-&gt;tp) &amp;&amp; !trace_kprobe_has_gone(tk)) &#123;</span><br><span class="line">		if (trace_kprobe_is_return(tk))</span><br><span class="line">			ret = enable_kretprobe(&amp;tk-&gt;rp);</span><br><span class="line">		else</span><br><span class="line">			ret = enable_kprobe(&amp;tk-&gt;rp.kp);</span><br><span class="line">	&#125;</span><br><span class="line"> out:</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="2、数据存入"><a href="#2、数据存入" class="headerlink" title="2、数据存入"></a>2、数据存入</h1><p>kprobe event的数据存入路径为：kprobe_dispatcher() -&gt; kprobe_trace_func() -&gt; __kprobe_trace_func()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line">/* Kprobe handler */</span><br><span class="line">static nokprobe_inline void</span><br><span class="line">__kprobe_trace_func(struct trace_kprobe *tk, struct pt_regs *regs,</span><br><span class="line">		    struct trace_event_file *trace_file)</span><br><span class="line">&#123;</span><br><span class="line">	struct kprobe_trace_entry_head *entry;</span><br><span class="line">	struct ring_buffer_event *event;</span><br><span class="line">	struct ring_buffer *buffer;</span><br><span class="line">	int size, dsize, pc;</span><br><span class="line">	unsigned long irq_flags;</span><br><span class="line">	struct trace_event_call *call = &amp;tk-&gt;tp.call;</span><br><span class="line"></span><br><span class="line">	WARN_ON(call != trace_file-&gt;event_call);</span><br><span class="line"></span><br><span class="line">    /* (1) 如果当前event的trigger没有组合filter条件：</span><br><span class="line">        1、无条件执行trigger command；</span><br><span class="line">        2、如果是soft disable模式，直接返回；</span><br><span class="line">        3、判断pid filter；</span><br><span class="line">     */</span><br><span class="line">	if (trace_trigger_soft_disabled(trace_file))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	local_save_flags(irq_flags);</span><br><span class="line">	pc = preempt_count();</span><br><span class="line"></span><br><span class="line">    /* (2) 计算trace数据的长度：</span><br><span class="line">        sizeof(*entry)：头部长度</span><br><span class="line">        tk-&gt;tp.size：固定数据长度</span><br><span class="line">        dsize：动态数据的长度</span><br><span class="line">     */</span><br><span class="line">	dsize = __get_data_size(&amp;tk-&gt;tp, regs);</span><br><span class="line">	size = sizeof(*entry) + tk-&gt;tp.size + dsize;</span><br><span class="line"></span><br><span class="line">    /* (3) 从ringbuffer中分配空间 */</span><br><span class="line">	event = trace_event_buffer_lock_reserve(&amp;buffer, trace_file,</span><br><span class="line">						call-&gt;event.type,</span><br><span class="line">						size, irq_flags, pc);</span><br><span class="line">	if (!event)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (4) 存储头部数据 */</span><br><span class="line">	entry = ring_buffer_event_data(event);</span><br><span class="line">	entry-&gt;ip = (unsigned long)tk-&gt;rp.kp.addr;</span><br><span class="line">	</span><br><span class="line">	/* (5) 存储event自定义数据 */</span><br><span class="line">	store_trace_args(sizeof(*entry), &amp;tk-&gt;tp, regs, (u8 *)&amp;entry[1], dsize);</span><br><span class="line"></span><br><span class="line">    /* (6) 提交确认数据 */</span><br><span class="line">	event_trigger_unlock_commit_regs(trace_file, buffer, event,</span><br><span class="line">					 entry, irq_flags, pc, regs);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">/* Store the value of each argument */</span><br><span class="line">static nokprobe_inline void</span><br><span class="line">store_trace_args(int ent_size, struct trace_probe *tp, struct pt_regs *regs,</span><br><span class="line">		 u8 *data, int maxlen)</span><br><span class="line">&#123;</span><br><span class="line">	int i;</span><br><span class="line">	u32 end = tp-&gt;size;</span><br><span class="line">	u32 *dl;	/* Data (relative) location */</span><br><span class="line"></span><br><span class="line">    /* (5.1) 逐个拷贝arg到trace data中 */</span><br><span class="line">	for (i = 0; i &lt; tp-&gt;nr_args; i++) &#123;</span><br><span class="line">		if (unlikely(tp-&gt;args[i].fetch_size.fn)) &#123;</span><br><span class="line">			/*</span><br><span class="line">			 * First, we set the relative location and</span><br><span class="line">			 * maximum data length to *dl</span><br><span class="line">			 */</span><br><span class="line">			dl = (u32 *)(data + tp-&gt;args[i].offset);</span><br><span class="line">			*dl = make_data_rloc(maxlen, end - tp-&gt;args[i].offset);</span><br><span class="line">			/* Then try to fetch string or dynamic array data */</span><br><span class="line">			call_fetch(&amp;tp-&gt;args[i].fetch, regs, dl);</span><br><span class="line">			/* Reduce maximum length */</span><br><span class="line">			end += get_rloc_len(*dl);</span><br><span class="line">			maxlen -= get_rloc_len(*dl);</span><br><span class="line">			/* Trick here, convert data_rloc to data_loc */</span><br><span class="line">			*dl = convert_rloc_to_loc(*dl,</span><br><span class="line">				 ent_size + tp-&gt;args[i].offset);</span><br><span class="line">		&#125; else</span><br><span class="line">			/* Just fetching data normally */</span><br><span class="line">			call_fetch(&amp;tp-&gt;args[i].fetch, regs,</span><br><span class="line">				   data + tp-&gt;args[i].offset);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>kretprobe event的数据存入路径为：kretprobe_dispatcher() -&gt; kretprobe_trace_func() -&gt; __kretprobe_trace_func()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">/* Kretprobe handler */</span><br><span class="line">static nokprobe_inline void</span><br><span class="line">__kretprobe_trace_func(struct trace_kprobe *tk, struct kretprobe_instance *ri,</span><br><span class="line">		       struct pt_regs *regs,</span><br><span class="line">		       struct trace_event_file *trace_file)</span><br><span class="line">&#123;</span><br><span class="line">	struct kretprobe_trace_entry_head *entry;</span><br><span class="line">	struct ring_buffer_event *event;</span><br><span class="line">	struct ring_buffer *buffer;</span><br><span class="line">	int size, pc, dsize;</span><br><span class="line">	unsigned long irq_flags;</span><br><span class="line">	struct trace_event_call *call = &amp;tk-&gt;tp.call;</span><br><span class="line"></span><br><span class="line">	WARN_ON(call != trace_file-&gt;event_call);</span><br><span class="line"></span><br><span class="line">	if (trace_trigger_soft_disabled(trace_file))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	local_save_flags(irq_flags);</span><br><span class="line">	pc = preempt_count();</span><br><span class="line"></span><br><span class="line">	dsize = __get_data_size(&amp;tk-&gt;tp, regs);</span><br><span class="line">	size = sizeof(*entry) + tk-&gt;tp.size + dsize;</span><br><span class="line"></span><br><span class="line">	event = trace_event_buffer_lock_reserve(&amp;buffer, trace_file,</span><br><span class="line">						call-&gt;event.type,</span><br><span class="line">						size, irq_flags, pc);</span><br><span class="line">	if (!event)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* 存储头部格式略有不同 */</span><br><span class="line">	entry = ring_buffer_event_data(event);</span><br><span class="line">	entry-&gt;func = (unsigned long)tk-&gt;rp.kp.addr;</span><br><span class="line">	entry-&gt;ret_ip = (unsigned long)ri-&gt;ret_addr;</span><br><span class="line">	store_trace_args(sizeof(*entry), &amp;tk-&gt;tp, regs, (u8 *)&amp;entry[1], dsize);</span><br><span class="line"></span><br><span class="line">	event_trigger_unlock_commit_regs(trace_file, buffer, event,</span><br><span class="line">					 entry, irq_flags, pc, regs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="2-1、数据格式"><a href="#2-1、数据格式" class="headerlink" title="2.1、数据格式"></a>2.1、数据格式</h2><p>kprobe event的数据格式为：</p>
+<p><img src="/images/ftrace_kprobe_event/entry_kprobe_event.png" alt="image"></p>
+<p>kretprobe event的数据格式为：</p>
+<p><img src="/images/ftrace_kprobe_event/entry_kretprobe_event.png" alt="image"></p>
+<h2 id="2-2、filter"><a href="#2-2、filter" class="headerlink" title="2.2、filter"></a>2.2、filter</h2><p>trigger、filter和普通的trace event操作一致，请参考：<a href="https://blog.csdn.net/pwl999/article/details/80514271" target="_blank" rel="noopener">trace event</a></p>
+<h1 id="3、数据读出"><a href="#3、数据读出" class="headerlink" title="3、数据读出"></a>3、数据读出</h1><p>从trace文件读出的kprobe event数据格式为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">cat /sys/kernel/debug/tracing/trace</span><br><span class="line"># tracer: nop</span><br><span class="line">#</span><br><span class="line">#           TASK-PID    CPU#    TIMESTAMP  FUNCTION</span><br><span class="line">#              | |       |          |         |</span><br><span class="line">           &lt;...&gt;-1447  [001] 1038282.286875: myprobe: (do_sys_open+0x0/0xd6) dfd=3 filename=7fffd1ec4440 flags=8000 mode=0</span><br><span class="line">           &lt;...&gt;-1447  [001] 1038282.286878: myretprobe: (sys_openat+0xc/0xe &lt;- do_sys_open) $retval=fffffffffffffffe</span><br><span class="line">           &lt;...&gt;-1447  [001] 1038282.286885: myprobe: (do_sys_open+0x0/0xd6) dfd=ffffff9c filename=40413c flags=8000 mode=1b6</span><br><span class="line">           &lt;...&gt;-1447  [001] 1038282.286915: myretprobe: (sys_open+0x1b/0x1d &lt;- do_sys_open) $retval=3</span><br><span class="line">           &lt;...&gt;-1447  [001] 1038282.286969: myprobe: (do_sys_open+0x0/0xd6) dfd=ffffff9c filename=4041c6 flags=98800 mode=10</span><br><span class="line">           &lt;...&gt;-1447  [001] 1038282.286976: myretprobe: (sys_open+0x1b/0x1d &lt;- do_sys_open) $retval=3</span><br></pre></td></tr></table></figure>
+<p>在register_kprobe_event()中，对kprobe模式的event.funcs赋值kprobe_funcs，对kretprobe模式的event.funcs赋值kretprobe_funcs：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">static int register_kprobe_event(struct trace_kprobe *tk)</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">	/* Initialize trace_event_call */</span><br><span class="line">	INIT_LIST_HEAD(&amp;call-&gt;class-&gt;fields);</span><br><span class="line">	if (trace_kprobe_is_return(tk)) &#123;</span><br><span class="line">		call-&gt;event.funcs = &amp;kretprobe_funcs;</span><br><span class="line">		call-&gt;class-&gt;define_fields = kretprobe_event_define_fields;</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		call-&gt;event.funcs = &amp;kprobe_funcs;</span><br><span class="line">		call-&gt;class-&gt;define_fields = kprobe_event_define_fields;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static struct trace_event_functions kretprobe_funcs = &#123;</span><br><span class="line">	.trace		= print_kretprobe_event</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static struct trace_event_functions kprobe_funcs = &#123;</span><br><span class="line">	.trace		= print_kprobe_event</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在数据读出时，会调用到event对应的event-&gt;funcs-&gt;trace()函数，seq_read() -&gt; s_show() -&gt; print_trace_line() -&gt; print_trace_fmt() -&gt; event-&gt;funcs-&gt;trace()：</p>
+<p>kprobe模式对应print_kprobe_event()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">/* Event entry printers */</span><br><span class="line">static enum print_line_t</span><br><span class="line">print_kprobe_event(struct trace_iterator *iter, int flags,</span><br><span class="line">		   struct trace_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct kprobe_trace_entry_head *field;</span><br><span class="line">	struct trace_seq *s = &amp;iter-&gt;seq;</span><br><span class="line">	struct trace_probe *tp;</span><br><span class="line">	u8 *data;</span><br><span class="line">	int i;</span><br><span class="line"></span><br><span class="line">	field = (struct kprobe_trace_entry_head *)iter-&gt;ent;</span><br><span class="line">	tp = container_of(event, struct trace_probe, call.event);</span><br><span class="line"></span><br><span class="line">    /* (1) 打印event name */</span><br><span class="line">	trace_seq_printf(s, &quot;%s: (&quot;, trace_event_name(&amp;tp-&gt;call));</span><br><span class="line"></span><br><span class="line">    /* (2) 打印ip对应的symbol */</span><br><span class="line">	if (!seq_print_ip_sym(s, field-&gt;ip, flags | TRACE_ITER_SYM_OFFSET))</span><br><span class="line">		goto out;</span><br><span class="line"></span><br><span class="line">	trace_seq_putc(s, &apos;)&apos;);</span><br><span class="line"></span><br><span class="line">	data = (u8 *)&amp;field[1];</span><br><span class="line">	/* (3) 逐个打印arg的name = value */</span><br><span class="line">	for (i = 0; i &lt; tp-&gt;nr_args; i++)</span><br><span class="line">		if (!tp-&gt;args[i].type-&gt;print(s, tp-&gt;args[i].name,</span><br><span class="line">					     data + tp-&gt;args[i].offset, field))</span><br><span class="line">			goto out;</span><br><span class="line"></span><br><span class="line">	trace_seq_putc(s, &apos;\n&apos;);</span><br><span class="line"> out:</span><br><span class="line">	return trace_handle_return(s);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>kretprobe模式对应print_kretprobe_event()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">static enum print_line_t</span><br><span class="line">print_kretprobe_event(struct trace_iterator *iter, int flags,</span><br><span class="line">		      struct trace_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct kretprobe_trace_entry_head *field;</span><br><span class="line">	struct trace_seq *s = &amp;iter-&gt;seq;</span><br><span class="line">	struct trace_probe *tp;</span><br><span class="line">	u8 *data;</span><br><span class="line">	int i;</span><br><span class="line"></span><br><span class="line">	field = (struct kretprobe_trace_entry_head *)iter-&gt;ent;</span><br><span class="line">	tp = container_of(event, struct trace_probe, call.event);</span><br><span class="line"></span><br><span class="line">    /* (1) 打印event name */</span><br><span class="line">	trace_seq_printf(s, &quot;%s: (&quot;, trace_event_name(&amp;tp-&gt;call));</span><br><span class="line"></span><br><span class="line">    /* (2) 打印函数返回地址 */</span><br><span class="line">	if (!seq_print_ip_sym(s, field-&gt;ret_ip, flags | TRACE_ITER_SYM_OFFSET))</span><br><span class="line">		goto out;</span><br><span class="line"></span><br><span class="line">	trace_seq_puts(s, &quot; &lt;- &quot;);</span><br><span class="line"></span><br><span class="line">    /* (3) 打印函数地址 */</span><br><span class="line">	if (!seq_print_ip_sym(s, field-&gt;func, flags &amp; ~TRACE_ITER_SYM_OFFSET))</span><br><span class="line">		goto out;</span><br><span class="line"></span><br><span class="line">	trace_seq_putc(s, &apos;)&apos;);</span><br><span class="line"></span><br><span class="line">	data = (u8 *)&amp;field[1];</span><br><span class="line">	/* (4) 逐个打印arg的name = value */</span><br><span class="line">	for (i = 0; i &lt; tp-&gt;nr_args; i++)</span><br><span class="line">		if (!tp-&gt;args[i].type-&gt;print(s, tp-&gt;args[i].name,</span><br><span class="line">					     data + tp-&gt;args[i].offset, field))</span><br><span class="line">			goto out;</span><br><span class="line"></span><br><span class="line">	trace_seq_putc(s, &apos;\n&apos;);</span><br><span class="line"></span><br><span class="line"> out:</span><br><span class="line">	return trace_handle_return(s);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/kprobe/" rel="tag"># kprobe</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/21/systrace/" rel="next" title="Systrace">
+                <i class="fa fa-chevron-left"></i> Systrace
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、函数插桩"><span class="nav-number">1.</span> <span class="nav-text">1、函数插桩</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1、插桩原理"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、插桩原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2、kprobe-event的使用"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、kprobe event的使用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-3、kprobe-event的创建"><span class="nav-number">1.3.</span> <span class="nav-text">1.3、kprobe event的创建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-4、kprobe-event的enable"><span class="nav-number">1.4.</span> <span class="nav-text">1.4、kprobe event的enable</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、数据存入"><span class="nav-number">2.</span> <span class="nav-text">2、数据存入</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1、数据格式"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、数据格式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2、filter"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、filter</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、数据读出"><span class="nav-number">3.</span> <span class="nav-text">3、数据读出</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2018</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

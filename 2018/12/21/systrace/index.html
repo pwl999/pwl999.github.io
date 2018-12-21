@@ -107,25 +107,25 @@
   <meta name="description" content="上图基本就能说清systrace的整个框架：  1、systrace调用atrace抓取目标机的trace数据； 2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件； 3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分">
 <meta name="keywords" content="systrace">
 <meta property="og:type" content="article">
-<meta property="og:title" content="systrace">
-<meta property="og:url" content="http://yoursite.com/2018/12/20/systrace/index.html">
+<meta property="og:title" content="Systrace">
+<meta property="og:url" content="http://yoursite.com/2018/12/21/systrace/index.html">
 <meta property="og:site_name" content="pwl999&#39;s blog">
 <meta property="og:description" content="上图基本就能说清systrace的整个框架：  1、systrace调用atrace抓取目标机的trace数据； 2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件； 3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="http://yoursite.com/2018/12/20/images/systrace/systrace.png">
-<meta property="og:image" content="http://yoursite.com/2018/12/20/images/systrace/trace_html.png">
-<meta property="og:updated_time" content="2018-12-21T01:44:51.477Z">
+<meta property="og:image" content="http://yoursite.com/images/systrace/systrace.png">
+<meta property="og:image" content="http://yoursite.com/images/systrace/trace_html.png">
+<meta property="og:updated_time" content="2018-12-21T03:02:08.544Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="systrace">
+<meta name="twitter:title" content="Systrace">
 <meta name="twitter:description" content="上图基本就能说清systrace的整个框架：  1、systrace调用atrace抓取目标机的trace数据； 2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件； 3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分">
-<meta name="twitter:image" content="http://yoursite.com/2018/12/20/images/systrace/systrace.png">
+<meta name="twitter:image" content="http://yoursite.com/images/systrace/systrace.png">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2018/12/20/systrace/">
+  <link rel="canonical" href="http://yoursite.com/2018/12/21/systrace/">
 
 
 
@@ -135,7 +135,7 @@
   };
 </script>
 
-  <title>systrace | pwl999's blog</title>
+  <title>Systrace | pwl999's blog</title>
   
 
 
@@ -333,7 +333,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/20/systrace/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/12/21/systrace/">
 
     <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
       <meta itemprop="name" content="pwl999">
@@ -350,7 +350,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">systrace
+          <h1 class="post-title" itemprop="name headline">Systrace
 
               
             
@@ -358,7 +358,14 @@
         
 
         <div class="post-meta">
-          <span class="post-time">
+
+          
+            <i class="fa fa-thumb-tack"></i>
+            <font color="7D26CD">置顶</font>
+            <span class="post-meta-divider">|</span>
+          
+
+        <span class="post-time">
 
             
             
@@ -376,24 +383,12 @@
                 
               
 
-              <time title="创建时间：2018-12-20 20:25:15" itemprop="dateCreated datePublished" datetime="2018-12-20T20:25:15+08:00">2018-12-20</time>
+              <time title="创建时间：2018-12-21 10:18:21 / 修改时间：11:02:08" itemprop="dateCreated datePublished" datetime="2018-12-21T10:18:21+08:00">2018-12-21</time>
             
 
             
               
 
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2018-12-21 09:44:51" itemprop="dateModified" datetime="2018-12-21T09:44:51+08:00">2018-12-21</time>
               
             
           </span>
@@ -420,6 +415,17 @@
 
           
             
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/12/21/systrace/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/12/21/systrace/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
           
 
           
@@ -444,7 +450,7 @@
       
 
       
-        <p><img src="../images/systrace/systrace.png" alt="systrace"></p>
+        <p><img src="/images/systrace/systrace.png" alt="systrace"></p>
 <p>上图基本就能说清systrace的整个框架：</p>
 <ul>
 <li>1、systrace调用atrace抓取目标机的trace数据；</li>
@@ -465,7 +471,7 @@
 <li>‘gfx view wm am dalvik input sched freq idle’，指定了需要抓取的事件；</li>
 </ul>
 <p>在命令启动以后，我们就可以在目标机上进行滑动、启动app等一系列操作，10s内的这些操作都会被记录下来最后dump进trace.html文件。我们可以通过google的chrome浏览器来查看、分析trace.html：’google-chrome trace.html’。</p>
-<p><img src="../images/systrace/trace_html.png" alt="trace_html"></p>
+<p><img src="/images/systrace/trace_html.png" alt="trace_html"></p>
 <p>可以通过’-l’选项来查看目标机支持的systrace事件全集：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">$ ./systrace -l</span><br><span class="line">         gfx - Graphics</span><br><span class="line">       input - Input</span><br><span class="line">        view - View System</span><br><span class="line">     webview - WebView</span><br><span class="line">          wm - Window Manager</span><br><span class="line">          am - Activity Manager</span><br><span class="line">          sm - Sync Manager</span><br><span class="line">       audio - Audio</span><br><span class="line">       video - Video</span><br><span class="line">      camera - Camera</span><br><span class="line">         hal - Hardware Modules</span><br><span class="line">         app - Application</span><br><span class="line">         res - Resource Loading</span><br><span class="line">      dalvik - Dalvik VM</span><br><span class="line">          rs - RenderScript</span><br><span class="line">      bionic - Bionic C Library</span><br><span class="line">       power - Power Management</span><br><span class="line">          pm - Package Manager</span><br><span class="line">          ss - System Server</span><br><span class="line">    database - Database</span><br><span class="line">     network - Network</span><br><span class="line">         adb - ADB</span><br><span class="line">         pdx - PDX services</span><br><span class="line">       sched - CPU Scheduling</span><br><span class="line">         irq - IRQ Events</span><br><span class="line">        freq - CPU Frequency</span><br><span class="line">        idle - CPU Idle</span><br><span class="line">        disk - Disk I/O</span><br><span class="line">       workq - Kernel Workqueues</span><br><span class="line">  memreclaim - Kernel Memory Reclaim</span><br><span class="line">  regulators - Voltage and Current Regulators</span><br><span class="line">  binder_driver - Binder Kernel driver</span><br><span class="line">  binder_lock - Binder global lock trace</span><br><span class="line">   pagecache - Page cache</span><br><span class="line"></span><br><span class="line">NOTE: more categories may be available with adb root</span><br></pre></td></tr></table></figure>
 <p>还可以通过’–help’选项来查看systrace命令的详细选项：</p>
@@ -620,6 +626,26 @@
       
 
       
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/12/21/perf_tracepoint_events/" rel="next" title="Linux Perf 1.2、tracepoint events">
+                <i class="fa fa-chevron-left"></i> Linux Perf 1.2、tracepoint events
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/21/ftrace_kprobe_event/" rel="prev" title="Linux Ftrace 1.4、kprobe event">
+                Linux Ftrace 1.4、kprobe event <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
 
       
       
@@ -636,6 +662,13 @@
 
           </div>
           
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
 
   
 
@@ -687,7 +720,7 @@
                 
                   <a href="/archives">
                 
-                    <span class="site-state-item-count">1</span>
+                    <span class="site-state-item-count">30</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
@@ -697,14 +730,20 @@
                 
                 
                 <div class="site-state-item site-state-categories">
-                  
+                  <a href="/categories/index.html">
                     
                     
                       
                     
-                    <span class="site-state-item-count">1</span>
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
                     <span class="site-state-item-name">分类</span>
-                  
+                  </a>
                 </div>
               
 
@@ -712,14 +751,64 @@
                 
                 
                 <div class="site-state-item site-state-tags">
-                  
+                  <a href="/tags/index.html">
                     
                     
                       
                     
-                    <span class="site-state-item-count">1</span>
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
                     <span class="site-state-item-name">标签</span>
-                  
+                  </a>
                 </div>
               
             </nav>
@@ -906,6 +995,31 @@
 
 
   
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/12/21/systrace/";
+        this.page.identifier = "2018/12/21/systrace/";
+        this.page.title = 'Systrace';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
 
 
 
