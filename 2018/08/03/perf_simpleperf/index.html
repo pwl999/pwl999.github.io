@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="因为perf原生的用户态工具(kerneldir/tools/perf)交叉编译出错较多，用户态源码分析改用android 7.0简化版simpleperf来分析。simpleperf支持完整perf命令中的一些常见子命令。 1、命令框架源码入口在system/extras/simpleperf/main.cpp: 12345678910111213141516171819202122232425">
+<meta name="keywords" content="simpleperf">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux Perf 2.1、simpleperf">
+<meta property="og:url" content="http://yoursite.com/2018/08/03/perf_simpleperf/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="因为perf原生的用户态工具(kerneldir/tools/perf)交叉编译出错较多，用户态源码分析改用android 7.0简化版simpleperf来分析。simpleperf支持完整perf命令中的一些常见子命令。 1、命令框架源码入口在system/extras/simpleperf/main.cpp: 12345678910111213141516171819202122232425">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-01-14T02:22:48.824Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux Perf 2.1、simpleperf">
+<meta name="twitter:description" content="因为perf原生的用户态工具(kerneldir/tools/perf)交叉编译出错较多，用户态源码分析改用android 7.0简化版simpleperf来分析。simpleperf支持完整perf命令中的一些常见子命令。 1、命令框架源码入口在system/extras/simpleperf/main.cpp: 12345678910111213141516171819202122232425">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/08/03/perf_simpleperf/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Linux Perf 2.1、simpleperf | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/03/perf_simpleperf/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux Perf 2.1、simpleperf
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-08-03 19:17:07" itemprop="dateCreated datePublished" datetime="2018-08-03T19:17:07+08:00">2018-08-03</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-01-14 10:22:48" itemprop="dateModified" datetime="2019-01-14T10:22:48+08:00">2019-01-14</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/08/03/perf_simpleperf/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/08/03/perf_simpleperf/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>因为perf原生的用户态工具(kerneldir/tools/perf)交叉编译出错较多，用户态源码分析改用android 7.0简化版simpleperf来分析。simpleperf支持完整perf命令中的一些常见子命令。</p>
+<h1 id="1、命令框架"><a href="#1、命令框架" class="headerlink" title="1、命令框架"></a>1、命令框架</h1><p>源码入口在system/extras/simpleperf/main.cpp:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></td><td class="code"><pre><span class="line">int main(int argc, char** argv) &#123;</span><br><span class="line">  InitLogging(argv, android::base::StderrLogger);</span><br><span class="line">  std::vector&lt;std::string&gt; args;</span><br><span class="line">  android::base::LogSeverity log_severity = android::base::WARNING;</span><br><span class="line"></span><br><span class="line">  /* (1) 解析命令参数“simpleperf xxx”：从argv[i]解析到args */</span><br><span class="line">  for (int i = 1; i &lt; argc; ++i) &#123;</span><br><span class="line">  </span><br><span class="line">    /* (1.1) help子命令 */</span><br><span class="line">    if (strcmp(argv[i], &quot;--help&quot;) == 0 || strcmp(argv[i], &quot;-h&quot;) == 0) &#123;</span><br><span class="line">      args.insert(args.begin(), &quot;help&quot;);</span><br><span class="line">    </span><br><span class="line">    /* (1.2) 指定log等级 */</span><br><span class="line">    &#125; else if (strcmp(argv[i], &quot;--log&quot;) == 0) &#123;</span><br><span class="line">      if (i + 1 &lt; argc) &#123;</span><br><span class="line">        ++i;</span><br><span class="line">        if (!GetLogSeverity(argv[i], &amp;log_severity)) &#123;</span><br><span class="line">          LOG(ERROR) &lt;&lt; &quot;Unknown log severity: &quot; &lt;&lt; argv[i];</span><br><span class="line">          return 1;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125; else &#123;</span><br><span class="line">        LOG(ERROR) &lt;&lt; &quot;Missing argument for --log option.\n&quot;;</span><br><span class="line">        return 1;</span><br><span class="line">      &#125;</span><br><span class="line">    </span><br><span class="line">    /* (1.3) 其他的不解析直接压入args */</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      args.push_back(argv[i]);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (1.4) 设定log等级 */</span><br><span class="line">  android::base::ScopedLogSeverity severity(log_severity);</span><br><span class="line"></span><br><span class="line">  /* (1.5) 如果参数为空，设置参数为&quot;help&quot; */</span><br><span class="line">  if (args.empty()) &#123;</span><br><span class="line">    args.push_back(&quot;help&quot;);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (2) 根据args[0]指定的命令名，找到注册的对应命令command */</span><br><span class="line">  std::unique_ptr&lt;Command&gt; command = CreateCommandInstance(args[0]);</span><br><span class="line">  if (command == nullptr) &#123;</span><br><span class="line">    LOG(ERROR) &lt;&lt; &quot;malformed command line: unknown command &quot; &lt;&lt; args[0];</span><br><span class="line">    return 1;</span><br><span class="line">  &#125;</span><br><span class="line">  std::string command_name = args[0];</span><br><span class="line">  args.erase(args.begin());</span><br><span class="line"></span><br><span class="line">  LOG(DEBUG) &lt;&lt; &quot;command &apos;&quot; &lt;&lt; command_name &lt;&lt; &quot;&apos; starts running&quot;;</span><br><span class="line">  /* (3) 调用command对象的Run()方法 */</span><br><span class="line">  bool result = command-&gt;Run(args);</span><br><span class="line">  LOG(DEBUG) &lt;&lt; &quot;command &apos;&quot; &lt;&lt; command_name &lt;&lt; &quot;&apos; &quot;</span><br><span class="line">             &lt;&lt; (result ? &quot;finished successfully&quot; : &quot;failed&quot;);</span><br><span class="line">  return result ? 0 : 1;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">std::unique_ptr&lt;Command&gt; CreateCommandInstance(const std::string&amp; cmd_name) &#123;</span><br><span class="line"></span><br><span class="line">  /* (2.1) 根据name从command map中找到对应command对象 */</span><br><span class="line">  auto it = CommandMap().find(cmd_name);</span><br><span class="line">  return (it == CommandMap().end()) ? nullptr : (it-&gt;second)();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>command map是通过RegisterCommand()来进行注册的，在CommandRegister对象的构造函数中统一注册：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">/* (1) 类 */</span><br><span class="line">class CommandRegister &#123;</span><br><span class="line"> public:</span><br><span class="line"> </span><br><span class="line">  /* (1.1) 构造函数 */</span><br><span class="line">  CommandRegister() &#123;</span><br><span class="line">    RegisterDumpRecordCommand();</span><br><span class="line">    RegisterHelpCommand();</span><br><span class="line">    RegisterReportCommand();</span><br><span class="line">#if defined(__linux__)</span><br><span class="line">    RegisterListCommand();</span><br><span class="line">    RegisterRecordCommand();</span><br><span class="line">    RegisterStatCommand();</span><br><span class="line">#endif</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">/* (2) 定义一个全局对象来调用构造函数 */</span><br><span class="line">CommandRegister command_register;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">void RegisterListCommand() &#123;</span><br><span class="line"></span><br><span class="line">  /* (1.1.1) 向command map中注册(&quot;list&quot;, (new ListCommand))序列对 */</span><br><span class="line">  RegisterCommand(&quot;list&quot;, [] &#123; return std::unique_ptr&lt;Command&gt;(new ListCommand); &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void RegisterRecordCommand() &#123;</span><br><span class="line">  RegisterCommand(&quot;record&quot;, [] &#123; return std::unique_ptr&lt;Command&gt;(new RecordCommand()); &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">void RegisterStatCommand() &#123;</span><br><span class="line">  RegisterCommand(&quot;stat&quot;, [] &#123; return std::unique_ptr&lt;Command&gt;(new StatCommand); &#125;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">void RegisterCommand(const std::string&amp; cmd_name,</span><br><span class="line">                     std::function&lt;std::unique_ptr&lt;Command&gt;(void)&gt; callback) &#123;</span><br><span class="line">                     </span><br><span class="line">  /* (1.1.1.1) 将序列对压入CommandMap() */ </span><br><span class="line">  CommandMap().insert(std::make_pair(cmd_name, callback));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="2、list子命令"><a href="#2、list子命令" class="headerlink" title="2、list子命令"></a>2、list子命令</h1><p>我们使用“simple list”来查看当前系统支持event的种类：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf list | more</span><br><span class="line">List of hw-cache events:</span><br><span class="line">  L1-dcache-loads</span><br><span class="line">  L1-dcache-load-misses</span><br><span class="line">  L1-dcache-stores</span><br><span class="line">  L1-dcache-store-misses</span><br><span class="line">  branch-loads</span><br><span class="line">  branch-load-misses</span><br><span class="line">  branch-stores</span><br><span class="line">  branch-store-misses</span><br><span class="line"></span><br><span class="line">List of hardware events:</span><br><span class="line">  cpu-cycles</span><br><span class="line">  instructions</span><br><span class="line">  cache-references</span><br><span class="line">  cache-misses</span><br><span class="line">  branch-misses</span><br><span class="line"></span><br><span class="line">List of software events:</span><br><span class="line">  cpu-clock</span><br><span class="line">  task-clock</span><br><span class="line">  page-faults</span><br><span class="line">  context-switches</span><br><span class="line">  cpu-migrations</span><br><span class="line">  minor-faults</span><br><span class="line">  major-faults</span><br><span class="line">  alignment-faults</span><br><span class="line">  emulation-faults</span><br><span class="line"></span><br><span class="line">List of tracepoint events:</span><br><span class="line">  almk:almk_shrink</span><br><span class="line">  almk:almk_vmpressure</span><br><span class="line">  asoc:snd_soc_bias_level_done</span><br><span class="line">  asoc:snd_soc_bias_level_start</span><br><span class="line">  asoc:snd_soc_dapm_connected</span><br><span class="line">  asoc:snd_soc_dapm_done</span><br><span class="line">  asoc:snd_soc_dapm_path</span><br><span class="line">  asoc:snd_soc_dapm_start</span><br><span class="line">  asoc:snd_soc_dapm_walk_done</span><br><span class="line">  asoc:snd_soc_dapm_widget_event_done</span><br><span class="line">  asoc:snd_soc_dapm_widget_event_start</span><br></pre></td></tr></table></figure>
+<p>list子命令的实现主体在ListCommand的Run方法中，system/extras/simpleperf/cmd_list.cpp:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">bool ListCommand::Run(const std::vector&lt;std::string&gt;&amp; args) &#123;</span><br><span class="line"></span><br><span class="line">  /* (1) 权限判断 */</span><br><span class="line">  if (!CheckPerfEventLimit()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  static std::map&lt;std::string, std::pair&lt;int, std::string&gt;&gt; type_map = &#123;</span><br><span class="line">      &#123;&quot;hw&quot;, &#123;PERF_TYPE_HARDWARE, &quot;hardware events&quot;&#125;&#125;,</span><br><span class="line">      &#123;&quot;sw&quot;, &#123;PERF_TYPE_SOFTWARE, &quot;software events&quot;&#125;&#125;,</span><br><span class="line">      &#123;&quot;cache&quot;, &#123;PERF_TYPE_HW_CACHE, &quot;hw-cache events&quot;&#125;&#125;,</span><br><span class="line">      &#123;&quot;tracepoint&quot;, &#123;PERF_TYPE_TRACEPOINT, &quot;tracepoint events&quot;&#125;&#125;,</span><br><span class="line">  &#125;;</span><br><span class="line"></span><br><span class="line">  /* (2) “simpleperf list xxx”子参数的判断 */</span><br><span class="line">  std::vector&lt;std::string&gt; names;</span><br><span class="line">  /* (2.1) 如果子参数为空，默认把type_map表中所有type加入到names对象 */</span><br><span class="line">  if (args.empty()) &#123;</span><br><span class="line">    for (auto&amp; item : type_map) &#123;</span><br><span class="line">      names.push_back(item.first);</span><br><span class="line">    &#125;</span><br><span class="line">  /* (2.2) 如果子参数不为空，判断是否符合type_map表中type，并加入到names对象 */</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    for (auto&amp; arg : args) &#123;</span><br><span class="line">      if (type_map.find(arg) != type_map.end()) &#123;</span><br><span class="line">        names.push_back(arg);</span><br><span class="line">      &#125; else &#123;</span><br><span class="line">        LOG(ERROR) &lt;&lt; &quot;unknown event type category: &quot; &lt;&lt; arg &lt;&lt; &quot;, try using \&quot;help list\&quot;&quot;;</span><br><span class="line">        return false;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  /* (3) 获取到总type底下，具体子config的全集 */</span><br><span class="line">  auto&amp; event_types = GetAllEventTypes();</span><br><span class="line"></span><br><span class="line">  /* (4) 根据命令参数指定的type，找出所有的子config </span><br><span class="line">        逐个尝试当前系统是否支持</span><br><span class="line">   */</span><br><span class="line">  for (auto&amp; name : names) &#123;</span><br><span class="line">    auto it = type_map.find(name);</span><br><span class="line">    PrintEventTypesOfType(it-&gt;second.first, it-&gt;second.second, event_types);</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>“type + config”的全集在GetAllEventTypes()函数中获取：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br></pre></td><td class="code"><pre><span class="line">const std::vector&lt;EventType&gt;&amp; GetAllEventTypes() &#123;</span><br><span class="line">  static std::vector&lt;EventType&gt; event_type_array;</span><br><span class="line">  if (event_type_array.empty()) &#123;</span><br><span class="line">  </span><br><span class="line">    /* (3.1) software和hardware event在static_event_type_array[]数组中定义 */</span><br><span class="line">    event_type_array.insert(event_type_array.end(), static_event_type_array.begin(),</span><br><span class="line">                            static_event_type_array.end());</span><br><span class="line">    </span><br><span class="line">    /* (3.2) tracepoint event通过轮询&quot;/sys/kernel/debug/tracing/events&quot;下的文件夹来添加 */</span><br><span class="line">    const std::vector&lt;EventType&gt; tracepoint_array = GetTracepointEventTypes();</span><br><span class="line">    event_type_array.insert(event_type_array.end(), tracepoint_array.begin(),</span><br><span class="line">                            tracepoint_array.end());</span><br><span class="line">  &#125;</span><br><span class="line">  return event_type_array;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static const std::vector&lt;EventType&gt; static_event_type_array = &#123;</span><br><span class="line">#include &quot;event_type_table.h&quot;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line"> /* (3.1.1) software和hardware event的详细定义 */</span><br><span class="line">// This file is auto-generated by generate-event_table.py.</span><br><span class="line"></span><br><span class="line">&#123;&quot;cpu-cycles&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CPU_CYCLES&#125;,</span><br><span class="line">&#123;&quot;instructions&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_INSTRUCTIONS&#125;,</span><br><span class="line">&#123;&quot;cache-references&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_REFERENCES&#125;,</span><br><span class="line">&#123;&quot;cache-misses&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_CACHE_MISSES&#125;,</span><br><span class="line">&#123;&quot;branch-instructions&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_INSTRUCTIONS&#125;,</span><br><span class="line">&#123;&quot;branch-misses&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_BRANCH_MISSES&#125;,</span><br><span class="line">&#123;&quot;bus-cycles&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_BUS_CYCLES&#125;,</span><br><span class="line">&#123;&quot;stalled-cycles-frontend&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_STALLED_CYCLES_FRONTEND&#125;,</span><br><span class="line">&#123;&quot;stalled-cycles-backend&quot;, PERF_TYPE_HARDWARE, PERF_COUNT_HW_STALLED_CYCLES_BACKEND&#125;,</span><br><span class="line"></span><br><span class="line">&#123;&quot;cpu-clock&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_CLOCK&#125;,</span><br><span class="line">&#123;&quot;task-clock&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_TASK_CLOCK&#125;,</span><br><span class="line">&#123;&quot;page-faults&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS&#125;,</span><br><span class="line">&#123;&quot;context-switches&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CONTEXT_SWITCHES&#125;,</span><br><span class="line">&#123;&quot;cpu-migrations&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_CPU_MIGRATIONS&#125;,</span><br><span class="line">&#123;&quot;minor-faults&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MIN&#125;,</span><br><span class="line">&#123;&quot;major-faults&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_PAGE_FAULTS_MAJ&#125;,</span><br><span class="line">&#123;&quot;alignment-faults&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_ALIGNMENT_FAULTS&#125;,</span><br><span class="line">&#123;&quot;emulation-faults&quot;, PERF_TYPE_SOFTWARE, PERF_COUNT_SW_EMULATION_FAULTS&#125;,</span><br><span class="line"></span><br><span class="line">&#123;&quot;L1-dcache-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-dcache-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-dcache-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-dcache-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-dcache-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-dcache-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1D) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-icache-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1I) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-icache-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1I) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-icache-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1I) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-icache-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1I) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-icache-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1I) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;L1-icache-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_L1I) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;LLC-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;LLC-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;LLC-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;LLC-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;LLC-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;LLC-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_LL) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;dTLB-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_DTLB) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;dTLB-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_DTLB) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;dTLB-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_DTLB) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;dTLB-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_DTLB) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;dTLB-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_DTLB) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;dTLB-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_DTLB) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;iTLB-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_ITLB) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;iTLB-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_ITLB) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;iTLB-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_ITLB) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;iTLB-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_ITLB) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;iTLB-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_ITLB) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;iTLB-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_ITLB) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;branch-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_BPU) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;branch-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_BPU) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;branch-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_BPU) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;branch-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_BPU) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;branch-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_BPU) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;branch-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_BPU) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;node-loads&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_NODE) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;node-load-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_NODE) | (PERF_COUNT_HW_CACHE_OP_READ &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;node-stores&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_NODE) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;node-store-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_NODE) | (PERF_COUNT_HW_CACHE_OP_WRITE &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;node-prefetches&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_NODE) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_ACCESS &lt;&lt; 16))&#125;,</span><br><span class="line">&#123;&quot;node-prefetch-misses&quot;, PERF_TYPE_HW_CACHE, ((PERF_COUNT_HW_CACHE_NODE) | (PERF_COUNT_HW_CACHE_OP_PREFETCH &lt;&lt; 8) | (PERF_COUNT_HW_CACHE_RESULT_MISS &lt;&lt; 16))&#125;,</span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static const std::vector&lt;EventType&gt; GetTracepointEventTypes() &#123;</span><br><span class="line">  std::vector&lt;EventType&gt; result;</span><br><span class="line">  const std::string tracepoint_dirname = &quot;/sys/kernel/debug/tracing/events&quot;;</span><br><span class="line">  std::vector&lt;std::string&gt; system_dirs;</span><br><span class="line">  GetEntriesInDir(tracepoint_dirname, nullptr, &amp;system_dirs);</span><br><span class="line">  </span><br><span class="line">  /* (3.2.1) 遍历&quot;/sys/kernel/debug/tracing/events&quot;下的子文件夹 */</span><br><span class="line">  for (auto&amp; system_name : system_dirs) &#123;</span><br><span class="line">    std::string system_path = tracepoint_dirname + &quot;/&quot; + system_name;</span><br><span class="line">    std::vector&lt;std::string&gt; event_dirs;</span><br><span class="line">    GetEntriesInDir(system_path, nullptr, &amp;event_dirs);</span><br><span class="line">    for (auto&amp; event_name : event_dirs) &#123;</span><br><span class="line">      std::string id_path = system_path + &quot;/&quot; + event_name + &quot;/id&quot;;</span><br><span class="line">      std::string id_content;</span><br><span class="line">      if (!android::base::ReadFileToString(id_path, &amp;id_content)) &#123;</span><br><span class="line">        continue;</span><br><span class="line">      &#125;</span><br><span class="line">      char* endptr;</span><br><span class="line">      uint64_t id = strtoull(id_content.c_str(), &amp;endptr, 10);</span><br><span class="line">      if (endptr == id_content.c_str()) &#123;</span><br><span class="line">        LOG(DEBUG) &lt;&lt; &quot;unexpected id &apos;&quot; &lt;&lt; id_content &lt;&lt; &quot;&apos; in &quot; &lt;&lt; id_path;</span><br><span class="line">        continue;</span><br><span class="line">      &#125;</span><br><span class="line">      </span><br><span class="line">      /* (3.2.2) 得到tracepoint event具体的值 */</span><br><span class="line">      result.push_back(EventType(system_name + &quot;:&quot; + event_name, PERF_TYPE_TRACEPOINT, id));</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  std::sort(result.begin(), result.end(),</span><br><span class="line">            [](const EventType&amp; type1, const EventType&amp; type2) &#123; return type1.name &lt; type2.name; &#125;);</span><br><span class="line">  return result;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>逐个尝试“type + config”组合在当前系统中是否支持，PrintEventTypesOfType()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></td><td class="code"><pre><span class="line">static void PrintEventTypesOfType(uint32_t type, const std::string&amp; type_name,</span><br><span class="line">                                  const std::vector&lt;EventType&gt;&amp; event_types) &#123;</span><br><span class="line">  printf(&quot;List of %s:\n&quot;, type_name.c_str());</span><br><span class="line">  </span><br><span class="line">  /* (4.1) 从全集中遍历符合当前type的所有config */</span><br><span class="line">  for (auto&amp; event_type : event_types) &#123;</span><br><span class="line">    if (event_type.type == type) &#123;</span><br><span class="line">    </span><br><span class="line">      /* (4.2) 创建默认的属性attr */</span><br><span class="line">      perf_event_attr attr = CreateDefaultPerfEventAttr(event_type);</span><br><span class="line">      // Exclude kernel to list supported events even when</span><br><span class="line">      // /proc/sys/kernel/perf_event_paranoid is 2.</span><br><span class="line">      attr.exclude_kernel = 1;</span><br><span class="line">      </span><br><span class="line">      /* (4.3) 使用attr尝试使用perf_event_open()系统调用，如果调用ok说明本系统支持 */</span><br><span class="line">      if (IsEventAttrSupportedByKernel(attr)) &#123;</span><br><span class="line">        printf(&quot;  %s\n&quot;, event_type.name.c_str());</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  printf(&quot;\n&quot;);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">perf_event_attr CreateDefaultPerfEventAttr(const EventType&amp; event_type) &#123;</span><br><span class="line">  perf_event_attr attr;</span><br><span class="line">  memset(&amp;attr, 0, sizeof(attr));</span><br><span class="line">  attr.size = sizeof(perf_event_attr);</span><br><span class="line">  attr.type = event_type.type;</span><br><span class="line">  attr.config = event_type.config;</span><br><span class="line">  attr.mmap = 1;</span><br><span class="line">  attr.comm = 1;</span><br><span class="line">  attr.disabled = 0;</span><br><span class="line">  // Changing read_format affects the layout of the data read from perf_event_file, namely</span><br><span class="line">  // PerfCounter in event_fd.h.</span><br><span class="line">  attr.read_format =</span><br><span class="line">      PERF_FORMAT_TOTAL_TIME_ENABLED | PERF_FORMAT_TOTAL_TIME_RUNNING | PERF_FORMAT_ID;</span><br><span class="line">  attr.sample_type |=</span><br><span class="line">      PERF_SAMPLE_IP | PERF_SAMPLE_TID | PERF_SAMPLE_TIME | PERF_SAMPLE_PERIOD | PERF_SAMPLE_CPU;</span><br><span class="line"></span><br><span class="line">  if (attr.type == PERF_TYPE_TRACEPOINT) &#123;</span><br><span class="line">    attr.sample_freq = 0;</span><br><span class="line">    attr.sample_period = 1;</span><br><span class="line">    // Tracepoint information are stored in raw data in sample records.</span><br><span class="line">    attr.sample_type |= PERF_SAMPLE_RAW;</span><br><span class="line">  &#125;</span><br><span class="line">  return attr;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">bool IsEventAttrSupportedByKernel(perf_event_attr attr) &#123;</span><br><span class="line"></span><br><span class="line">  /* (4.3.1) pid = getpid(), cpu = -1 */</span><br><span class="line">  auto event_fd = EventFd::OpenEventFile(attr, getpid(), -1, false);</span><br><span class="line">  return event_fd != nullptr;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">std::unique_ptr&lt;EventFd&gt; EventFd::OpenEventFile(const perf_event_attr&amp; attr, pid_t tid, int cpu,</span><br><span class="line">                                                bool report_error) &#123;</span><br><span class="line">  perf_event_attr perf_attr = attr;</span><br><span class="line">  std::string event_name = &quot;unknown event&quot;;</span><br><span class="line">  const EventType* event_type = FindEventTypeByConfig(perf_attr.type, perf_attr.config);</span><br><span class="line">  if (event_type != nullptr) &#123;</span><br><span class="line">    event_name = event_type-&gt;name;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (4.3.1.1) 使用perf_event_open()系统调用得到fd */</span><br><span class="line">  int perf_event_fd = perf_event_open(&amp;perf_attr, tid, cpu, -1, 0);</span><br><span class="line">  if (perf_event_fd == -1) &#123;</span><br><span class="line">    if (report_error) &#123;</span><br><span class="line">      PLOG(ERROR) &lt;&lt; &quot;open perf_event_file (event &quot; &lt;&lt; event_name &lt;&lt; &quot;, tid &quot; &lt;&lt; tid &lt;&lt; &quot;, cpu &quot;</span><br><span class="line">                  &lt;&lt; cpu &lt;&lt; &quot;) failed&quot;;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      PLOG(DEBUG) &lt;&lt; &quot;open perf_event_file (event &quot; &lt;&lt; event_name &lt;&lt; &quot;, tid &quot; &lt;&lt; tid &lt;&lt; &quot;, cpu &quot;</span><br><span class="line">                  &lt;&lt; cpu &lt;&lt; &quot;) failed&quot;;</span><br><span class="line">    &#125;</span><br><span class="line">    return nullptr;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (4.3.1.2) 使用fcntl系统调用配置fd的属性 */</span><br><span class="line">  if (fcntl(perf_event_fd, F_SETFD, FD_CLOEXEC) == -1) &#123;</span><br><span class="line">    if (report_error) &#123;</span><br><span class="line">      PLOG(ERROR) &lt;&lt; &quot;fcntl(FD_CLOEXEC) for perf_event_file (event &quot; &lt;&lt; event_name &lt;&lt; &quot;, tid &quot;</span><br><span class="line">                  &lt;&lt; tid &lt;&lt; &quot;, cpu &quot; &lt;&lt; cpu &lt;&lt; &quot;) failed&quot;;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      PLOG(DEBUG) &lt;&lt; &quot;fcntl(FD_CLOEXEC) for perf_event_file (event &quot; &lt;&lt; event_name &lt;&lt; &quot;, tid &quot;</span><br><span class="line">                  &lt;&lt; tid &lt;&lt; &quot;, cpu &quot; &lt;&lt; cpu &lt;&lt; &quot;) failed&quot;;</span><br><span class="line">    &#125;</span><br><span class="line">    return nullptr;</span><br><span class="line">  &#125;</span><br><span class="line">  return std::unique_ptr&lt;EventFd&gt;(new EventFd(perf_event_fd, event_name, tid, cpu));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="3、stat子命令"><a href="#3、stat子命令" class="headerlink" title="3、stat子命令"></a>3、stat子命令</h1><p>我们经常使用“simpleperf stat xxx”命令在查看，在执行“xxx”命令的过程中，各个event的count的统计情况：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf stat sleep 10</span><br><span class="line">Performance counter statistics:</span><br><span class="line"></span><br><span class="line">     545,144,267  cpu-cycles         # 0.054173 GHz                      (12%)</span><br><span class="line">     307,576,139  instructions       # 1.772388 cycles per instruction   (12%)</span><br><span class="line">       2,657,986  branch-misses      # 264.133 K/sec                     (12%)</span><br><span class="line">  376.753066(ms)  task-clock         # 3.743928% cpu usage               (12%)</span><br><span class="line">              64  context-switches   # 6.360 /sec                        (12%)</span><br><span class="line">           5,002  page-faults        # 497.066 /sec                      (12%)</span><br><span class="line"></span><br><span class="line">Total test time: 10.063044 seconds.</span><br></pre></td></tr></table></figure>
+<p>系统默认创建了6种event来跟踪统计“sleep 10”命令的执行情况，这里只会使用read()调用来读取perf_event的count数据，没有使用mmap创建ringbuffer所有没有sample数据。</p>
+<p>我们也可以自定义选项来使用命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"> # simpleperf help stat</span><br><span class="line">Usage: simpleperf stat [options] [command [command-args]]</span><br><span class="line">    Gather performance counter information of running [command].</span><br><span class="line">    -a           Collect system-wide information.</span><br><span class="line">    --cpu cpu_item1,cpu_item2,...</span><br><span class="line">                 Collect information only on the selected cpus. cpu_item can</span><br><span class="line">                 be a cpu number like 1, or a cpu range like 0-3.</span><br><span class="line">    -e event1[:modifier1],event2[:modifier2],...</span><br><span class="line">                 Select the event list to count. Use `simpleperf list` to find</span><br><span class="line">                 all possible event names. Modifiers can be added to define</span><br><span class="line">                 how the event should be monitored. Possible modifiers are:</span><br><span class="line">                   u - monitor user space events only</span><br><span class="line">                   k - monitor kernel space events only</span><br><span class="line">    --no-inherit</span><br><span class="line">                 Don&apos;t stat created child threads/processes.</span><br><span class="line">    -p pid1,pid2,...</span><br><span class="line">                 Stat events on existing processes. Mutually exclusive with -a.</span><br><span class="line">    -t tid1,tid2,...</span><br><span class="line">                 Stat events on existing threads. Mutually exclusive with -a.</span><br><span class="line">    --verbose    Show result in verbose mode.</span><br><span class="line"></span><br><span class="line"> #</span><br></pre></td></tr></table></figure>
+<p>stat子命令的实现主体在StatCommand的Run方法中，system/extras/simpleperf/cmd_stat.cpp:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br></pre></td><td class="code"><pre><span class="line">bool StatCommand::Run(const std::vector&lt;std::string&gt;&amp; args) &#123;</span><br><span class="line">  if (!CheckPerfEventLimit()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 1. Parse options, and use default measured event types if not given.</span><br><span class="line">  /* (1) 解析&quot;simpleperf stat xxx&quot;中的参数，具体有哪些参数参考&quot;simpleperf help stat&quot;命令 */</span><br><span class="line">  std::vector&lt;std::string&gt; workload_args;</span><br><span class="line">  if (!ParseOptions(args, &amp;workload_args)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (1.1) 如果没有使用&quot;-e xxx&quot;选项来指定event，系统给你指定默认的event */</span><br><span class="line">  if (measured_event_types_.empty()) &#123;</span><br><span class="line">    if (!AddDefaultMeasuredEventTypes()) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (1.2) 把指定的events和其他选项进行合法性判断，并且封装成标准的attr保存到selections_中 */</span><br><span class="line">  if (!SetEventSelection()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 2. Create workload.</span><br><span class="line">  /* (2) 创建需要监控的子进程，但是子进程不会马上进行exec操作，它等待pipe信号同步</span><br><span class="line">    在后面调用workload-&gt;Start()后，才会进行exec操作</span><br><span class="line">   */</span><br><span class="line">  std::unique_ptr&lt;Workload&gt; workload;</span><br><span class="line">  if (!workload_args.empty()) &#123;</span><br><span class="line">    workload = Workload::CreateWorkload(workload_args);</span><br><span class="line">    if (workload == nullptr) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  if (!system_wide_collection_ &amp;&amp; monitored_threads_.empty()) &#123;</span><br><span class="line">    if (workload != nullptr) &#123;</span><br><span class="line">      monitored_threads_.push_back(workload-&gt;GetPid());</span><br><span class="line">      event_selection_set_.SetEnableOnExec(true);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      LOG(ERROR) &lt;&lt; &quot;No threads to monitor. Try `simpleperf help stat` for help\n&quot;;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 3. Open perf_event_files.</span><br><span class="line">  /* (3) 根据cpu、pid、event组合，创建多个perf_event */</span><br><span class="line">  if (system_wide_collection_) &#123;</span><br><span class="line">    if (!event_selection_set_.OpenEventFilesForCpus(cpus_)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    if (!event_selection_set_.OpenEventFilesForThreadsOnCpus(monitored_threads_, cpus_)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 4. Count events while workload running.</span><br><span class="line">  /* (4) 通知workload开始执行exec */</span><br><span class="line">  auto start_time = std::chrono::steady_clock::now();</span><br><span class="line">  if (workload != nullptr &amp;&amp; !workload-&gt;Start()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  /* 子进程执行完成后使用SIGCHLD信号通知父进程 */</span><br><span class="line">  while (!signaled) &#123;</span><br><span class="line">    sleep(1);</span><br><span class="line">  &#125;</span><br><span class="line">  auto end_time = std::chrono::steady_clock::now();</span><br><span class="line"></span><br><span class="line">  // 5. Read and print counters.</span><br><span class="line">  /* (5) 在workload执行完成后，逐个读出perf_event的count值，归类累加并展示 */</span><br><span class="line">  std::vector&lt;CountersInfo&gt; counters;</span><br><span class="line">  if (!event_selection_set_.ReadCounters(&amp;counters)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  double duration_in_sec =</span><br><span class="line">      std::chrono::duration_cast&lt;std::chrono::duration&lt;double&gt;&gt;(end_time - start_time).count();</span><br><span class="line">  if (!ShowCounters(counters, duration_in_sec)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果不使用”-e xxx”指定event，系统会默认指定event，并且判断当前系统能支持哪些event。合法event加入到measured_event_types_中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">bool StatCommand::AddDefaultMeasuredEventTypes() &#123;</span><br><span class="line"></span><br><span class="line">  /* (1.1.1) 默认属性在default_measured_event_types中定义 */</span><br><span class="line">  for (auto&amp; name : default_measured_event_types) &#123;</span><br><span class="line">  </span><br><span class="line">    // It is not an error when some event types in the default list are not supported by the kernel.</span><br><span class="line">    /* (1.1.2) 根据name在全集中找到&quot;type+config&quot; */</span><br><span class="line">    const EventType* type = FindEventTypeByName(name);</span><br><span class="line">    </span><br><span class="line">    /* (1.1.3) 使用默认属性调用perf_event_open()，如果可以有效返回，说明本系统支持 */</span><br><span class="line">    if (type != nullptr &amp;&amp; IsEventAttrSupportedByKernel(CreateDefaultPerfEventAttr(*type))) &#123;</span><br><span class="line">    </span><br><span class="line">      /* (1.1.4) 加入到measured_event_types_ */</span><br><span class="line">      AddMeasuredEventType(name);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  if (measured_event_types_.empty()) &#123;</span><br><span class="line">    LOG(ERROR) &lt;&lt; &quot;Failed to add any supported default measured types&quot;;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">static std::vector&lt;std::string&gt; default_measured_event_types&#123;</span><br><span class="line">    &quot;cpu-cycles&quot;,   &quot;stalled-cycles-frontend&quot;, &quot;stalled-cycles-backend&quot;,</span><br><span class="line">    &quot;instructions&quot;, &quot;branch-instructions&quot;,     &quot;branch-misses&quot;,</span><br><span class="line">    &quot;task-clock&quot;,   &quot;context-switches&quot;,        &quot;page-faults&quot;,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>把measured_event_types_中的event和其他选项进行组合，合法的加入到selections_中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line">bool StatCommand::SetEventSelection() &#123;</span><br><span class="line">  for (auto&amp; event_type : measured_event_types_) &#123;</span><br><span class="line">    if (!event_selection_set_.AddEventType(event_type)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  event_selection_set_.SetInherit(child_inherit_);</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">bool EventSelectionSet::AddEventType(const EventTypeAndModifier&amp; event_type_modifier) &#123;</span><br><span class="line">  EventSelection selection;</span><br><span class="line">  </span><br><span class="line">  /* (1.2.1) 将event和modifier组合 */</span><br><span class="line">  selection.event_type_modifier = event_type_modifier;</span><br><span class="line">  selection.event_attr = CreateDefaultPerfEventAttr(event_type_modifier.event_type);</span><br><span class="line">  selection.event_attr.exclude_user = event_type_modifier.exclude_user;</span><br><span class="line">  selection.event_attr.exclude_kernel = event_type_modifier.exclude_kernel;</span><br><span class="line">  selection.event_attr.exclude_hv = event_type_modifier.exclude_hv;</span><br><span class="line">  selection.event_attr.exclude_host = event_type_modifier.exclude_host;</span><br><span class="line">  selection.event_attr.exclude_guest = event_type_modifier.exclude_guest;</span><br><span class="line">  selection.event_attr.precise_ip = event_type_modifier.precise_ip;</span><br><span class="line">  </span><br><span class="line">  /* (1.2.2) 使用perf_event_open()来继续合法性判断 */</span><br><span class="line">  if (!IsEventAttrSupportedByKernel(selection.event_attr)) &#123;</span><br><span class="line">    LOG(ERROR) &lt;&lt; &quot;Event type &apos;&quot; &lt;&lt; event_type_modifier.name &lt;&lt; &quot;&apos; is not supported by the kernel&quot;;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (1.2.3) 保存到selections_中 */</span><br><span class="line">  selections_.push_back(std::move(selection));</span><br><span class="line">  UnionSampleType();</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们在给workload创建子进程时使用了pipe机制用来同步：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br></pre></td><td class="code"><pre><span class="line">std::unique_ptr&lt;Workload&gt; Workload::CreateWorkload(const std::vector&lt;std::string&gt;&amp; args) &#123;</span><br><span class="line">  std::unique_ptr&lt;Workload&gt; workload(new Workload(args));</span><br><span class="line">  if (workload != nullptr &amp;&amp; workload-&gt;CreateNewProcess()) &#123;</span><br><span class="line">    return workload;</span><br><span class="line">  &#125;</span><br><span class="line">  return nullptr;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">bool Workload::CreateNewProcess() &#123;</span><br><span class="line">  CHECK_EQ(work_state_, NotYetCreateNewProcess);</span><br><span class="line"></span><br><span class="line">  /* pipe函数返回2个fd：fd[0]负责读，fd[1]负责写。 */</span><br><span class="line"></span><br><span class="line">  /* (2.1.1) 子进程开始执行exce的信号：父进程写，子进程读*/</span><br><span class="line">  int start_signal_pipe[2];</span><br><span class="line">  if (pipe2(start_signal_pipe, O_CLOEXEC) != 0) &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;pipe2() failed&quot;;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  /* (2.1.2) 子进程执行出错的信号：子进程写，父进程读*/</span><br><span class="line">  int exec_child_pipe[2];</span><br><span class="line">  if (pipe2(exec_child_pipe, O_CLOEXEC) != 0) &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;pipe2() failed&quot;;</span><br><span class="line">    close(start_signal_pipe[0]);</span><br><span class="line">    close(start_signal_pipe[1]);</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  pid_t pid = fork();</span><br><span class="line">  if (pid == -1) &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;fork() failed&quot;;</span><br><span class="line">    close(start_signal_pipe[0]);</span><br><span class="line">    close(start_signal_pipe[1]);</span><br><span class="line">    close(exec_child_pipe[0]);</span><br><span class="line">    close(exec_child_pipe[1]);</span><br><span class="line">    return false;</span><br><span class="line">  &#125; else if (pid == 0) &#123;</span><br><span class="line">    // In child process.</span><br><span class="line">    close(start_signal_pipe[1]);</span><br><span class="line">    close(exec_child_pipe[0]);</span><br><span class="line">    </span><br><span class="line">    /* (2.1.3) 子进程的处理，准备exec执行workload */</span><br><span class="line">    ChildProcessFn(args_, start_signal_pipe[0], exec_child_pipe[1]);</span><br><span class="line">    _exit(0);</span><br><span class="line">  &#125;</span><br><span class="line">  // In parent process.</span><br><span class="line">  close(start_signal_pipe[0]);</span><br><span class="line">  close(exec_child_pipe[1]);</span><br><span class="line">  start_signal_fd_ = start_signal_pipe[1];</span><br><span class="line">  exec_child_fd_ = exec_child_pipe[0];</span><br><span class="line">  work_pid_ = pid;</span><br><span class="line">  work_state_ = NotYetStartNewProcess;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static void ChildProcessFn(std::vector&lt;std::string&gt;&amp; args, int start_signal_fd, int exec_child_fd) &#123;</span><br><span class="line">  std::vector&lt;char*&gt; argv(args.size() + 1);</span><br><span class="line">  for (size_t i = 0; i &lt; args.size(); ++i) &#123;</span><br><span class="line">    argv[i] = &amp;args[i][0];</span><br><span class="line">  &#125;</span><br><span class="line">  argv[args.size()] = nullptr;</span><br><span class="line"></span><br><span class="line">  char start_signal = 0;</span><br><span class="line">  </span><br><span class="line">  /* (2.1.3.1) 暂停，等待父进程的开始信号 */</span><br><span class="line">  ssize_t nread = TEMP_FAILURE_RETRY(read(start_signal_fd, &amp;start_signal, 1));</span><br><span class="line">  </span><br><span class="line">  if (nread == 1 &amp;&amp; start_signal == 1) &#123;</span><br><span class="line">    close(start_signal_fd);</span><br><span class="line">    </span><br><span class="line">    /* (2.1.3.2) exec执行workload */</span><br><span class="line">    execvp(argv[0], argv.data());</span><br><span class="line">    // If execvp() succeed, we will not arrive here. But if it failed, we need to</span><br><span class="line">    // report the failure to the parent process by writing 1 to exec_child_fd.</span><br><span class="line">    int saved_errno = errno;</span><br><span class="line">    char exec_child_failed = 1;</span><br><span class="line">    </span><br><span class="line">    /* (2.1.3.3) 如果exec执行失败，通知父进程 */</span><br><span class="line">    TEMP_FAILURE_RETRY(write(exec_child_fd, &amp;exec_child_failed, 1));</span><br><span class="line">    close(exec_child_fd);</span><br><span class="line">    errno = saved_errno;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;child process failed to execvp(&quot; &lt;&lt; argv[0] &lt;&lt; &quot;)&quot;;</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;child process failed to receive start_signal, nread = &quot; &lt;&lt; nread;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>为了perf_event和workload之间的同步，我们设置perf_event的EnableOnExec属性：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">void EventSelectionSet::SetEnableOnExec(bool enable) &#123;</span><br><span class="line">  for (auto&amp; selection : selections_) &#123;</span><br><span class="line">    // If sampling is enabled on exec, then it is disabled at startup, otherwise</span><br><span class="line">    // it should be enabled at startup. Don&apos;t use ioctl(PERF_EVENT_IOC_ENABLE)</span><br><span class="line">    // to enable it after perf_event_open(). Because some android kernels can&apos;t</span><br><span class="line">    // handle ioctl() well when cpu-hotplug happens. See http://b/25193162.</span><br><span class="line">    </span><br><span class="line">    /* (2.2) 设置perf_event的enable_on_exec属性，可以从&quot;perf_event内核框架&quot;一章中查看其原理 */</span><br><span class="line">    if (enable) &#123;</span><br><span class="line">      selection.event_attr.enable_on_exec = 1;</span><br><span class="line">      selection.event_attr.disabled = 1;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      selection.event_attr.enable_on_exec = 0;</span><br><span class="line">      selection.event_attr.disabled = 0;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>一条命令可能会创建多个perf_event。因为cpu、pid、event的组合，需要多个perf_event才能满足：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">bool EventSelectionSet::OpenEventFilesForThreadsOnCpus(const std::vector&lt;pid_t&gt;&amp; threads,</span><br><span class="line">                                                       std::vector&lt;int&gt; cpus) &#123;</span><br><span class="line">  /* (3.1) 对cpu参数的合法性判断 */</span><br><span class="line">  if (!cpus.empty()) &#123;</span><br><span class="line">    if (!CheckIfCpusOnline(cpus)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    cpus = GetOnlineCpus();</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (3.2)  */</span><br><span class="line">  return OpenEventFiles(threads, cpus);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">bool EventSelectionSet::OpenEventFiles(const std::vector&lt;pid_t&gt;&amp; threads,</span><br><span class="line">                                       const std::vector&lt;int&gt;&amp; cpus) &#123;</span><br><span class="line">  </span><br><span class="line">  /* (3.2.1) 组合event/tid/cpu，逐个创建perf_event */</span><br><span class="line">  for (auto&amp; selection : selections_) &#123;</span><br><span class="line">    for (auto&amp; tid : threads) &#123;</span><br><span class="line">      size_t open_per_thread = 0;</span><br><span class="line">      for (auto&amp; cpu : cpus) &#123;</span><br><span class="line">        </span><br><span class="line">        /* (3.2.2) 创建perf_event */</span><br><span class="line">        auto event_fd = EventFd::OpenEventFile(selection.event_attr, tid, cpu);</span><br><span class="line">        if (event_fd != nullptr) &#123;</span><br><span class="line">          LOG(VERBOSE) &lt;&lt; &quot;OpenEventFile for tid &quot; &lt;&lt; tid &lt;&lt; &quot;, cpu &quot; &lt;&lt; cpu;</span><br><span class="line">          </span><br><span class="line">          /* (3.2.3) 保存fd到selection.event_fds */</span><br><span class="line">          selection.event_fds.push_back(std::move(event_fd));</span><br><span class="line">          ++open_per_thread;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      // As the online cpus can be enabled or disabled at runtime, we may not open event file for</span><br><span class="line">      // all cpus successfully. But we should open at least one cpu successfully.</span><br><span class="line">      if (open_per_thread == 0) &#123;</span><br><span class="line">        PLOG(ERROR) &lt;&lt; &quot;failed to open perf event file for event_type &quot;</span><br><span class="line">                    &lt;&lt; selection.event_type_modifier.name &lt;&lt; &quot; for &quot;</span><br><span class="line">                    &lt;&lt; (tid == -1 ? &quot;all threads&quot; : android::base::StringPrintf(&quot; thread %d&quot;, tid));</span><br><span class="line">        return false;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>perf_event创建完成以后，通知workload开始exec：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">bool Workload::Start() &#123;</span><br><span class="line">  CHECK_EQ(work_state_, NotYetStartNewProcess);</span><br><span class="line">  char start_signal = 1;</span><br><span class="line">  </span><br><span class="line">  /* (4.1) 写入start_signal_fd_，通知子进程开始exec workload */</span><br><span class="line">  ssize_t nwrite = TEMP_FAILURE_RETRY(write(start_signal_fd_, &amp;start_signal, 1));</span><br><span class="line">  if (nwrite != 1) &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;write start signal failed&quot;;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  char exec_child_failed;</span><br><span class="line">  </span><br><span class="line">  /* (4.2) 如果收到exec_child_fd_信息，说明子进程exec出错 */</span><br><span class="line">  ssize_t nread = TEMP_FAILURE_RETRY(read(exec_child_fd_, &amp;exec_child_failed, 1));</span><br><span class="line">  if (nread != 0) &#123;</span><br><span class="line">    if (nread == -1) &#123;</span><br><span class="line">      PLOG(ERROR) &lt;&lt; &quot;failed to receive error message from child process&quot;;</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      LOG(ERROR) &lt;&lt; &quot;received error message from child process&quot;;</span><br><span class="line">    &#125;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  work_state_ = Started;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>workload执行完成后，根据event逐个perf_event读出其count值：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">bool EventSelectionSet::ReadCounters(std::vector&lt;CountersInfo&gt;* counters) &#123;</span><br><span class="line">  counters-&gt;clear();</span><br><span class="line">  for (auto&amp; selection : selections_) &#123;</span><br><span class="line">    CountersInfo counters_info;</span><br><span class="line">    counters_info.event_type = &amp;selection.event_type_modifier;</span><br><span class="line">    for (auto&amp; event_fd : selection.event_fds) &#123;</span><br><span class="line">      CountersInfo::CounterInfo counter_info;</span><br><span class="line">      </span><br><span class="line">      /* (5.1) 读出当前perf_event的count值 */</span><br><span class="line">      if (!event_fd-&gt;ReadCounter(&amp;counter_info.counter)) &#123;</span><br><span class="line">        return false;</span><br><span class="line">      &#125;</span><br><span class="line">      counter_info.tid = event_fd-&gt;ThreadId();</span><br><span class="line">      counter_info.cpu = event_fd-&gt;Cpu();</span><br><span class="line">      counters_info.counters.push_back(counter_info);</span><br><span class="line">    &#125;</span><br><span class="line">    counters-&gt;push_back(counters_info);</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">bool EventFd::ReadCounter(PerfCounter* counter) const &#123;</span><br><span class="line">  CHECK(counter != nullptr);</span><br><span class="line">  if (!android::base::ReadFully(perf_event_fd_, counter, sizeof(*counter))) &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;ReadCounter from &quot; &lt;&lt; Name() &lt;&lt; &quot; failed&quot;;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>再统计这些count，以报告的形式呈现出来：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line">bool StatCommand::ShowCounters(const std::vector&lt;CountersInfo&gt;&amp; counters, double duration_in_sec) &#123;</span><br><span class="line">  printf(&quot;Performance counter statistics:\n\n&quot;);</span><br><span class="line"></span><br><span class="line">  /* (5.2.1) verbose打印出明显 */</span><br><span class="line">  if (verbose_mode_) &#123;</span><br><span class="line">    for (auto&amp; counters_info : counters) &#123;</span><br><span class="line">      const EventTypeAndModifier* event_type = counters_info.event_type;</span><br><span class="line">      for (auto&amp; counter_info : counters_info.counters) &#123;</span><br><span class="line">        printf(&quot;%s(tid %d, cpu %d): count %s, time_enabled %&quot; PRIu64 &quot;, time running %&quot; PRIu64</span><br><span class="line">               &quot;, id %&quot; PRIu64 &quot;\n&quot;,</span><br><span class="line">               event_type-&gt;name.c_str(), counter_info.tid, counter_info.cpu,</span><br><span class="line">               ReadableCountValue(counter_info.counter.value, *event_type).c_str(),</span><br><span class="line">               counter_info.counter.time_enabled, counter_info.counter.time_running,</span><br><span class="line">               counter_info.counter.id);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  std::vector&lt;CounterSummary&gt; summaries;</span><br><span class="line">  </span><br><span class="line">  /* (5.2.2) 按照event type逐个遍历 */</span><br><span class="line">  for (auto&amp; counters_info : counters) &#123;</span><br><span class="line">    uint64_t value_sum = 0;</span><br><span class="line">    uint64_t time_enabled_sum = 0;</span><br><span class="line">    uint64_t time_running_sum = 0;</span><br><span class="line">    for (auto&amp; counter_info : counters_info.counters) &#123;</span><br><span class="line">    </span><br><span class="line">      /* (5.2.2.1) 按照type，累加count/enbale时间/running时间 */</span><br><span class="line">      value_sum += counter_info.counter.value;</span><br><span class="line">      time_enabled_sum += counter_info.counter.time_enabled;</span><br><span class="line">      time_running_sum += counter_info.counter.time_running;</span><br><span class="line">    &#125;</span><br><span class="line">    double scale = 1.0;</span><br><span class="line">    uint64_t scaled_count = value_sum;</span><br><span class="line">    if (time_running_sum &lt; time_enabled_sum) &#123;</span><br><span class="line">      if (time_running_sum == 0) &#123;</span><br><span class="line">        scaled_count = 0;</span><br><span class="line">      &#125; else &#123;</span><br><span class="line">      </span><br><span class="line">        /* (5.2.2.2) 比例 = enbale时间/running时间 */</span><br><span class="line">        scale = static_cast&lt;double&gt;(time_enabled_sum) / time_running_sum;</span><br><span class="line">        scaled_count = static_cast&lt;uint64_t&gt;(scale * value_sum);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    CounterSummary summary;</span><br><span class="line">    summary.event_type = counters_info.event_type;</span><br><span class="line">    summary.count = scaled_count;</span><br><span class="line">    summary.scale = scale;</span><br><span class="line">    </span><br><span class="line">    /* (5.2.2.3) 把count值转成可读字符串 */</span><br><span class="line">    summary.readable_count_str = ReadableCountValue(summary.count, *summary.event_type);</span><br><span class="line">    summaries.push_back(summary);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">  /* (5.2.2.4) 获取每种type的comment */</span><br><span class="line">  for (auto&amp; summary : summaries) &#123;</span><br><span class="line">    summary.comment = GetCommentForSummary(summary, summaries, duration_in_sec);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  size_t count_column_width = 0;</span><br><span class="line">  size_t name_column_width = 0;</span><br><span class="line">  size_t comment_column_width = 0;</span><br><span class="line">  /* (5.2.2.5) 计算每个字段的最大值，用来对齐 */</span><br><span class="line">  for (auto&amp; summary : summaries) &#123;</span><br><span class="line">    count_column_width = std::max(count_column_width, summary.readable_count_str.size());</span><br><span class="line">    name_column_width = std::max(name_column_width, summary.event_type-&gt;name.size());</span><br><span class="line">    comment_column_width = std::max(comment_column_width, summary.comment.size());</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  /* (5.2.2.6) 轮询event的type，打印出其统计值 */</span><br><span class="line">  for (auto&amp; summary : summaries) &#123;</span><br><span class="line">    printf(&quot;  %*s  %-*s   # %-*s   (%.0lf%%)\n&quot;, static_cast&lt;int&gt;(count_column_width),</span><br><span class="line">           summary.readable_count_str.c_str(), static_cast&lt;int&gt;(name_column_width),</span><br><span class="line">           summary.event_type-&gt;name.c_str(), static_cast&lt;int&gt;(comment_column_width),</span><br><span class="line">           summary.comment.c_str(), 1.0 / summary.scale * 100);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  printf(&quot;\nTotal test time: %lf seconds.\n&quot;, duration_in_sec);</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="4、record子命令"><a href="#4、record子命令" class="headerlink" title="4、record子命令"></a>4、record子命令</h1><p>我们可以使用“simpleperf record xxx”命令记录一个命令的详细trace数据，在执行“xxx”命令的过程中把count数据和trace数据保存到perf.data中，随后可以使用 report子命令进行分析。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">/sdcard # simpleperf record sleep 10</span><br><span class="line">/sdcard #</span><br><span class="line">/sdcard # ls -l perf.data</span><br><span class="line">-rw-rw---- 1 root sdcard_rw 10264 1970-02-27 08:27 perf.data</span><br><span class="line">/sdcard #</span><br><span class="line">/sdcard # simpleperf report</span><br><span class="line">simpleperf W  9131  9131 dso.cpp:263] Symbol addresses in /proc/kallsyms are all zero. Check /proc/sys/kernel/kptr_restrict if possible.</span><br><span class="line">Cmdline: /system/xbin/simpleperf record sleep 10</span><br><span class="line">Samples: 131 of event &apos;cpu-cycles&apos;</span><br><span class="line">Event count: 40889310</span><br><span class="line"></span><br><span class="line">Overhead  Command     Pid   Tid   Shared Object          Symbol</span><br><span class="line">70.02%    sleep       9078  9078  [kernel.kallsyms]      unknown</span><br><span class="line">10.78%    sleep       9078  9078  /system/bin/linker64   [linker]soinfo::gnu_lookup(SymbolName&amp;, version_info const*, unsigned int*) const</span><br><span class="line">3.96%     sleep       9078  9078  /system/bin/linker64   [linker]soinfo_do_lookup(soinfo*, char const*, version_info const*, soinfo**, LinkedList&lt;soinfo, SoinfoListAllocator&gt; const&amp;, LinkedList&lt;soinfo, SoinfoListAllocator&gt; const&amp;, elf64_sym const**)</span><br><span class="line">3.35%     sleep       9078  9078  /system/bin/linker64   [linker]isspace</span><br><span class="line">2.66%     sleep       9078  9078  /system/bin/linker64   [linker]strcmp</span><br><span class="line">1.38%     sleep       9078  9078  /system/bin/linker64   [linker]memset</span><br><span class="line">1.34%     sleep       9078  9078  /system/lib64/libc.so  pthread_mutex_unlock</span><br><span class="line">1.33%     sleep       9078  9078  /system/lib64/libc.so  memcpy</span><br><span class="line">1.32%     sleep       9078  9078  /system/lib64/libc.so  extent_szad_comp</span><br><span class="line">1.31%     sleep       9078  9078  /system/bin/linker64   [linker]VersionTracker::init_verdef(soinfo const*)</span><br><span class="line">1.28%     sleep       9078  9078  /system/bin/linker64   [linker]bool soinfo::relocate&lt;plain_reloc_iterator&gt;(VersionTracker const&amp;, plain_reloc_iterator&amp;&amp;, LinkedList&lt;soinfo, SoinfoListAllocator&gt; const&amp;, LinkedList&lt;soinfo, SoinfoListAllocator&gt; const&amp;)</span><br><span class="line">1.25%     sleep       9078  9078  /system/bin/linker64   [linker]soinfo::elf_lookup(SymbolName&amp;, version_info const*, unsigned int*) const</span><br><span class="line">0.01%     simpleperf  9078  9078  [kernel.kallsyms]      unknown</span><br></pre></td></tr></table></figure>
+<p>系统默认创建了6种event来跟踪统计“sleep 10”命令的执行情况，这里会使mmap创建ringbuffer来保存sample数据，并记录到文件中。</p>
+<p>我们也可以自定义选项来使用命令：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf help record</span><br><span class="line">Usage: simpleperf record [options] [command [command-args]]</span><br><span class="line">    Gather sampling information when running [command].</span><br><span class="line">    -a           System-wide collection.</span><br><span class="line">    -b           Enable take branch stack sampling. Same as &apos;-j any&apos;</span><br><span class="line">    -c count     Set event sample period.</span><br><span class="line">    --call-graph fp | dwarf[,&lt;dump_stack_size&gt;]</span><br><span class="line">                 Enable call graph recording. Use frame pointer or dwarf as the</span><br><span class="line">                 method to parse call graph in stack. Default is dwarf,8192.</span><br><span class="line">    --cpu cpu_item1,cpu_item2,...</span><br><span class="line">                 Collect samples only on the selected cpus. cpu_item can be cpu</span><br><span class="line">                 number like 1, or cpu range like 0-3.</span><br><span class="line">    -e event1[:modifier1],event2[:modifier2],...</span><br><span class="line">                 Select the event list to sample. Use `simpleperf list` to find</span><br><span class="line">                 all possible event names. Modifiers can be added to define</span><br><span class="line">                 how the event should be monitored. Possible modifiers are:</span><br><span class="line">                   u - monitor user space events only</span><br><span class="line">                   k - monitor kernel space events only</span><br><span class="line">    -f freq      Set event sample frequency.</span><br><span class="line">    -F freq      Same as &apos;-f freq&apos;.</span><br><span class="line">    -g           Same as &apos;--call-graph dwarf&apos;.</span><br><span class="line">    -j branch_filter1,branch_filter2,...</span><br><span class="line">                 Enable taken branch stack sampling. Each sample</span><br><span class="line">                 captures a series of consecutive taken branches.</span><br><span class="line">                 The following filters are defined:</span><br><span class="line">                   any: any type of branch</span><br><span class="line">                   any_call: any function call or system call</span><br><span class="line">                   any_ret: any function return or system call return</span><br><span class="line">                   ind_call: any indirect branch</span><br><span class="line">                   u: only when the branch target is at the user level</span><br><span class="line">                   k: only when the branch target is in the kernel</span><br><span class="line">                 This option requires at least one branch type among any,</span><br><span class="line">                 any_call, any_ret, ind_call.</span><br><span class="line">    -m mmap_pages</span><br><span class="line">                 Set the size of the buffer used to receiving sample data from</span><br><span class="line">                 the kernel. It should be a power of 2. The default value is 16.</span><br><span class="line">    --no-inherit</span><br><span class="line">                 Don&apos;t record created child threads/processes.</span><br><span class="line">    --no-unwind  If `--call-graph dwarf` option is used, then the user&apos;s stack will</span><br><span class="line">                 be unwound by default. Use this option to disable the unwinding of</span><br><span class="line">                 the user&apos;s stack.</span><br><span class="line">    -o record_file_name    Set record file name, default is perf.data.</span><br><span class="line">    -p pid1,pid2,...</span><br><span class="line">                 Record events on existing processes. Mutually exclusive with -a.</span><br><span class="line">    --post-unwind</span><br><span class="line">                 If `--call-graph dwarf` option is used, then the user&apos;s stack will</span><br><span class="line">                 be unwound while recording by default. But it may lose records as</span><br><span class="line">                 stacking unwinding can be time consuming. Use this option to unwind</span><br><span class="line">                 the user&apos;s stack after recording.</span><br><span class="line">    -t tid1,tid2,...</span><br><span class="line">                 Record events on existing threads. Mutually exclusive with -a.</span><br></pre></td></tr></table></figure>
+<p>record子命令的实现主体在RecordCommand的Run方法中，基本流程和stat子命令类似多了mmap操作，system/extras/simpleperf/cmd_record.cpp:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br></pre></td><td class="code"><pre><span class="line">bool RecordCommand::Run(const std::vector&lt;std::string&gt;&amp; args) &#123;</span><br><span class="line">  if (!CheckPerfEventLimit()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 1. Parse options, and use default measured event type if not given.</span><br><span class="line">  /* (1) 解析&quot;simpleperf record xxx&quot;中的参数，具体有哪些参数参考&quot;simpleperf help stat&quot;命令 */</span><br><span class="line">  std::vector&lt;std::string&gt; workload_args;</span><br><span class="line">  if (!ParseOptions(args, &amp;workload_args)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (1.1) 如果没有使用&quot;-e xxx&quot;选项来指定event，系统给你指定默认的event */</span><br><span class="line">  if (measured_event_types_.empty()) &#123;</span><br><span class="line">    if (!AddMeasuredEventType(default_measured_event_type)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  /* (1.2) 把指定的events和其他选项进行合法性判断，并且封装成标准的attr保存到selections_中 */</span><br><span class="line">  if (!SetEventSelection()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 2. Create workload.</span><br><span class="line">  /* (2) 创建workload */</span><br><span class="line">  std::unique_ptr&lt;Workload&gt; workload;</span><br><span class="line">  if (!workload_args.empty()) &#123;</span><br><span class="line">    /* (2.1) 创建需要监控的子进程，但是子进程不会马上进行exec操作，它等待pipe信号同步</span><br><span class="line">      在后面调用workload-&gt;Start()后，才会进行exec操作</span><br><span class="line">      来保证父进程和workload的同步</span><br><span class="line">     */</span><br><span class="line">    workload = Workload::CreateWorkload(workload_args);</span><br><span class="line">    if (workload == nullptr) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  if (!system_wide_collection_ &amp;&amp; monitored_threads_.empty()) &#123;</span><br><span class="line">    if (workload != nullptr) &#123;</span><br><span class="line">      monitored_threads_.push_back(workload-&gt;GetPid());</span><br><span class="line">      </span><br><span class="line">      /* (2.2) 如果是监控进程，会把perf_event的enable_on_exec属性置位，来保证perf_event和workload的启动同步 */</span><br><span class="line">      event_selection_set_.SetEnableOnExec(true);</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">      LOG(ERROR) &lt;&lt; &quot;No threads to monitor. Try `simpleperf help record` for help\n&quot;;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 3. Open perf_event_files, create memory mapped buffers for perf_event_files, add prepare poll</span><br><span class="line">  //    for perf_event_files.</span><br><span class="line">  /* (3) 根据cpu、pid、event组合，创建多个perf_event */</span><br><span class="line">  if (system_wide_collection_) &#123;</span><br><span class="line">    if (!event_selection_set_.OpenEventFilesForCpus(cpus_)) &#123;</span><br><span class="line">      system_wide_perf_event_open_failed = true;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    /* (3.1) 创建perf_event对应的fd */</span><br><span class="line">    if (!event_selection_set_.OpenEventFilesForThreadsOnCpus(monitored_threads_, cpus_)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (3.2) 通过fd做mmap操作，给perf_event分配ringbuffer </span><br><span class="line">     默认perf_mmap_pages_ = 16</span><br><span class="line">   */</span><br><span class="line">  if (!event_selection_set_.MmapEventFiles(perf_mmap_pages_)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  std::vector&lt;pollfd&gt; pollfds;</span><br><span class="line">  /* (3.3) 聚合fd，用来做poll操作 */</span><br><span class="line">  event_selection_set_.PreparePollForEventFiles(&amp;pollfds);</span><br><span class="line"></span><br><span class="line">  // 4. Create perf.data.</span><br><span class="line">  /* (4) 创建perf.data文件，并且记录系统信息 */</span><br><span class="line">  if (!CreateAndInitRecordFile()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 5. Write records in mmap buffers of perf_event_files to output file while workload is running.</span><br><span class="line">  /* (5) 记录workload运行中perf_event的sample信息 */</span><br><span class="line">  if (workload != nullptr &amp;&amp; !workload-&gt;Start()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (5.1) 创建record cache */</span><br><span class="line">  record_cache_.reset(</span><br><span class="line">      new RecordCache(*event_selection_set_.FindEventAttrByType(measured_event_types_[0])));</span><br><span class="line">  auto callback = std::bind(&amp;RecordCommand::CollectRecordsFromKernel, this, std::placeholders::_1,</span><br><span class="line">                            std::placeholders::_2);</span><br><span class="line">  /* (5.2) 通过poll操作查询数据，记录mmap数据到cache中 */</span><br><span class="line">  while (true) &#123;</span><br><span class="line">    if (!event_selection_set_.ReadMmapEventData(callback)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    /* (5.3) workload执行完成，退出 */</span><br><span class="line">    if (signaled) &#123;</span><br><span class="line">      break;</span><br><span class="line">    &#125;</span><br><span class="line">    poll(&amp;pollfds[0], pollfds.size(), -1);</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (5.4) 从cache中读数据，记录到perf.data文件中 */</span><br><span class="line">  std::vector&lt;std::unique_ptr&lt;Record&gt;&gt; records = record_cache_-&gt;PopAll();</span><br><span class="line">  for (auto&amp; r : records) &#123;</span><br><span class="line">    if (!ProcessRecord(r.get())) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 6. Dump additional features, and close record file.</span><br><span class="line">  /* (6) dump更多的信息到文件中 */</span><br><span class="line">  if (!DumpAdditionalFeatures(args)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  if (!record_file_writer_-&gt;Close()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // 7. Unwind dwarf callchain.</span><br><span class="line">  /* (7) 展开dwarf调用链 */</span><br><span class="line">  if (post_unwind_) &#123;</span><br><span class="line">    if (!PostUnwind(args)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  LOG(VERBOSE) &lt;&lt; &quot;Record &quot; &lt;&lt; sample_record_count_ &lt;&lt; &quot; samples.&quot;;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>mmap操作的具体实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line">bool EventSelectionSet::MmapEventFiles(size_t mmap_pages) &#123;</span><br><span class="line">  for (auto&amp; selection : selections_) &#123;</span><br><span class="line">    for (auto&amp; event_fd : selection.event_fds) &#123;</span><br><span class="line">      if (!event_fd-&gt;MmapContent(mmap_pages)) &#123;</span><br><span class="line">        return false;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">bool EventFd::MmapContent(size_t mmap_pages) &#123;</span><br><span class="line">  CHECK(IsPowerOfTwo(mmap_pages));</span><br><span class="line">  size_t page_size = sysconf(_SC_PAGE_SIZE);</span><br><span class="line">  size_t mmap_len = (mmap_pages + 1) * page_size;</span><br><span class="line">  </span><br><span class="line">  /* (3.2.1) mmap系统调用 */</span><br><span class="line">  void* mmap_addr = mmap(nullptr, mmap_len, PROT_READ | PROT_WRITE, MAP_SHARED, perf_event_fd_, 0);</span><br><span class="line">  if (mmap_addr == MAP_FAILED) &#123;</span><br><span class="line">    PLOG(ERROR) &lt;&lt; &quot;mmap() failed for &quot; &lt;&lt; Name();</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  mmap_addr_ = mmap_addr;</span><br><span class="line">  mmap_len_ = mmap_len;</span><br><span class="line">  mmap_metadata_page_ = reinterpret_cast&lt;perf_event_mmap_page*&gt;(mmap_addr_);</span><br><span class="line">  mmap_data_buffer_ = reinterpret_cast&lt;char*&gt;(mmap_addr_) + page_size;</span><br><span class="line">  mmap_data_buffer_size_ = mmap_len_ - page_size;</span><br><span class="line">  if (data_process_buffer_.size() &lt; mmap_data_buffer_size_) &#123;</span><br><span class="line">    data_process_buffer_.resize(mmap_data_buffer_size_);</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在创建perf.data文件时，还保存了不少系统信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line">bool RecordCommand::CreateAndInitRecordFile() &#123;</span><br><span class="line">  </span><br><span class="line">  /* (4.1) 创建perf.data文件并记录perf_event的fd信息 */</span><br><span class="line">  record_file_writer_ = CreateRecordFile(record_filename_);</span><br><span class="line">  if (record_file_writer_ == nullptr) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (4.2) dump kernel和module信息到文件 */</span><br><span class="line">  if (!DumpKernelAndModuleMmaps()) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">  /* (4.3) dump 进程信息到文件 */</span><br><span class="line">  if (!DumpThreadCommAndMmaps(system_wide_collection_, monitored_threads_)) &#123;</span><br><span class="line">    return false;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">std::unique_ptr&lt;RecordFileWriter&gt; RecordCommand::CreateRecordFile(const std::string&amp; filename) &#123;</span><br><span class="line"></span><br><span class="line">  /* (4.1.1) 创建perf.data文件 */</span><br><span class="line">  std::unique_ptr&lt;RecordFileWriter&gt; writer = RecordFileWriter::CreateInstance(filename);</span><br><span class="line">  if (writer == nullptr) &#123;</span><br><span class="line">    return nullptr;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  /* (4.1.2) 记录perf_event的fd信息到文件 */</span><br><span class="line">  std::vector&lt;AttrWithId&gt; attr_ids;</span><br><span class="line">  for (auto&amp; event_type : measured_event_types_) &#123;</span><br><span class="line">    AttrWithId attr_id;</span><br><span class="line">    attr_id.attr = event_selection_set_.FindEventAttrByType(event_type);</span><br><span class="line">    CHECK(attr_id.attr != nullptr);</span><br><span class="line">    const std::vector&lt;std::unique_ptr&lt;EventFd&gt;&gt;* fds =</span><br><span class="line">        event_selection_set_.FindEventFdsByType(event_type);</span><br><span class="line">    CHECK(fds != nullptr);</span><br><span class="line">    for (auto&amp; fd : *fds) &#123;</span><br><span class="line">      attr_id.ids.push_back(fd-&gt;Id());</span><br><span class="line">    &#125;</span><br><span class="line">    attr_ids.push_back(attr_id);</span><br><span class="line">  &#125;</span><br><span class="line">  if (!writer-&gt;WriteAttrSection(attr_ids)) &#123;</span><br><span class="line">    return nullptr;</span><br><span class="line">  &#125;</span><br><span class="line">  return writer;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>通过ReadMmapEventData()函数读取ringbuffer数据，并且通过回调CollectRecordsFromKernel()函数记录到cache中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br></pre></td><td class="code"><pre><span class="line">bool EventSelectionSet::ReadMmapEventData(std::function&lt;bool(const char*, size_t)&gt; callback) &#123;</span><br><span class="line">  for (auto&amp; selection : selections_) &#123;</span><br><span class="line">    for (auto&amp; event_fd : selection.event_fds) &#123;</span><br><span class="line">      while (true) &#123;</span><br><span class="line">        bool have_data;</span><br><span class="line">        </span><br><span class="line">        /* (5.2.1) 逐个perf_event读取ringbuffer数据 */</span><br><span class="line">        if (!ReadMmapEventDataForFd(event_fd, callback, &amp;have_data)) &#123;</span><br><span class="line">          return false;</span><br><span class="line">        &#125;</span><br><span class="line">        if (!have_data) &#123;</span><br><span class="line">          break;</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static bool ReadMmapEventDataForFd(std::unique_ptr&lt;EventFd&gt;&amp; event_fd,</span><br><span class="line">                                   std::function&lt;bool(const char*, size_t)&gt; callback,</span><br><span class="line">                                   bool* have_data) &#123;</span><br><span class="line">  *have_data = false;</span><br><span class="line">  while (true) &#123;</span><br><span class="line">    char* data;</span><br><span class="line">    size_t size = event_fd-&gt;GetAvailableMmapData(&amp;data);</span><br><span class="line">    if (size == 0) &#123;</span><br><span class="line">      break;</span><br><span class="line">    &#125;</span><br><span class="line">    if (!callback(data, size)) &#123;</span><br><span class="line">      return false;</span><br><span class="line">    &#125;</span><br><span class="line">    *have_data = true;</span><br><span class="line">  &#125;</span><br><span class="line">  return true;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">size_t EventFd::GetAvailableMmapData(char** pdata) &#123;</span><br><span class="line">  // The mmap_data_buffer is used as a ring buffer like below. The kernel continuously writes</span><br><span class="line">  // records to the buffer, and the user continuously read records out.</span><br><span class="line">  //         _________________________________________</span><br><span class="line">  // buffer | can write   |   can read   |  can write |</span><br><span class="line">  //                      ^              ^</span><br><span class="line">  //                    read_head       write_head</span><br><span class="line">  //</span><br><span class="line">  // So the user can read records in [read_head, write_head), and the kernel can write records</span><br><span class="line">  // in [write_head, read_head). The kernel is responsible for updating write_head, and the user</span><br><span class="line">  // is responsible for updating read_head.</span><br><span class="line"></span><br><span class="line">  size_t buf_mask = mmap_data_buffer_size_ - 1;</span><br><span class="line">  size_t write_head = static_cast&lt;size_t&gt;(mmap_metadata_page_-&gt;data_head &amp; buf_mask);</span><br><span class="line">  size_t read_head = static_cast&lt;size_t&gt;(mmap_metadata_page_-&gt;data_tail &amp; buf_mask);</span><br><span class="line"></span><br><span class="line">  if (read_head == write_head) &#123;</span><br><span class="line">    // No available data.</span><br><span class="line">    return 0;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  // Make sure we can see the data after the fence.</span><br><span class="line">  std::atomic_thread_fence(std::memory_order_acquire);</span><br><span class="line"></span><br><span class="line">  // Copy records from mapped buffer to data_process_buffer. Note that records can be wrapped</span><br><span class="line">  // at the end of the mapped buffer.</span><br><span class="line">  char* to = data_process_buffer_.data();</span><br><span class="line">  if (read_head &lt; write_head) &#123;</span><br><span class="line">    char* from = mmap_data_buffer_ + read_head;</span><br><span class="line">    size_t n = write_head - read_head;</span><br><span class="line">    memcpy(to, from, n);</span><br><span class="line">    to += n;</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    char* from = mmap_data_buffer_ + read_head;</span><br><span class="line">    size_t n = mmap_data_buffer_size_ - read_head;</span><br><span class="line">    memcpy(to, from, n);</span><br><span class="line">    to += n;</span><br><span class="line">    from = mmap_data_buffer_;</span><br><span class="line">    n = write_head;</span><br><span class="line">    memcpy(to, from, n);</span><br><span class="line">    to += n;</span><br><span class="line">  &#125;</span><br><span class="line">  size_t read_bytes = to - data_process_buffer_.data();</span><br><span class="line">  *pdata = data_process_buffer_.data();</span><br><span class="line">  DiscardMmapData(read_bytes);</span><br><span class="line">  return read_bytes;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="5、report子命令"><a href="#5、report子命令" class="headerlink" title="5、report子命令"></a>5、report子命令</h1><p>暂不分析。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/simpleperf/" rel="tag"># simpleperf</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/08/02/perf_hardware_events/" rel="next" title="Linux Perf 1.4、hardware events">
+                <i class="fa fa-chevron-left"></i> Linux Perf 1.4、hardware events
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/08/03/perf_index/" rel="prev" title="Linux Perf (Index)">
+                Linux Perf (Index) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、命令框架"><span class="nav-number">1.</span> <span class="nav-text">1、命令框架</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、list子命令"><span class="nav-number">2.</span> <span class="nav-text">2、list子命令</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、stat子命令"><span class="nav-number">3.</span> <span class="nav-text">3、stat子命令</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4、record子命令"><span class="nav-number">4.</span> <span class="nav-text">4、record子命令</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5、report子命令"><span class="nav-number">5.</span> <span class="nav-text">5、report子命令</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/08/03/perf_simpleperf/";
+        this.page.identifier = "2018/08/03/perf_simpleperf/";
+        this.page.title = 'Linux Perf 2.1、simpleperf';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

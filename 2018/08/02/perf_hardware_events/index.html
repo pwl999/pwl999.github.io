@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="可以通过perf list命令来查看系统中的hardware event： 1234567# simpleperf list hwList of hardware events:  cpu-cycles  instructions  cache-references  cache-misses  branch-misses 还有hardware-cache event： 12345678910#">
+<meta name="keywords" content="perf">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux Perf 1.4、hardware events">
+<meta property="og:url" content="http://yoursite.com/2018/08/02/perf_hardware_events/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="可以通过perf list命令来查看系统中的hardware event： 1234567# simpleperf list hwList of hardware events:  cpu-cycles  instructions  cache-references  cache-misses  branch-misses 还有hardware-cache event： 12345678910#">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_hw_provide_data.png">
+<meta property="og:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_hw_irq.png">
+<meta property="og:updated_time" content="2019-01-14T02:23:20.728Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux Perf 1.4、hardware events">
+<meta name="twitter:description" content="可以通过perf list命令来查看系统中的hardware event： 1234567# simpleperf list hwList of hardware events:  cpu-cycles  instructions  cache-references  cache-misses  branch-misses 还有hardware-cache event： 12345678910#">
+<meta name="twitter:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_hw_provide_data.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/08/02/perf_hardware_events/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Linux Perf 1.4、hardware events | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/08/02/perf_hardware_events/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux Perf 1.4、hardware events
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-08-02 16:24:52" itemprop="dateCreated datePublished" datetime="2018-08-02T16:24:52+08:00">2018-08-02</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-01-14 10:23:20" itemprop="dateModified" datetime="2019-01-14T10:23:20+08:00">2019-01-14</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/08/02/perf_hardware_events/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/08/02/perf_hardware_events/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>可以通过perf list命令来查看系统中的hardware event：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf list hw</span><br><span class="line">List of hardware events:</span><br><span class="line">  cpu-cycles</span><br><span class="line">  instructions</span><br><span class="line">  cache-references</span><br><span class="line">  cache-misses</span><br><span class="line">  branch-misses</span><br></pre></td></tr></table></figure>
+<p>还有hardware-cache event：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf list cache</span><br><span class="line">List of hw-cache events:</span><br><span class="line">  L1-dcache-loads</span><br><span class="line">  L1-dcache-load-misses</span><br><span class="line">  L1-dcache-stores</span><br><span class="line">  L1-dcache-store-misses</span><br><span class="line">  branch-loads</span><br><span class="line">  branch-load-misses</span><br><span class="line">  branch-stores</span><br><span class="line">  branch-store-misses</span><br></pre></td></tr></table></figure>
+<h1 id="1、原理介绍："><a href="#1、原理介绍：" class="headerlink" title="1、原理介绍："></a>1、原理介绍：</h1><h2 id="1-1、hardware-pmu"><a href="#1-1、hardware-pmu" class="headerlink" title="1.1、hardware pmu"></a>1.1、hardware pmu</h2><p>PMU(Performance Monitor Unit)本来指的就是硬件上的性能监控计数器(counter)。因为软件trace方法存在制约制约：1、软件大部分是插桩法，对于没有插桩的地方缺乏监控；2、软件使用hrtimer的采样法开销较大，而且不精确。所以使用硬件采样来trace是一个很好的补充。</p>
+<p>可以看到arm64的hardware pmu可以监控：cpu-cycles、instructions、cache-references、cache-misses、branch-misses、cache相关事件等等。它的监控原理比较简单：每个cpu有几个counter，counter 0固定只能配置成cpu-cycles，其他counter可以配置成支持的任意类型。当counter的计数达到我们配置的值后，产生中断，在中断中记录当前的pc等现场信息(sample数据)和累加counter计数(count数据)。</p>
+<p><img src="/images/perf_k/perf_k_pmu_hw_provide_data.png" alt="perf_k_pmu_hw_provide_data"></p>
+<p>我们可以利用pmu来做以下分析，例如：</p>
+<ul>
+<li>使用“instructions”每1000 instr采样一次，统计采样pc出现概率最大的函数，这样能找到当前的计算热点；</li>
+<li>使用“cache-misses”每10 miss采样一次，统计排序，找出“cache-misses”的热点；</li>
+</ul>
+<p>arm64v3每个cpu支持7个counter，counter可配置的类型如下：</p>
+<ul>
+<li>hw event。arm64支持的类型：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">/* PMUv3 HW events mapping. */</span><br><span class="line">const unsigned armv8_pmuv3_perf_map[PERF_COUNT_HW_MAX] = &#123;</span><br><span class="line">	PERF_MAP_ALL_UNSUPPORTED,</span><br><span class="line">	[PERF_COUNT_HW_CPU_CYCLES]		= ARMV8_PMUV3_PERFCTR_CLOCK_CYCLES,</span><br><span class="line">	[PERF_COUNT_HW_INSTRUCTIONS]		= ARMV8_PMUV3_PERFCTR_INSTR_EXECUTED,</span><br><span class="line">	[PERF_COUNT_HW_CACHE_REFERENCES]	= ARMV8_PMUV3_PERFCTR_L1_DCACHE_ACCESS,</span><br><span class="line">	[PERF_COUNT_HW_CACHE_MISSES]		= ARMV8_PMUV3_PERFCTR_L1_DCACHE_REFILL,</span><br><span class="line">	[PERF_COUNT_HW_BRANCH_MISSES]		= ARMV8_PMUV3_PERFCTR_PC_BRANCH_MIS_PRED,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>arm hw event的全集：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> * Generalized performance event event_id types, used by the</span><br><span class="line"> * attr.event_id parameter of the sys_perf_event_open()</span><br><span class="line"> * syscall:</span><br><span class="line"> */</span><br><span class="line">enum perf_hw_id &#123;</span><br><span class="line">	/*</span><br><span class="line">	 * Common hardware events, generalized by the kernel:</span><br><span class="line">	 */</span><br><span class="line">	PERF_COUNT_HW_CPU_CYCLES		= 0,</span><br><span class="line">	PERF_COUNT_HW_INSTRUCTIONS		= 1,</span><br><span class="line">	PERF_COUNT_HW_CACHE_REFERENCES		= 2,</span><br><span class="line">	PERF_COUNT_HW_CACHE_MISSES		= 3,</span><br><span class="line">	PERF_COUNT_HW_BRANCH_INSTRUCTIONS	= 4,</span><br><span class="line">	PERF_COUNT_HW_BRANCH_MISSES		= 5,</span><br><span class="line">	PERF_COUNT_HW_BUS_CYCLES		= 6,</span><br><span class="line">	PERF_COUNT_HW_STALLED_CYCLES_FRONTEND	= 7,</span><br><span class="line">	PERF_COUNT_HW_STALLED_CYCLES_BACKEND	= 8,</span><br><span class="line">	PERF_COUNT_HW_REF_CPU_CYCLES		= 9,</span><br><span class="line"></span><br><span class="line">	PERF_COUNT_HW_MAX,			/* non-ABI */</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>hw-cache event。三维数组，arm64支持的类型：</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">const unsigned armv8_pmuv3_perf_cache_map[PERF_COUNT_HW_CACHE_MAX]</span><br><span class="line">						[PERF_COUNT_HW_CACHE_OP_MAX]</span><br><span class="line">						[PERF_COUNT_HW_CACHE_RESULT_MAX] = &#123;</span><br><span class="line">	PERF_CACHE_MAP_ALL_UNSUPPORTED,</span><br><span class="line"></span><br><span class="line">	[C(L1D)][C(OP_READ)][C(RESULT_ACCESS)]	= ARMV8_PMUV3_PERFCTR_L1_DCACHE_ACCESS,</span><br><span class="line">	[C(L1D)][C(OP_READ)][C(RESULT_MISS)]	= ARMV8_PMUV3_PERFCTR_L1_DCACHE_REFILL,</span><br><span class="line">	[C(L1D)][C(OP_WRITE)][C(RESULT_ACCESS)]	= ARMV8_PMUV3_PERFCTR_L1_DCACHE_ACCESS,</span><br><span class="line">	[C(L1D)][C(OP_WRITE)][C(RESULT_MISS)]	= ARMV8_PMUV3_PERFCTR_L1_DCACHE_REFILL,</span><br><span class="line"></span><br><span class="line">	[C(BPU)][C(OP_READ)][C(RESULT_ACCESS)]	= ARMV8_PMUV3_PERFCTR_PC_BRANCH_PRED,</span><br><span class="line">	[C(BPU)][C(OP_READ)][C(RESULT_MISS)]	= ARMV8_PMUV3_PERFCTR_PC_BRANCH_MIS_PRED,</span><br><span class="line">	[C(BPU)][C(OP_WRITE)][C(RESULT_ACCESS)]	= ARMV8_PMUV3_PERFCTR_PC_BRANCH_PRED,</span><br><span class="line">	[C(BPU)][C(OP_WRITE)][C(RESULT_MISS)]	= ARMV8_PMUV3_PERFCTR_PC_BRANCH_MIS_PRED,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>arm hw-cache event的全集三维数组：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">/*</span><br><span class="line"> * Generalized hardware cache events:</span><br><span class="line"> *</span><br><span class="line"> *       &#123; L1-D, L1-I, LLC, ITLB, DTLB, BPU, NODE &#125; x</span><br><span class="line"> *       &#123; read, write, prefetch &#125; x</span><br><span class="line"> *       &#123; accesses, misses &#125;</span><br><span class="line"> */</span><br><span class="line">enum perf_hw_cache_id &#123;</span><br><span class="line">	PERF_COUNT_HW_CACHE_L1D			= 0,</span><br><span class="line">	PERF_COUNT_HW_CACHE_L1I			= 1,</span><br><span class="line">	PERF_COUNT_HW_CACHE_LL			= 2,</span><br><span class="line">	PERF_COUNT_HW_CACHE_DTLB		= 3,</span><br><span class="line">	PERF_COUNT_HW_CACHE_ITLB		= 4,</span><br><span class="line">	PERF_COUNT_HW_CACHE_BPU			= 5,</span><br><span class="line">	PERF_COUNT_HW_CACHE_NODE		= 6,</span><br><span class="line"></span><br><span class="line">	PERF_COUNT_HW_CACHE_MAX,		/* non-ABI */</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">enum perf_hw_cache_op_id &#123;</span><br><span class="line">	PERF_COUNT_HW_CACHE_OP_READ		= 0,</span><br><span class="line">	PERF_COUNT_HW_CACHE_OP_WRITE		= 1,</span><br><span class="line">	PERF_COUNT_HW_CACHE_OP_PREFETCH		= 2,</span><br><span class="line"></span><br><span class="line">	PERF_COUNT_HW_CACHE_OP_MAX,		/* non-ABI */</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">enum perf_hw_cache_op_result_id &#123;</span><br><span class="line">	PERF_COUNT_HW_CACHE_RESULT_ACCESS	= 0,</span><br><span class="line">	PERF_COUNT_HW_CACHE_RESULT_MISS		= 1,</span><br><span class="line"></span><br><span class="line">	PERF_COUNT_HW_CACHE_RESULT_MAX,		/* non-ABI */</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>x86系列pmu支持的监控类型更加丰富。</p>
+<h2 id="1-2、pmu-init"><a href="#1-2、pmu-init" class="headerlink" title="1.2、pmu init"></a>1.2、pmu init</h2><p>在dts文件中定义了pmu的类型：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">cpu_pmu: cpu-pmu &#123;</span><br><span class="line">	compatible = &quot;arm,armv8-pmuv3&quot;;</span><br><span class="line">	qcom,irq-is-percpu;</span><br><span class="line">	interrupts = &lt;1 6 4&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>对应的驱动在drivers/perf/perf_event_armv8.c:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">static const struct of_device_id armv8_pmu_of_device_ids[] = &#123;</span><br><span class="line">	&#123;.compatible = &quot;arm,armv8-pmuv3&quot;,	.data = armv8_pmuv3_init&#125;,</span><br><span class="line">	&#123;.compatible = &quot;arm,cortex-a53-pmu&quot;,	.data = armv8_a53_pmu_init&#125;,</span><br><span class="line">	&#123;.compatible = &quot;arm,cortex-a57-pmu&quot;,	.data = armv8_a57_pmu_init&#125;,</span><br><span class="line">#ifdef CONFIG_ARCH_MSM8996</span><br><span class="line">	&#123;.compatible = &quot;qcom,kryo-pmuv3&quot;, .data = kryo_pmu_init&#125;,</span><br><span class="line">#endif</span><br><span class="line">	&#123;&#125;,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">static struct platform_driver armv8_pmu_driver = &#123;</span><br><span class="line">	.driver		= &#123;</span><br><span class="line">		.name	= &quot;armv8-pmu&quot;,</span><br><span class="line">		.of_match_table = armv8_pmu_of_device_ids,</span><br><span class="line">	&#125;,</span><br><span class="line">	.probe		= armv8_pmu_device_probe,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>我们分析它的初始化函数armv8_pmu_device_probe():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br></pre></td><td class="code"><pre><span class="line">static int armv8_pmu_device_probe(struct platform_device *pdev)</span><br><span class="line">&#123;</span><br><span class="line">	return arm_pmu_device_probe(pdev, armv8_pmu_of_device_ids, NULL);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">int arm_pmu_device_probe(struct platform_device *pdev,</span><br><span class="line">			 const struct of_device_id *of_table,</span><br><span class="line">			 const struct pmu_probe_info *probe_table)</span><br><span class="line">&#123;</span><br><span class="line">	const struct of_device_id *of_id;</span><br><span class="line">	const int (*init_fn)(struct arm_pmu *);</span><br><span class="line">	struct device_node *node = pdev-&gt;dev.of_node;</span><br><span class="line">	struct arm_pmu *pmu;</span><br><span class="line">	int ret = -ENODEV;</span><br><span class="line"></span><br><span class="line">    /* (1) 初始化arm_pmu结构，其中arm_pmu-&gt;pmu成员是标准的pmu结构 */</span><br><span class="line">	pmu = kzalloc(sizeof(struct arm_pmu), GFP_KERNEL);</span><br><span class="line">	if (!pmu) &#123;</span><br><span class="line">		pr_info(&quot;failed to allocate PMU device!\n&quot;);</span><br><span class="line">		return -ENOMEM;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (2) 初始化标准pmu结构：arm_pmu-&gt;pmu */</span><br><span class="line">	armpmu_init(pmu);</span><br><span class="line"></span><br><span class="line">	if (!__oprofile_cpu_pmu)</span><br><span class="line">		__oprofile_cpu_pmu = pmu;</span><br><span class="line"></span><br><span class="line">	pmu-&gt;plat_device = pdev;</span><br><span class="line"></span><br><span class="line">    /* (3) arm_pmu通用部分的初始化 */</span><br><span class="line">	ret = cpu_pmu_init(pmu);</span><br><span class="line">	if (ret)</span><br><span class="line">		goto out_free;</span><br><span class="line"></span><br><span class="line">    /* (4) arm_pmu自定义部分的初始化， </span><br><span class="line">        &quot;arm,armv8-pmuv3&quot;，对应init_fn = armv8_pmuv3_init</span><br><span class="line">     */</span><br><span class="line">	if (node &amp;&amp; (of_id = of_match_node(of_table, pdev-&gt;dev.of_node))) &#123;</span><br><span class="line">		init_fn = of_id-&gt;data;</span><br><span class="line"></span><br><span class="line">		pmu-&gt;secure_access = of_property_read_bool(pdev-&gt;dev.of_node,</span><br><span class="line">							   &quot;secure-reg-access&quot;);</span><br><span class="line"></span><br><span class="line">		/* arm64 systems boot only as non-secure */</span><br><span class="line">		if (IS_ENABLED(CONFIG_ARM64) &amp;&amp; pmu-&gt;secure_access) &#123;</span><br><span class="line">			pr_warn(&quot;ignoring \&quot;secure-reg-access\&quot; property for arm64\n&quot;);</span><br><span class="line">			pmu-&gt;secure_access = false;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		ret = of_pmu_irq_cfg(pmu);</span><br><span class="line">		if (!ret)</span><br><span class="line">			ret = init_fn(pmu);</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		ret = probe_current_pmu(pmu, probe_table);</span><br><span class="line">		cpumask_setall(&amp;pmu-&gt;supported_cpus);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		pr_info(&quot;%s: failed to probe PMU!\n&quot;, of_node_full_name(node));</span><br><span class="line">		goto out_destroy;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (5) 注册标准的pmu */</span><br><span class="line">	ret = perf_pmu_register(&amp;pmu-&gt;pmu, pmu-&gt;name, -1);</span><br><span class="line">	if (ret)</span><br><span class="line">		goto out_destroy;</span><br><span class="line"></span><br><span class="line">	pmu-&gt;pmu_state  = ARM_PMU_STATE_OFF;</span><br><span class="line">	pmu-&gt;percpu_irq = -1;</span><br><span class="line"></span><br><span class="line">	pr_info(&quot;enabled with %s PMU driver, %d counters available\n&quot;,</span><br><span class="line">			pmu-&gt;name, pmu-&gt;num_events);</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line"></span><br><span class="line">out_destroy:</span><br><span class="line">	cpu_pmu_destroy(pmu);</span><br><span class="line">out_free:</span><br><span class="line">	pr_info(&quot;%s: failed to register PMU devices!\n&quot;,</span><br><span class="line">		of_node_full_name(node));</span><br><span class="line">	kfree(pmu);</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>armpmu_init()初始化标准pmu结构：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">static void armpmu_init(struct arm_pmu *armpmu)</span><br><span class="line">&#123;</span><br><span class="line">	atomic_set(&amp;armpmu-&gt;active_events, 0);</span><br><span class="line">	mutex_init(&amp;armpmu-&gt;reserve_mutex);</span><br><span class="line"></span><br><span class="line">    /* (2.1) 标准pmu的初始赋值 */</span><br><span class="line">	armpmu-&gt;pmu = (struct pmu) &#123;</span><br><span class="line">		.pmu_enable	= armpmu_enable,</span><br><span class="line">		.pmu_disable	= armpmu_disable,</span><br><span class="line">		.event_init	= armpmu_event_init,</span><br><span class="line">		.add		= armpmu_add,</span><br><span class="line">		.del		= armpmu_del,</span><br><span class="line">		.start		= armpmu_start,</span><br><span class="line">		.stop		= armpmu_stop,</span><br><span class="line">		.read		= armpmu_read,</span><br><span class="line">		.filter_match	= armpmu_filter_match,</span><br><span class="line">		.events_across_hotplug = 1,</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>cpu_pmu_init()初始化arm_pmu结构的通用部分：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">static int cpu_pmu_init(struct arm_pmu *cpu_pmu)</span><br><span class="line">&#123;</span><br><span class="line">	int err;</span><br><span class="line">	int cpu;</span><br><span class="line">	struct pmu_hw_events __percpu *cpu_hw_events;</span><br><span class="line"></span><br><span class="line">    /* (3.1) 分配per_cpu的pmu_hw_events结构</span><br><span class="line">        hw pmu在每个cpu上有7个hw counter， </span><br><span class="line">        pmu_hw_events-&gt;used_mask中的每个bit代表对于counter是否被使用</span><br><span class="line">        cpu_hw_events-&gt;events[]代表被使用counter对应的perf_event结构</span><br><span class="line">     */</span><br><span class="line">	cpu_hw_events = alloc_percpu(struct pmu_hw_events);</span><br><span class="line">	if (!cpu_hw_events)</span><br><span class="line">		return -ENOMEM;</span><br><span class="line"></span><br><span class="line">    /* (3.2) 注册arm_pmu对应的cpu hotplug回调 */</span><br><span class="line">	cpu_pmu-&gt;hotplug_nb.notifier_call = cpu_pmu_notify;</span><br><span class="line">	err = register_cpu_notifier(&amp;cpu_pmu-&gt;hotplug_nb);</span><br><span class="line">	if (err)</span><br><span class="line">		goto out_hw_events;</span><br><span class="line"></span><br><span class="line">    /* (3.3) 注册arm_pmu对应的pm回调 */</span><br><span class="line">	err = cpu_pm_pmu_register(cpu_pmu);</span><br><span class="line">	if (err)</span><br><span class="line">		goto out_unregister;</span><br><span class="line"></span><br><span class="line">    /* (3.4) 初始化分配的pmu_hw_events结构 */</span><br><span class="line">	for_each_possible_cpu(cpu) &#123;</span><br><span class="line">		struct pmu_hw_events *events = per_cpu_ptr(cpu_hw_events, cpu);</span><br><span class="line">		raw_spin_lock_init(&amp;events-&gt;pmu_lock);</span><br><span class="line">		events-&gt;percpu_pmu = cpu_pmu;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (3.5) 初始化arm_pmu的部分成员 */</span><br><span class="line">	cpu_pmu-&gt;hw_events	= cpu_hw_events;</span><br><span class="line">	cpu_pmu-&gt;request_irq	= cpu_pmu_request_irq;</span><br><span class="line">	cpu_pmu-&gt;free_irq	= cpu_pmu_free_irq;</span><br><span class="line"></span><br><span class="line">	/* Ensure the PMU has sane values out of reset. */</span><br><span class="line">	/* (3.6) 如果可能reset到确定值 */</span><br><span class="line">	if (cpu_pmu-&gt;reset)</span><br><span class="line">		on_each_cpu_mask(&amp;cpu_pmu-&gt;supported_cpus, cpu_pmu-&gt;reset,</span><br><span class="line">			 cpu_pmu, 1);</span><br><span class="line"></span><br><span class="line">	/* If no interrupts available, set the corresponding capability flag */</span><br><span class="line">	/* (3.7) 如果没有中断能力，不能上报sample数据 */</span><br><span class="line">	if (!platform_get_irq(cpu_pmu-&gt;plat_device, 0))</span><br><span class="line">		cpu_pmu-&gt;pmu.capabilities |= PERF_PMU_CAP_NO_INTERRUPT;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line"></span><br><span class="line">out_unregister:</span><br><span class="line">	unregister_cpu_notifier(&amp;cpu_pmu-&gt;hotplug_nb);</span><br><span class="line">out_hw_events:</span><br><span class="line">	free_percpu(cpu_hw_events);</span><br><span class="line">	return err;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>armv8_pmuv3_init()初始化arm_pmu结构的架构(arm64)相关部分：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line">static int armv8_pmuv3_init(struct arm_pmu *cpu_pmu)</span><br><span class="line">&#123;</span><br><span class="line">    /* (4.1) arm_pmu结构中架构相关的成员赋值 */</span><br><span class="line">	armv8_pmu_init(cpu_pmu);</span><br><span class="line">	cpu_pmu-&gt;name			= &quot;armv8_pmuv3&quot;;</span><br><span class="line">	cpu_pmu-&gt;map_event		= armv8_pmuv3_map_event;</span><br><span class="line">	</span><br><span class="line">	/* (4.2) 重要：</span><br><span class="line">	    返回pmu可配置counter的个数</span><br><span class="line">	 */</span><br><span class="line">	return armv8pmu_probe_num_events(cpu_pmu);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">void armv8_pmu_init(struct arm_pmu *cpu_pmu)</span><br><span class="line">&#123;</span><br><span class="line">	cpu_pmu-&gt;handle_irq		= armv8pmu_handle_irq,</span><br><span class="line">	cpu_pmu-&gt;enable			= armv8pmu_enable_event,</span><br><span class="line">	cpu_pmu-&gt;disable		= armv8pmu_disable_event,</span><br><span class="line">	cpu_pmu-&gt;read_counter		= armv8pmu_read_counter,</span><br><span class="line">	cpu_pmu-&gt;write_counter		= armv8pmu_write_counter,</span><br><span class="line">	cpu_pmu-&gt;get_event_idx		= armv8pmu_get_event_idx,</span><br><span class="line">	cpu_pmu-&gt;start			= armv8pmu_start,</span><br><span class="line">	cpu_pmu-&gt;stop			= armv8pmu_stop,</span><br><span class="line">	cpu_pmu-&gt;reset			= armv8pmu_reset,</span><br><span class="line">	cpu_pmu-&gt;max_period		= (1LLU &lt;&lt; 32) - 1,</span><br><span class="line">	cpu_pmu-&gt;set_event_filter	= armv8pmu_set_event_filter;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">int armv8pmu_probe_num_events(struct arm_pmu *arm_pmu)</span><br><span class="line">&#123;</span><br><span class="line">	int ret;</span><br><span class="line">	struct arm_pmu_and_idle_nb *pmu_idle_nb;</span><br><span class="line"></span><br><span class="line">	pmu_idle_nb = devm_kzalloc(&amp;arm_pmu-&gt;plat_device-&gt;dev,</span><br><span class="line">					sizeof(*pmu_idle_nb), GFP_KERNEL);</span><br><span class="line">	if (!pmu_idle_nb)</span><br><span class="line">		return -ENOMEM;</span><br><span class="line"></span><br><span class="line">	pmu_idle_nb-&gt;cpu_pmu = arm_pmu;</span><br><span class="line">	pmu_idle_nb-&gt;perf_cpu_idle_nb.notifier_call = perf_cpu_idle_notifier;</span><br><span class="line">	idle_notifier_register(&amp;pmu_idle_nb-&gt;perf_cpu_idle_nb);</span><br><span class="line"></span><br><span class="line">	ret = smp_call_function_any(&amp;arm_pmu-&gt;supported_cpus,</span><br><span class="line">				    armv8pmu_read_num_pmnc_events,</span><br><span class="line">				    &amp;arm_pmu-&gt;num_events, 1);</span><br><span class="line">	if (ret)</span><br><span class="line">		idle_notifier_unregister(&amp;pmu_idle_nb-&gt;perf_cpu_idle_nb);</span><br><span class="line">	return ret;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static void armv8pmu_read_num_pmnc_events(void *info)</span><br><span class="line">&#123;</span><br><span class="line">	int *nb_cnt = info;</span><br><span class="line"></span><br><span class="line">    /* (4.2.1) 读寄存器，返回counter的个数 */</span><br><span class="line">	/* Read the nb of CNTx counters supported from PMNC */</span><br><span class="line">	*nb_cnt = (armv8pmu_pmcr_read() &gt;&gt; ARMV8_PMCR_N_SHIFT) &amp; ARMV8_PMCR_N_MASK;</span><br><span class="line"></span><br><span class="line">    /* (4.2.2) counter 0，固定为cpu cycles counter */</span><br><span class="line">	/* Add the CPU cycles counter */</span><br><span class="line">	*nb_cnt += 1;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="2、event-init"><a href="#2、event-init" class="headerlink" title="2、event init"></a>2、event init</h1><p>我们深入来看看标准pmu的event init函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br></pre></td><td class="code"><pre><span class="line">static void armpmu_init(struct arm_pmu *armpmu)</span><br><span class="line">&#123;</span><br><span class="line">	atomic_set(&amp;armpmu-&gt;active_events, 0);</span><br><span class="line">	mutex_init(&amp;armpmu-&gt;reserve_mutex);</span><br><span class="line"></span><br><span class="line">	armpmu-&gt;pmu = (struct pmu) &#123;</span><br><span class="line">		.pmu_enable	= armpmu_enable,</span><br><span class="line">		.pmu_disable	= armpmu_disable,</span><br><span class="line">		.event_init	= armpmu_event_init,</span><br><span class="line">		.add		= armpmu_add,</span><br><span class="line">		.del		= armpmu_del,</span><br><span class="line">		.start		= armpmu_start,</span><br><span class="line">		.stop		= armpmu_stop,</span><br><span class="line">		.read		= armpmu_read,</span><br><span class="line">		.filter_match	= armpmu_filter_match,</span><br><span class="line">		.events_across_hotplug = 1,</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int armpmu_event_init(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	int err = 0;</span><br><span class="line">	atomic_t *active_events = &amp;armpmu-&gt;active_events;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Reject CPU-affine events for CPUs that are of a different class to</span><br><span class="line">	 * that which this PMU handles. Process-following events (where</span><br><span class="line">	 * event-&gt;cpu == -1) can be migrated between CPUs, and thus we have to</span><br><span class="line">	 * reject them later (in armpmu_add) if they&apos;re scheduled on a</span><br><span class="line">	 * different class of CPU.</span><br><span class="line">	 */</span><br><span class="line">	/* (1) 判断event所绑定的cpu是否支持 */</span><br><span class="line">	if (event-&gt;cpu != -1 &amp;&amp;</span><br><span class="line">		!cpumask_test_cpu(event-&gt;cpu, &amp;armpmu-&gt;supported_cpus))</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	/* does not support taken branch sampling */</span><br><span class="line">	if (has_branch_stack(event))</span><br><span class="line">		return -EOPNOTSUPP;</span><br><span class="line"></span><br><span class="line">    /* (2) 将event的type + config，映射成：PERF_TYPE_HARDWARE/PERF_TYPE_HW_CACHE/PERF_TYPE_RAW </span><br><span class="line">        调用的是armv8_pmuv3_map_event()函数</span><br><span class="line">     */</span><br><span class="line">	if (armpmu-&gt;map_event(event) == -ENOENT)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	event-&gt;destroy = hw_perf_event_destroy;</span><br><span class="line"></span><br><span class="line">    /* (3) 如果是event第一次绑定pmu，需要做一些初始化动作：</span><br><span class="line">        比如注册中断</span><br><span class="line">     */</span><br><span class="line">	if (!atomic_inc_not_zero(active_events)) &#123;</span><br><span class="line">		mutex_lock(&amp;armpmu-&gt;reserve_mutex);</span><br><span class="line">		if (atomic_read(active_events) == 0)</span><br><span class="line">			err = armpmu_reserve_hardware(armpmu);</span><br><span class="line"></span><br><span class="line">		if (!err)</span><br><span class="line">			atomic_inc(active_events);</span><br><span class="line">		mutex_unlock(&amp;armpmu-&gt;reserve_mutex);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (err)</span><br><span class="line">		return err;</span><br><span class="line"></span><br><span class="line">    /* (4) perf_event的一些初始化 */</span><br><span class="line">	err = __hw_perf_event_init(event);</span><br><span class="line">	if (err)</span><br><span class="line">		hw_perf_event_destroy(event);</span><br><span class="line"></span><br><span class="line">	return err;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static int armv8_pmuv3_map_event(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	return armpmu_map_event(event, &amp;armv8_pmuv3_perf_map,</span><br><span class="line">				&amp;armv8_pmuv3_perf_cache_map,</span><br><span class="line">				ARMV8_EVTYPE_EVENT);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">int</span><br><span class="line">armpmu_map_event(struct perf_event *event,</span><br><span class="line">		 const unsigned (*event_map)[PERF_COUNT_HW_MAX],</span><br><span class="line">		 const unsigned (*cache_map)</span><br><span class="line">				[PERF_COUNT_HW_CACHE_MAX]</span><br><span class="line">				[PERF_COUNT_HW_CACHE_OP_MAX]</span><br><span class="line">				[PERF_COUNT_HW_CACHE_RESULT_MAX],</span><br><span class="line">		 u32 raw_event_mask)</span><br><span class="line">&#123;</span><br><span class="line">	u64 config = event-&gt;attr.config;</span><br><span class="line">	int type = event-&gt;attr.type;</span><br><span class="line"></span><br><span class="line">    /* (2.1) hardware pmu在perf_pmu_register()注册的时候，type=-1，所有它的type是动态分配的</span><br><span class="line">        如果event的type = 动态分配的type，那么config就是raw类型的，不用映射，直接指定hardware counter的type</span><br><span class="line">     */</span><br><span class="line">	if (type == event-&gt;pmu-&gt;type)</span><br><span class="line">		return armpmu_map_raw_event(raw_event_mask, config);</span><br><span class="line"></span><br><span class="line">	switch (type) &#123;</span><br><span class="line">	</span><br><span class="line">	/* (2.2) HARDWARE type，对config进行映射转换 */</span><br><span class="line">	case PERF_TYPE_HARDWARE:</span><br><span class="line">		return armpmu_map_hw_event(event_map, config);</span><br><span class="line">		</span><br><span class="line">	/* (2.3) HW_CACHE type，对config进行映射转换 */</span><br><span class="line">	case PERF_TYPE_HW_CACHE:</span><br><span class="line">		return armpmu_map_cache_event(cache_map, config);</span><br><span class="line">		</span><br><span class="line">	/* (2.4) RAW type，对config进行映射转换 */</span><br><span class="line">	case PERF_TYPE_RAW:</span><br><span class="line">		return armpmu_map_raw_event(raw_event_mask, config);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return -ENOENT;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static int</span><br><span class="line">armpmu_reserve_hardware(struct arm_pmu *armpmu)</span><br><span class="line">&#123;</span><br><span class="line">    /* (3.1) 实际调用的是cpu_pmu_request_irq()函数 */</span><br><span class="line">	int err = armpmu-&gt;request_irq(armpmu, armpmu_dispatch_irq);</span><br><span class="line">	if (err) &#123;</span><br><span class="line">		armpmu_release_hardware(armpmu);</span><br><span class="line">		return err;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	armpmu-&gt;pmu_state = ARM_PMU_STATE_RUNNING;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static int cpu_pmu_request_irq(struct arm_pmu *cpu_pmu, irq_handler_t handler)</span><br><span class="line">&#123;</span><br><span class="line">	int i, err, irq, irqs;</span><br><span class="line">	struct platform_device *pmu_device = cpu_pmu-&gt;plat_device;</span><br><span class="line">	struct pmu_hw_events __percpu *hw_events = cpu_pmu-&gt;hw_events;</span><br><span class="line"></span><br><span class="line">	if (!pmu_device)</span><br><span class="line">		return -ENODEV;</span><br><span class="line"></span><br><span class="line">    /* (3.1.1) pmu支持中断的个数 */</span><br><span class="line">	irqs = min(pmu_device-&gt;num_resources, num_possible_cpus());</span><br><span class="line">	if (irqs &lt; 1) &#123;</span><br><span class="line">		pr_warn_once(&quot;perf/ARM: No irqs for PMU defined, sampling events not supported\n&quot;);</span><br><span class="line">		return 0;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (3.1.2) 如果是per_cpu中断，从dts获得中断号并注册 */</span><br><span class="line">	irq = platform_get_irq(pmu_device, 0);</span><br><span class="line">	if (irq &gt; 0 &amp;&amp; irq_is_percpu(irq)) &#123;</span><br><span class="line">		err = request_percpu_irq(irq, handler, &quot;arm-pmu&quot;,</span><br><span class="line">					 &amp;hw_events-&gt;percpu_pmu);</span><br><span class="line">		if (err) &#123;</span><br><span class="line">			pr_err(&quot;unable to request IRQ%d for ARM PMU counters\n&quot;,</span><br><span class="line">				irq);</span><br><span class="line">			return err;</span><br><span class="line">		&#125;</span><br><span class="line">		on_each_cpu(cpu_pmu_enable_percpu_irq, &amp;irq, 1);</span><br><span class="line">		cpu_pmu-&gt;percpu_irq = irq;</span><br><span class="line">	/* (3.1.3) 如果不是per_cpu中断，逐个从dts获得中断号并注册 */</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		for (i = 0; i &lt; irqs; ++i) &#123;</span><br><span class="line">			int cpu = i;</span><br><span class="line"></span><br><span class="line">			err = 0;</span><br><span class="line">			irq = platform_get_irq(pmu_device, i);</span><br><span class="line">			if (irq &lt; 0)</span><br><span class="line">				continue;</span><br><span class="line"></span><br><span class="line">			if (cpu_pmu-&gt;irq_affinity)</span><br><span class="line">				cpu = cpu_pmu-&gt;irq_affinity[i];</span><br><span class="line"></span><br><span class="line">			/*</span><br><span class="line">			 * If we have a single PMU interrupt that we can&apos;t shift,</span><br><span class="line">			 * assume that we&apos;re running on a uniprocessor machine and</span><br><span class="line">			 * continue. Otherwise, continue without this interrupt.</span><br><span class="line">			 */</span><br><span class="line">			if (irq_set_affinity(irq, cpumask_of(cpu)) &amp;&amp; irqs &gt; 1) &#123;</span><br><span class="line">				pr_warn(&quot;unable to set irq affinity (irq=%d, cpu=%u)\n&quot;,</span><br><span class="line">					irq, cpu);</span><br><span class="line">				continue;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			err = request_irq(irq, handler,</span><br><span class="line">					  IRQF_NOBALANCING | IRQF_NO_THREAD, &quot;arm-pmu&quot;,</span><br><span class="line">					  per_cpu_ptr(&amp;hw_events-&gt;percpu_pmu, cpu));</span><br><span class="line">			if (err) &#123;</span><br><span class="line">				pr_err(&quot;unable to request IRQ%d for ARM PMU counters\n&quot;,</span><br><span class="line">					irq);</span><br><span class="line">				return err;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			cpumask_set_cpu(cpu, &amp;cpu_pmu-&gt;active_irqs);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static int</span><br><span class="line">__hw_perf_event_init(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	int mapping;</span><br><span class="line"></span><br><span class="line">    /* (4.1) 再次调用映射转换，把config转换成counter的type </span><br><span class="line">        并且存储到hwc-&gt;config_base变量中</span><br><span class="line">     */</span><br><span class="line">	mapping = armpmu-&gt;map_event(event);</span><br><span class="line"></span><br><span class="line">	if (mapping &lt; 0) &#123;</span><br><span class="line">		pr_debug(&quot;event %x:%llx not supported\n&quot;, event-&gt;attr.type,</span><br><span class="line">			 event-&gt;attr.config);</span><br><span class="line">		return mapping;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * We don&apos;t assign an index until we actually place the event onto</span><br><span class="line">	 * hardware. Use -1 to signify that we haven&apos;t decided where to put it</span><br><span class="line">	 * yet. For SMP systems, each core has it&apos;s own PMU so we can&apos;t do any</span><br><span class="line">	 * clever allocation or constraints checking at this point.</span><br><span class="line">	 */</span><br><span class="line">	hwc-&gt;idx		= -1;</span><br><span class="line">	hwc-&gt;config_base	= 0;</span><br><span class="line">	hwc-&gt;config		= 0;</span><br><span class="line">	hwc-&gt;event_base		= 0;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Check whether we need to exclude the counter from certain modes.</span><br><span class="line">	 */</span><br><span class="line">	if ((!armpmu-&gt;set_event_filter ||</span><br><span class="line">	     armpmu-&gt;set_event_filter(hwc, &amp;event-&gt;attr)) &amp;&amp;</span><br><span class="line">	     event_requires_mode_exclusion(&amp;event-&gt;attr)) &#123;</span><br><span class="line">		pr_debug(&quot;ARM performance counters do not support &quot;</span><br><span class="line">			 &quot;mode exclusion\n&quot;);</span><br><span class="line">		return -EOPNOTSUPP;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Store the event encoding into the config_base field.</span><br><span class="line">	 */</span><br><span class="line">	hwc-&gt;config_base	    |= (unsigned long)mapping;</span><br><span class="line"></span><br><span class="line">    /* (4.2) 如果不需要提供sample数据，</span><br><span class="line">        初始化period参数：sample_period、last_period、period_left</span><br><span class="line">     */</span><br><span class="line">	if (!is_sampling_event(event)) &#123;</span><br><span class="line">		/*</span><br><span class="line">		 * For non-sampling runs, limit the sample_period to half</span><br><span class="line">		 * of the counter width. That way, the new counter value</span><br><span class="line">		 * is far less likely to overtake the previous one unless</span><br><span class="line">		 * you have some serious IRQ latency issues.</span><br><span class="line">		 */</span><br><span class="line">		hwc-&gt;sample_period  = armpmu-&gt;max_period &gt;&gt; 1;</span><br><span class="line">		hwc-&gt;last_period    = hwc-&gt;sample_period;</span><br><span class="line">		local64_set(&amp;hwc-&gt;period_left, hwc-&gt;sample_period);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (event-&gt;group_leader != event) &#123;</span><br><span class="line">		if (validate_group(event) != 0)</span><br><span class="line">			return -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="3、event-add-del"><a href="#3、event-add-del" class="headerlink" title="3、event add/del"></a>3、event add/del</h1><p>在“perf_event内核框架”一章中已经阐明，task维度的perf_event需要和task一起调度，其回调函数最后控制的就是perf_event的启动和停止。</p>
+<ul>
+<li>start函数调用路径：context_switch() -&gt; finish_task_switch() -&gt; perf_event_task_sched_in() -&gt; __perf_event_task_sched_in() -&gt; perf_event_context_sched_in() -&gt; perf_event_sched_in() -&gt; ctx_sched_in() -&gt; ctx_pinned_sched_in()/ctx_flexible_sched_in() -&gt; group_sched_in() -&gt; event_sched_in() -&gt; pmu-&gt;add(event, PERF_EF_START) -&gt; xxx_add():</li>
+</ul>
+<ul>
+<li>stop函数调用路径：context_switch() -&gt; prepare_task_switch() -&gt; perf_event_task_sched_out() -&gt; __perf_event_task_sched_out() -&gt; perf_event_context_sched_out() -&gt; ctx_sched_out() -&gt; group_sched_out() -&gt; event_sched_out() -&gt; pmu-&gt;del() -&gt; xxx_del():</li>
+</ul>
+<blockquote>
+<p>可以看到hw counter是非常珍贵的，arm64一个cpu上只有7个counter，而一个perf_event在一个cpu上运行时就需要消耗一个独立的hw counter。不像软件的pmu，多个perf_event可以以链表的形式无限的链接到同一个pmu数据源的per_cpu链表上。 </p>
+</blockquote>
+<p>我们具体看看hardware pmu的add和del函数的实现：</p>
+<ul>
+<li>armpmu_add()。从本cpu的counters中分配空闲的counter，配置成perf_event指定的type，并且配置count指定多少count后中断，最后使能counter。</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br></pre></td><td class="code"><pre><span class="line">static int</span><br><span class="line">armpmu_add(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct pmu_hw_events *hw_events = this_cpu_ptr(armpmu-&gt;hw_events);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	int idx;</span><br><span class="line">	int err = 0;</span><br><span class="line"></span><br><span class="line">	/* An event following a process won&apos;t be stopped earlier */</span><br><span class="line">	if (!cpumask_test_cpu(smp_processor_id(), &amp;armpmu-&gt;supported_cpus))</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">    /* (1) disable本cpu上所有的counter */</span><br><span class="line">	perf_pmu_disable(event-&gt;pmu);</span><br><span class="line"></span><br><span class="line">	/* If we don&apos;t have a space for the counter then finish early. */</span><br><span class="line">	/* (2) 从本cpu上获取一个空闲的counter */</span><br><span class="line">	idx = armpmu-&gt;get_event_idx(hw_events, event);</span><br><span class="line">	if (idx &lt; 0) &#123;</span><br><span class="line">		err = idx;</span><br><span class="line">		goto out;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * If there is an event in the counter we are going to use then make</span><br><span class="line">	 * sure it is disabled.</span><br><span class="line">	 */</span><br><span class="line">	event-&gt;hw.idx = idx;</span><br><span class="line">	armpmu-&gt;disable(event);</span><br><span class="line">	hw_events-&gt;events[idx] = event;</span><br><span class="line"></span><br><span class="line">	hwc-&gt;state = PERF_HES_STOPPED | PERF_HES_UPTODATE;</span><br><span class="line">	/* (3) 使能新分配的counter：</span><br><span class="line">	    把counter配置成perf_event需要的type</span><br><span class="line">	    并且配置period count，到期后会产生中断，在中断中上报数据并且重新配置period count</span><br><span class="line">	 */</span><br><span class="line">	if (flags &amp; PERF_EF_START)</span><br><span class="line">		armpmu_start(event, PERF_EF_RELOAD);</span><br><span class="line"></span><br><span class="line">	/* Propagate our changes to the userspace mapping. */</span><br><span class="line">	perf_event_update_userpage(event);</span><br><span class="line"></span><br><span class="line">out:</span><br><span class="line">    /* (4) 重新使能本cpu上所有的counter */</span><br><span class="line">	perf_pmu_enable(event-&gt;pmu);</span><br><span class="line">	return err;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">void perf_pmu_disable(struct pmu *pmu)</span><br><span class="line">&#123;</span><br><span class="line">	int *count = this_cpu_ptr(pmu-&gt;pmu_disable_count);</span><br><span class="line">	if (!(*count)++)</span><br><span class="line">	    /* 调用armpmu_disable() */</span><br><span class="line">		pmu-&gt;pmu_disable(pmu);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static void armpmu_disable(struct pmu *pmu)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(pmu);</span><br><span class="line"></span><br><span class="line">	/* For task-bound events we may be called on other CPUs */</span><br><span class="line">	if (!cpumask_test_cpu(smp_processor_id(), &amp;armpmu-&gt;supported_cpus))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* 调用armv8pmu_stop() */</span><br><span class="line">	armpmu-&gt;stop(armpmu);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|||→</span><br><span class="line"></span><br><span class="line">static void armv8pmu_stop(struct arm_pmu *cpu_pmu)</span><br><span class="line">&#123;</span><br><span class="line">	unsigned long flags;</span><br><span class="line">	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu-&gt;hw_events);</span><br><span class="line"></span><br><span class="line">	raw_spin_lock_irqsave(&amp;events-&gt;pmu_lock, flags);</span><br><span class="line">	/* Disable all counters */</span><br><span class="line">	/* (1.1) disable本cpu上所有的counter */</span><br><span class="line">	armv8pmu_pmcr_write(armv8pmu_pmcr_read() &amp; ~ARMV8_PMCR_E);</span><br><span class="line">	raw_spin_unlock_irqrestore(&amp;events-&gt;pmu_lock, flags);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static int armv8pmu_get_event_idx(struct pmu_hw_events *cpuc,</span><br><span class="line">				  struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	int idx;</span><br><span class="line">	struct arm_pmu *cpu_pmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	unsigned long evtype = hwc-&gt;config_base &amp; ARMV8_EVTYPE_EVENT;</span><br><span class="line"></span><br><span class="line">	/* Place the first cycle counter request into the cycle counter. */</span><br><span class="line">	/* (2.1) 如果需要cycles counter，先尝试counter 0 */</span><br><span class="line">	if (evtype == ARMV8_PMUV3_PERFCTR_CLOCK_CYCLES) &#123;</span><br><span class="line">		if (!test_and_set_bit(ARMV8_IDX_CYCLE_COUNTER, cpuc-&gt;used_mask))</span><br><span class="line">			return ARMV8_IDX_CYCLE_COUNTER;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * For anything other than a cycle counter, try and use</span><br><span class="line">	 * the events counters</span><br><span class="line">	 */</span><br><span class="line">	/* (2.2) 否则从counter 1开始寻找空闲counter */</span><br><span class="line">	for (idx = ARMV8_IDX_COUNTER0; idx &lt; cpu_pmu-&gt;num_events; ++idx) &#123;</span><br><span class="line">		if (!test_and_set_bit(idx, cpuc-&gt;used_mask))</span><br><span class="line">			return idx;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/* The counters are all in use. */</span><br><span class="line">	return -EAGAIN;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static void armpmu_start(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * ARM pmu always has to reprogram the period, so ignore</span><br><span class="line">	 * PERF_EF_RELOAD, see the comment below.</span><br><span class="line">	 */</span><br><span class="line">	if (flags &amp; PERF_EF_RELOAD)</span><br><span class="line">		WARN_ON_ONCE(!(hwc-&gt;state &amp; PERF_HES_UPTODATE));</span><br><span class="line"></span><br><span class="line">	hwc-&gt;state = 0;</span><br><span class="line">	/*</span><br><span class="line">	 * Set the period again. Some counters can&apos;t be stopped, so when we</span><br><span class="line">	 * were stopped we simply disabled the IRQ source and the counter</span><br><span class="line">	 * may have been left counting. If we don&apos;t do this step then we may</span><br><span class="line">	 * get an interrupt too soon or *way* too late if the overflow has</span><br><span class="line">	 * happened since disabling.</span><br><span class="line">	 */</span><br><span class="line">	/* (3.1) 设置counter的中断次数 */</span><br><span class="line">	armpmu_event_set_period(event);</span><br><span class="line">	</span><br><span class="line">	/* (3.2) 配置counter type，并且使能counter */</span><br><span class="line">	armpmu-&gt;enable(event);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">int armpmu_event_set_period(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	s64 left = local64_read(&amp;hwc-&gt;period_left);</span><br><span class="line">	s64 period = hwc-&gt;sample_period;</span><br><span class="line">	int ret = 0;</span><br><span class="line"></span><br><span class="line">    /* (3.1.1) left初始值为period，中断后：left -= delta ，</span><br><span class="line">        如果上次实际发生中断的间隔delta准确等于period，left=0</span><br><span class="line">        如果上次实际发生中断的间隔delta准确大于period，left&lt;0</span><br><span class="line">        如果上次实际发生中断的间隔delta准确大于2period，left &lt;= -period，这种情况下没有补差的必要直接重新对其period</span><br><span class="line">    */</span><br><span class="line">	if (unlikely(left &lt;= -period)) &#123;</span><br><span class="line">		left = period;</span><br><span class="line">		local64_set(&amp;hwc-&gt;period_left, left);</span><br><span class="line">		hwc-&gt;last_period = period;</span><br><span class="line">		ret = 1;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (3.1.2) 如果上次实际发生中断的间隔delta准确等于period，left=0</span><br><span class="line">        如果上次实际发生中断的间隔delta准确大于period，left&lt;0</span><br><span class="line">        如果上次实际发生中断的间隔delta准确大于2period，left &lt;= -period</span><br><span class="line">        如果上次实际发生中断的间隔delta准确大于period但是小于2period，尝试重新补差同步，</span><br><span class="line">    */</span><br><span class="line">	if (unlikely(left &lt;= 0)) &#123;</span><br><span class="line">		left += period;</span><br><span class="line">		local64_set(&amp;hwc-&gt;period_left, left);</span><br><span class="line">		hwc-&gt;last_period = period;</span><br><span class="line">		ret = 1;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Limit the maximum period to prevent the counter value</span><br><span class="line">	 * from overtaking the one we are about to program. In</span><br><span class="line">	 * effect we are reducing max_period to account for</span><br><span class="line">	 * interrupt latency (and we are being very conservative).</span><br><span class="line">	 */</span><br><span class="line">	/* (3.1.3) left不能大于最大周期的1/2 */</span><br><span class="line">	if (left &gt; (armpmu-&gt;max_period &gt;&gt; 1))</span><br><span class="line">		left = armpmu-&gt;max_period &gt;&gt; 1;</span><br><span class="line"></span><br><span class="line">    /* (3.1.4) 配置prev_count为-left */</span><br><span class="line">	local64_set(&amp;hwc-&gt;prev_count, (u64)-left);</span><br><span class="line"></span><br><span class="line">    /* (3.1.5) 配置counter为-left </span><br><span class="line">        当counter累加到0后产生中断</span><br><span class="line">     */</span><br><span class="line">	armpmu-&gt;write_counter(event, (u64)(-left) &amp; 0xffffffff);</span><br><span class="line"></span><br><span class="line">	perf_event_update_userpage(event);</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|||→</span><br><span class="line"></span><br><span class="line">static inline void armv8pmu_write_counter(struct perf_event *event, u32 value)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *cpu_pmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	int idx = hwc-&gt;idx;</span><br><span class="line"></span><br><span class="line">	if (!armv8pmu_counter_valid(cpu_pmu, idx))</span><br><span class="line">		pr_err(&quot;CPU%u writing wrong counter %d\n&quot;,</span><br><span class="line">			smp_processor_id(), idx);</span><br><span class="line">	/* (3.1.5.1) 默认就是counter 0，直接配置count */</span><br><span class="line">	else if (idx == ARMV8_IDX_CYCLE_COUNTER)</span><br><span class="line">		armv8pmu_pmccntr_write_reg(value);</span><br><span class="line">		</span><br><span class="line">	/* (3.1.5.2) 否则需要先选择counter编号，再配置count */</span><br><span class="line">	else if (armv8pmu_select_counter(idx) == idx)</span><br><span class="line">		armv8pmu_pmxevcntr_write_reg(value);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static void armv8pmu_enable_event(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	unsigned long flags;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	struct arm_pmu *cpu_pmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu-&gt;hw_events);</span><br><span class="line">	int idx = hwc-&gt;idx;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Enable counter and interrupt, and set the counter to count</span><br><span class="line">	 * the event that we&apos;re interested in.</span><br><span class="line">	 */</span><br><span class="line">	raw_spin_lock_irqsave(&amp;events-&gt;pmu_lock, flags);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Disable counter</span><br><span class="line">	 */</span><br><span class="line">	/* (3.2.1) disable counter */</span><br><span class="line">	armv8pmu_disable_counter(idx);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Set event (if destined for PMNx counters).</span><br><span class="line">	 */</span><br><span class="line">	/* (3.2.2) 根据perf_event映射转换的type，配置counter的type */</span><br><span class="line">	armv8pmu_write_evtype(idx, hwc-&gt;config_base);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Enable interrupt for this counter</span><br><span class="line">	 */</span><br><span class="line">	/* (3.2.3) enable counter的中断 */</span><br><span class="line">	armv8pmu_enable_intens(idx);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Enable counter</span><br><span class="line">	 */</span><br><span class="line">	/* (3.2.4) enable counter */</span><br><span class="line">	armv8pmu_enable_counter(idx);</span><br><span class="line"></span><br><span class="line">	raw_spin_unlock_irqrestore(&amp;events-&gt;pmu_lock, flags);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">void perf_pmu_enable(struct pmu *pmu)</span><br><span class="line">&#123;</span><br><span class="line">	int *count = this_cpu_ptr(pmu-&gt;pmu_disable_count);</span><br><span class="line">	if (!--(*count))</span><br><span class="line">		pmu-&gt;pmu_enable(pmu);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">static void armpmu_enable(struct pmu *pmu)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(pmu);</span><br><span class="line">	struct pmu_hw_events *hw_events = this_cpu_ptr(armpmu-&gt;hw_events);</span><br><span class="line">	int enabled = bitmap_weight(hw_events-&gt;used_mask, armpmu-&gt;num_events);</span><br><span class="line"></span><br><span class="line">	/* For task-bound events we may be called on other CPUs */</span><br><span class="line">	if (!cpumask_test_cpu(smp_processor_id(), &amp;armpmu-&gt;supported_cpus))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	if (enabled)</span><br><span class="line">		armpmu-&gt;start(armpmu);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|||→</span><br><span class="line"></span><br><span class="line">static void armv8pmu_start(struct arm_pmu *cpu_pmu)</span><br><span class="line">&#123;</span><br><span class="line">	unsigned long flags;</span><br><span class="line">	struct pmu_hw_events *events = this_cpu_ptr(cpu_pmu-&gt;hw_events);</span><br><span class="line"></span><br><span class="line">	raw_spin_lock_irqsave(&amp;events-&gt;pmu_lock, flags);</span><br><span class="line">	/* Enable all counters */</span><br><span class="line">	/* (4.1) 重新使能本cpu上所有的counter */</span><br><span class="line">	armv8pmu_pmcr_write(armv8pmu_pmcr_read() | ARMV8_PMCR_E);</span><br><span class="line">	raw_spin_unlock_irqrestore(&amp;events-&gt;pmu_lock, flags);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>armpmu_del()。将event对应的counter停工，并且将counter归还给本cpu的空闲counter。</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">static void</span><br><span class="line">armpmu_del(struct perf_event *event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct pmu_hw_events *hw_events = this_cpu_ptr(armpmu-&gt;hw_events);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	int idx = hwc-&gt;idx;</span><br><span class="line"></span><br><span class="line">    /* (1) 将event对应的counter停工 */</span><br><span class="line">	armpmu_stop(event, PERF_EF_UPDATE);</span><br><span class="line">	</span><br><span class="line">	/* (2) 将counter归还给本cpu的空闲counter */</span><br><span class="line">	hw_events-&gt;events[idx] = NULL;</span><br><span class="line">	clear_bit(idx, hw_events-&gt;used_mask);</span><br><span class="line">	if (armpmu-&gt;clear_event_idx)</span><br><span class="line">		armpmu-&gt;clear_event_idx(hw_events, event);</span><br><span class="line"></span><br><span class="line">	perf_event_update_userpage(event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="4、event-数据采集"><a href="#4、event-数据采集" class="headerlink" title="4、event 数据采集"></a>4、event 数据采集</h1><p><img src="/images/perf_k/perf_k_pmu_hw_irq.png" alt="perf_k_pmu_hw_irq"></p>
+<p>hardware event是采样法，采样法都是依赖于中断实现的：</p>
+<ul>
+<li>配置counter的count，当count累加到0后，产生中断</li>
+<li>arm64每个cpu上多个counter共享一个中断，所以中断处理函数中需要分发中断，查看到底是哪一个counter发生了overflow</li>
+<li>如果是某个counter发出的中断，给其对应的perf_event上报count数据和sample数据</li>
+<li>处理完所以事务后，重新配置counter的count，这样就会重复的产生周期性的采样</li>
+</ul>
+<p>具体的中断处理函数如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br></pre></td><td class="code"><pre><span class="line">static irqreturn_t armpmu_dispatch_irq(int irq, void *dev)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu;</span><br><span class="line">	struct platform_device *plat_device;</span><br><span class="line">	struct arm_pmu_platdata *plat;</span><br><span class="line">	int ret;</span><br><span class="line">	u64 start_clock, finish_clock;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * we request the IRQ with a (possibly percpu) struct arm_pmu**, but</span><br><span class="line">	 * the handlers expect a struct arm_pmu*. The percpu_irq framework will</span><br><span class="line">	 * do any necessary shifting, we just need to perform the first</span><br><span class="line">	 * dereference.</span><br><span class="line">	 */</span><br><span class="line">	armpmu = *(void **)dev;</span><br><span class="line">	plat_device = armpmu-&gt;plat_device;</span><br><span class="line">	plat = dev_get_platdata(&amp;plat_device-&gt;dev);</span><br><span class="line"></span><br><span class="line">	start_clock = sched_clock();</span><br><span class="line">	if (plat &amp;&amp; plat-&gt;handle_irq)</span><br><span class="line">		ret = plat-&gt;handle_irq(irq, armpmu, armpmu-&gt;handle_irq);</span><br><span class="line">	else</span><br><span class="line">	    /* (1) 实际调用了armv8pmu_handle_irq() */</span><br><span class="line">		ret = armpmu-&gt;handle_irq(irq, armpmu);</span><br><span class="line">	finish_clock = sched_clock();</span><br><span class="line"></span><br><span class="line">	perf_sample_event_took(finish_clock - start_clock);</span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">static irqreturn_t armv8pmu_handle_irq(int irq_num, void *dev)</span><br><span class="line">&#123;</span><br><span class="line">	u32 pmovsr;</span><br><span class="line">	struct perf_sample_data data;</span><br><span class="line">	struct arm_pmu *cpu_pmu = (struct arm_pmu *)dev;</span><br><span class="line">	struct pmu_hw_events *cpuc = this_cpu_ptr(cpu_pmu-&gt;hw_events);</span><br><span class="line">	struct pt_regs *regs;</span><br><span class="line">	int idx;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Get and reset the IRQ flags</span><br><span class="line">	 */</span><br><span class="line">	pmovsr = armv8pmu_getreset_flags();</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Did an overflow occur?</span><br><span class="line">	 */</span><br><span class="line">	if (!armv8pmu_has_overflowed(pmovsr))</span><br><span class="line">		return IRQ_NONE;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Handle the counter(s) overflow(s)</span><br><span class="line">	 */</span><br><span class="line">	regs = get_irq_regs();</span><br><span class="line"></span><br><span class="line">    /* (1.1) 逐个轮询，是本cpu上的哪个counter产生的中断 */</span><br><span class="line">	for (idx = 0; idx &lt; cpu_pmu-&gt;num_events; ++idx) &#123;</span><br><span class="line">		struct perf_event *event = cpuc-&gt;events[idx];</span><br><span class="line">		struct hw_perf_event *hwc;</span><br><span class="line"></span><br><span class="line">		/* Ignore if we don&apos;t have an event. */</span><br><span class="line">		if (!event)</span><br><span class="line">			continue;</span><br><span class="line"></span><br><span class="line">		/*</span><br><span class="line">		 * We have a single interrupt for all counters. Check that</span><br><span class="line">		 * each counter has overflowed before we process it.</span><br><span class="line">		 */</span><br><span class="line">		/* (1.1.1) 判断是否当前counter产生的中断 */</span><br><span class="line">		if (!armv8pmu_counter_has_overflowed(pmovsr, idx))</span><br><span class="line">			continue;</span><br><span class="line"></span><br><span class="line">		hwc = &amp;event-&gt;hw;</span><br><span class="line">		</span><br><span class="line">		/* (1.1.2) 计算counter的差值，并且更新perf_event的count值 */</span><br><span class="line">		armpmu_event_update(event);</span><br><span class="line">		</span><br><span class="line">		</span><br><span class="line">		perf_sample_data_init(&amp;data, 0, hwc-&gt;last_period);</span><br><span class="line">		</span><br><span class="line">		/* (1.1.3) 重新配置中断周期 */</span><br><span class="line">		if (!armpmu_event_set_period(event))</span><br><span class="line">			continue;</span><br><span class="line"></span><br><span class="line">        /* (1.1.4) 给对应perf_event上报sample数据 */</span><br><span class="line">		if (perf_event_overflow(event, &amp;data, regs))</span><br><span class="line">			cpu_pmu-&gt;disable(event);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Handle the pending perf events.</span><br><span class="line">	 *</span><br><span class="line">	 * Note: this call *must* be run with interrupts disabled. For</span><br><span class="line">	 * platforms that can have the PMU interrupts raised as an NMI, this</span><br><span class="line">	 * will not work.</span><br><span class="line">	 */</span><br><span class="line">	/* (1.2) 处理irq_work_queue()压入的任务 */</span><br><span class="line">	irq_work_run();</span><br><span class="line"></span><br><span class="line">	return IRQ_HANDLED;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">||→</span><br><span class="line"></span><br><span class="line">u64 armpmu_event_update(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	u64 delta, prev_raw_count, new_raw_count;</span><br><span class="line"></span><br><span class="line">again:</span><br><span class="line">	prev_raw_count = local64_read(&amp;hwc-&gt;prev_count);</span><br><span class="line">	</span><br><span class="line">	/* (1.1.2.1) 读取counter的当前count值 */</span><br><span class="line">	new_raw_count = armpmu-&gt;read_counter(event);</span><br><span class="line"></span><br><span class="line">	if (local64_cmpxchg(&amp;hwc-&gt;prev_count, prev_raw_count,</span><br><span class="line">			     new_raw_count) != prev_raw_count)</span><br><span class="line">		goto again;</span><br><span class="line"></span><br><span class="line">    /* (1.1.2.2) 计算和上一次的差值 */</span><br><span class="line">	delta = (new_raw_count - prev_raw_count) &amp; armpmu-&gt;max_period;</span><br><span class="line"></span><br><span class="line">    /* (1.1.2.3) 把差值更新到perf_event的count中 */</span><br><span class="line">	local64_add(delta, &amp;event-&gt;count);</span><br><span class="line">	</span><br><span class="line">	/* (1.1.2.4) 把差值更新到left中 */</span><br><span class="line">	local64_sub(delta, &amp;hwc-&gt;period_left);</span><br><span class="line"></span><br><span class="line">	return new_raw_count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="4-1、count数据"><a href="#4-1、count数据" class="headerlink" title="4.1、count数据"></a>4.1、count数据</h2><p>perf_event的count数据，除了在上一节的中断中更新，在read操作读取时也会更新最新的count。</p>
+<p>perf_read() -&gt; <strong>perf_read() -&gt; perf_read_one() -&gt; perf_event_read_value() -&gt; perf_event_read() -&gt; </strong>perf_event_read():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line">static void __perf_event_read(void *info)</span><br><span class="line">&#123;</span><br><span class="line">	struct perf_read_data *data = info;</span><br><span class="line">	struct perf_event *sub, *event = data-&gt;event;</span><br><span class="line">	struct perf_event_context *ctx = event-&gt;ctx;</span><br><span class="line">	struct perf_cpu_context *cpuctx = __get_cpu_context(ctx);</span><br><span class="line">	struct pmu *pmu = event-&gt;pmu;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * If this is a task context, we need to check whether it is</span><br><span class="line">	 * the current task context of this cpu.  If not it has been</span><br><span class="line">	 * scheduled out before the smp call arrived.  In that case</span><br><span class="line">	 * event-&gt;count would have been updated to a recent sample</span><br><span class="line">	 * when the event was scheduled out.</span><br><span class="line">	 */</span><br><span class="line">	if (ctx-&gt;task &amp;&amp; cpuctx-&gt;task_ctx != ctx)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	raw_spin_lock(&amp;ctx-&gt;lock);</span><br><span class="line">	if (ctx-&gt;is_active) &#123;</span><br><span class="line">		update_context_time(ctx);</span><br><span class="line">		update_cgrp_time_from_event(event);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	update_event_times(event);</span><br><span class="line">	if (event-&gt;state != PERF_EVENT_STATE_ACTIVE)</span><br><span class="line">		goto unlock;</span><br><span class="line"></span><br><span class="line">	if (!data-&gt;group) &#123;</span><br><span class="line">	    /* (1) 调用pmu-&gt;read()函数更新最新的count值 </span><br><span class="line">	        如果是hardware pmu实际调用到armpmu_read()</span><br><span class="line">	     */</span><br><span class="line">		pmu-&gt;read(event);</span><br><span class="line">		data-&gt;ret = 0;</span><br><span class="line">		goto unlock;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	pmu-&gt;start_txn(pmu, PERF_PMU_TXN_READ);</span><br><span class="line"></span><br><span class="line">	pmu-&gt;read(event);</span><br><span class="line"></span><br><span class="line">	list_for_each_entry(sub, &amp;event-&gt;sibling_list, group_entry) &#123;</span><br><span class="line">		update_event_times(sub);</span><br><span class="line">		if (sub-&gt;state == PERF_EVENT_STATE_ACTIVE) &#123;</span><br><span class="line">			/*</span><br><span class="line">			 * Use sibling&apos;s PMU rather than @event&apos;s since</span><br><span class="line">			 * sibling could be on different (eg: software) PMU.</span><br><span class="line">			 */</span><br><span class="line">			sub-&gt;pmu-&gt;read(sub);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	data-&gt;ret = pmu-&gt;commit_txn(pmu);</span><br><span class="line"></span><br><span class="line">unlock:</span><br><span class="line">	raw_spin_unlock(&amp;ctx-&gt;lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void</span><br><span class="line">armpmu_read(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	armpmu_event_update(event);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">u64 armpmu_event_update(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	struct arm_pmu *armpmu = to_arm_pmu(event-&gt;pmu);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	u64 delta, prev_raw_count, new_raw_count;</span><br><span class="line"></span><br><span class="line">again:</span><br><span class="line">	prev_raw_count = local64_read(&amp;hwc-&gt;prev_count);</span><br><span class="line">	new_raw_count = armpmu-&gt;read_counter(event);</span><br><span class="line"></span><br><span class="line">	if (local64_cmpxchg(&amp;hwc-&gt;prev_count, prev_raw_count,</span><br><span class="line">			     new_raw_count) != prev_raw_count)</span><br><span class="line">		goto again;</span><br><span class="line"></span><br><span class="line">	delta = (new_raw_count - prev_raw_count) &amp; armpmu-&gt;max_period;</span><br><span class="line"></span><br><span class="line">	local64_add(delta, &amp;event-&gt;count);</span><br><span class="line">	local64_sub(delta, &amp;hwc-&gt;period_left);</span><br><span class="line"></span><br><span class="line">	return new_raw_count;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="4-2、sample数据"><a href="#4-2、sample数据" class="headerlink" title="4.2、sample数据"></a>4.2、sample数据</h2><p>在中断中定期的上报sample数据：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">static irqreturn_t armv8pmu_handle_irq(int irq_num, void *dev)</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	for (idx = 0; idx &lt; cpu_pmu-&gt;num_events; ++idx) &#123;</span><br><span class="line">		struct perf_event *event = cpuc-&gt;events[idx];</span><br><span class="line">		struct hw_perf_event *hwc;</span><br><span class="line"></span><br><span class="line">		/* Ignore if we don&apos;t have an event. */</span><br><span class="line">		if (!event)</span><br><span class="line">			continue;</span><br><span class="line"></span><br><span class="line">		/*</span><br><span class="line">		 * We have a single interrupt for all counters. Check that</span><br><span class="line">		 * each counter has overflowed before we process it.</span><br><span class="line">		 */</span><br><span class="line">		if (!armv8pmu_counter_has_overflowed(pmovsr, idx))</span><br><span class="line">			continue;</span><br><span class="line"></span><br><span class="line">		hwc = &amp;event-&gt;hw;</span><br><span class="line">		armpmu_event_update(event);</span><br><span class="line">		perf_sample_data_init(&amp;data, 0, hwc-&gt;last_period);</span><br><span class="line">		if (!armpmu_event_set_period(event))</span><br><span class="line">			continue;</span><br><span class="line"></span><br><span class="line">		if (perf_event_overflow(event, &amp;data, regs))</span><br><span class="line">			cpu_pmu-&gt;disable(event);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">int perf_event_overflow(struct perf_event *event,</span><br><span class="line">			  struct perf_sample_data *data,</span><br><span class="line">			  struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	return __perf_event_overflow(event, 1, data, regs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/perf/" rel="tag"># perf</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/07/31/perf_software_events/" rel="next" title="Linux Perf 1.3、software events">
+                <i class="fa fa-chevron-left"></i> Linux Perf 1.3、software events
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/08/03/perf_simpleperf/" rel="prev" title="Linux Perf 2.1、simpleperf">
+                Linux Perf 2.1、simpleperf <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、原理介绍："><span class="nav-number">1.</span> <span class="nav-text">1、原理介绍：</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1、hardware-pmu"><span class="nav-number">1.1.</span> <span class="nav-text">1.1、hardware pmu</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2、pmu-init"><span class="nav-number">1.2.</span> <span class="nav-text">1.2、pmu init</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、event-init"><span class="nav-number">2.</span> <span class="nav-text">2、event init</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、event-add-del"><span class="nav-number">3.</span> <span class="nav-text">3、event add/del</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4、event-数据采集"><span class="nav-number">4.</span> <span class="nav-text">4、event 数据采集</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1、count数据"><span class="nav-number">4.1.</span> <span class="nav-text">4.1、count数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2、sample数据"><span class="nav-number">4.2.</span> <span class="nav-text">4.2、sample数据</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/08/02/perf_hardware_events/";
+        this.page.identifier = "2018/08/02/perf_hardware_events/";
+        this.page.title = 'Linux Perf 1.4、hardware events';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="参考原文：Event Tracing 1、Introduction：Tracepoints用来创建event tracing框架，而不需要使用创建模块来注册probe函数。 不是所有的tracpoint都能够使用event tracing系统来跟踪。内核开发者必须提供代码定义信息怎么保存到tracing buffer、已经信息怎么打印出来。 2、 Using Event Tracing2.1、Vi">
+<meta name="keywords" content="trace event">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux Ftrace 2.2、trace event的使用">
+<meta property="og:url" content="http://yoursite.com/2018/05/23/ftrace_use_trace_event/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="参考原文：Event Tracing 1、Introduction：Tracepoints用来创建event tracing框架，而不需要使用创建模块来注册probe函数。 不是所有的tracpoint都能够使用event tracing系统来跟踪。内核开发者必须提供代码定义信息怎么保存到tracing buffer、已经信息怎么打印出来。 2、 Using Event Tracing2.1、Vi">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-01-14T02:15:45.823Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux Ftrace 2.2、trace event的使用">
+<meta name="twitter:description" content="参考原文：Event Tracing 1、Introduction：Tracepoints用来创建event tracing框架，而不需要使用创建模块来注册probe函数。 不是所有的tracpoint都能够使用event tracing系统来跟踪。内核开发者必须提供代码定义信息怎么保存到tracing buffer、已经信息怎么打印出来。 2、 Using Event Tracing2.1、Vi">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/05/23/ftrace_use_trace_event/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Linux Ftrace 2.2、trace event的使用 | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/05/23/ftrace_use_trace_event/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux Ftrace 2.2、trace event的使用
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-05-23 19:34:19" itemprop="dateCreated datePublished" datetime="2018-05-23T19:34:19+08:00">2018-05-23</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-01-14 10:15:45" itemprop="dateModified" datetime="2019-01-14T10:15:45+08:00">2019-01-14</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/05/23/ftrace_use_trace_event/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/05/23/ftrace_use_trace_event/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>参考原文：<a href="https://www.kernel.org/doc/html/latest/trace/events.html" target="_blank" rel="noopener">Event Tracing</a></p>
+<h1 id="1、Introduction："><a href="#1、Introduction：" class="headerlink" title="1、Introduction："></a>1、Introduction：</h1><p><a href="https://www.kernel.org/doc/Documentation/trace/tracepoints.txt" target="_blank" rel="noopener">Tracepoints</a>用来创建event tracing框架，而不需要使用创建模块来注册probe函数。</p>
+<p>不是所有的tracpoint都能够使用event tracing系统来跟踪。内核开发者必须提供代码定义信息怎么保存到tracing buffer、已经信息怎么打印出来。</p>
+<h1 id="2、-Using-Event-Tracing"><a href="#2、-Using-Event-Tracing" class="headerlink" title="2、 Using Event Tracing"></a>2、 Using Event Tracing</h1><h2 id="2-1、Via-the-‘set-event’-interface"><a href="#2-1、Via-the-‘set-event’-interface" class="headerlink" title="2.1、Via the ‘set_event’ interface"></a>2.1、Via the ‘set_event’ interface</h2><p>有哪些有效的trace event，可以查看“/sys/kernel/debug/tracing/available_events”文件。</p>
+<p>启用特定event，如‘sched_wakeup’，简单的echo到 /sys/kernel/debug/tracing/set_event。例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo sched_wakeup &gt;&gt; /sys/kernel/debug/tracing/set_event</span><br></pre></td></tr></table></figure>
+<p>注意：需要使用‘&gt;&gt;’，否则会首先disable所有的events。</p>
+<p>Disable event，在echo event name到set_event之前设置一个‘！’前缀：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!sched_wakeup&apos; &gt;&gt; /sys/kernel/debug/tracing/set_event</span><br></pre></td></tr></table></figure>
+<p>Disable all events，echo一个空行到set_event中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo &gt; /sys/kernel/debug/tracing/set_event</span><br></pre></td></tr></table></figure>
+<p>Enable all events，echo <em>:</em> or *:到set_event中：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo *:* &gt; /sys/kernel/debug/tracing/set_event</span><br></pre></td></tr></table></figure>
+<p>events被组织成subsystems，类似ext4, irq, sched,等等。一个完整的event name类似这样：<subsystem>:<event>。subsystem name是可选的，但是它显示在available_events文件中。一个subsystem钟所有的events可以通过 <subsystem>:*语法来表示，例如：enable所有的irq event：</subsystem></event></subsystem></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;irq:*&apos; &gt; /sys/kernel/debug/tracing/set_event</span><br></pre></td></tr></table></figure>
+<h2 id="2-2、Via-the-‘enable’-toggle"><a href="#2-2、Via-the-‘enable’-toggle" class="headerlink" title="2.2、Via the ‘enable’ toggle"></a>2.2、Via the ‘enable’ toggle</h2><p>所有有效的trace event同时会在“/sys/kernel/debug/tracing/events/”层次文件夹中列出。</p>
+<p>enable event ‘sched_wakeup’:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo 1 &gt; /sys/kernel/debug/tracing/events/sched/sched_wakeup/enable</span><br></pre></td></tr></table></figure>
+<p>disable:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo 0 &gt; /sys/kernel/debug/tracing/events/sched/sched_wakeup/enable</span><br></pre></td></tr></table></figure>
+<p>enable sched subsystem中所有的events：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo 1 &gt; /sys/kernel/debug/tracing/events/sched/enable</span><br></pre></td></tr></table></figure>
+<p>enable所有的events：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo 1 &gt; /sys/kernel/debug/tracing/events/enable</span><br></pre></td></tr></table></figure>
+<p>当读enable文件时，可能会有以下4种结果：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">0 - all events this file affects are disabled</span><br><span class="line">1 - all events this file affects are enabled</span><br><span class="line">X - there is a mixture of events enabled and disabled</span><br><span class="line">? - this file does not affect any event</span><br></pre></td></tr></table></figure>
+<h2 id="2-3、Boot-option"><a href="#2-3、Boot-option" class="headerlink" title="2.3、Boot option"></a>2.3、Boot option</h2><p>为了早期启动时调试，可以使用以下boot选项：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">trace_event=[event-list]</span><br></pre></td></tr></table></figure>
+<p>event-list是逗号分隔的event列表。</p>
+<h1 id="3、Defining-an-event-enabled-tracepoint"><a href="#3、Defining-an-event-enabled-tracepoint" class="headerlink" title="3、Defining an event-enabled tracepoint"></a>3、Defining an event-enabled tracepoint</h1><p>怎么样定义一个event-enabled的tracepoint，可以参考内核代码：samples/trace_events</p>
+<h1 id="4、Event-formats"><a href="#4、Event-formats" class="headerlink" title="4、Event formats"></a>4、Event formats</h1><p>每个trace event都有一个与它相关联的“format”文件，该文件包含log event中每个字段的描述。这个信息用来解析二进制的trace流，其中的字段也可以在event filter中找到对它的使用。</p>
+<p>它还显示用于在文本模式下打印事件的格式字符串，以及用于分析的事件名称和ID。</p>
+<p>每个event都有一系列通用的字段，全部都以“common_”作为前缀。其他的字段都需要在TRACE_EVENT()中定义。</p>
+<p>format中的每个字段都有如下形式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">field:field-type field-name; offset:N; size:N;</span><br></pre></td></tr></table></figure>
+<p>offset是字段在trace record中的offset，size是数据项的size，都是byte单位。</p>
+<p>举例，‘sched_wakeup’ event的format信息：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"># cat /sys/kernel/debug/tracing/events/sched/sched_wakeup/format</span><br><span class="line"></span><br><span class="line">name: sched_wakeup</span><br><span class="line">ID: 60</span><br><span class="line">format:</span><br><span class="line">        field:unsigned short common_type;       offset:0;       size:2;</span><br><span class="line">        field:unsigned char common_flags;       offset:2;       size:1;</span><br><span class="line">        field:unsigned char common_preempt_count;       offset:3;       size:1;</span><br><span class="line">        field:int common_pid;   offset:4;       size:4;</span><br><span class="line">        field:int common_tgid;  offset:8;       size:4;</span><br><span class="line"></span><br><span class="line">        field:char comm[TASK_COMM_LEN]; offset:12;      size:16;</span><br><span class="line">        field:pid_t pid;        offset:28;      size:4;</span><br><span class="line">        field:int prio; offset:32;      size:4;</span><br><span class="line">        field:int success;      offset:36;      size:4;</span><br><span class="line">        field:int cpu;  offset:40;      size:4;</span><br><span class="line"></span><br><span class="line">print fmt: &quot;task %s:%d [%d] success=%d [%03d]&quot;, REC-&gt;comm, REC-&gt;pid,</span><br><span class="line">           REC-&gt;prio, REC-&gt;success, REC-&gt;cpu</span><br></pre></td></tr></table></figure>
+<p>这个event包含10个字段，5个通用字段5个自定义字段。此事件的所有字段都是数字的，除了“COMM”是一个字符串，这对于事件过滤非常重要。</p>
+<h1 id="5、Event-filtering"><a href="#5、Event-filtering" class="headerlink" title="5、Event filtering"></a>5、Event filtering</h1><p>trace event支持 ‘filter expressions’ 式的过滤。一旦trace event被记录到trace buffer中，其字段就针对与该event类型相关联的‘filter expressions’进行检查。如果event匹配filter将会被记录，否则将会被丢弃。如果event没有filter配置任何时刻都是匹配的，event默认就是no filter配置。</p>
+<h2 id="5-1、Expression-syntax"><a href="#5-1、Expression-syntax" class="headerlink" title="5.1、Expression syntax"></a>5.1、Expression syntax</h2><p>一个filter expression由多个 ‘predicates’组成，它们使用逻辑操作符 ‘&amp;&amp;’、‘||’组合在一起。谓词只是一个子句，它将日志事件中包含的字段的值与常量值进行比较，并根据字段值匹配（1）或不匹配（0）返回0或1：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">field-name relational-operator value</span><br></pre></td></tr></table></figure>
+<p>圆括号可以用来提供任意的逻辑分组，并且可以使用双引号防止shell将操作符解释为shell元字符。 </p>
+<p>filter可以的字段名可以在对应event的‘format’文件中查看。</p>
+<p>relational-operators依赖于需要测试的字段类型。</p>
+<ul>
+<li><p>数字类的操作符包括：</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">==, !=, &lt;, &lt;=, &gt;, &gt;=, &amp;</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>字符类的操作符包括：</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">==, !=, ~</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<pre><code>约等于操作符(~)接受通配符形式 (*,?)和字符类 ([)。举例：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">prev_comm ~ &quot;*sh&quot;</span><br><span class="line">prev_comm ~ &quot;sh*&quot;</span><br><span class="line">prev_comm ~ &quot;*sh*&quot;</span><br><span class="line">prev_comm ~ &quot;ba*sh&quot;</span><br></pre></td></tr></table></figure>
+</code></pre><h2 id="5-2、Setting-filters"><a href="#5-2、Setting-filters" class="headerlink" title="5.2、Setting filters"></a>5.2、Setting filters</h2><p>通过将filter expressions写入给定event的filter”文件，来设置单个event的filter。</p>
+<p>举例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing/events/sched/sched_wakeup</span><br><span class="line"># echo &quot;common_preempt_count &gt; 4&quot; &gt; filter</span><br></pre></td></tr></table></figure>
+<p>一个涉及更多的例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing/events/signal/signal_generate</span><br><span class="line"># echo &quot;((sig &gt;= 10 &amp;&amp; sig &lt; 15) || sig == 17) &amp;&amp; comm != bash&quot; &gt; filter</span><br></pre></td></tr></table></figure>
+<p>如果表达式中存在错误，则在设置时会得到一个“Invalid argument”错误，错误的字符串连同错误消息可以通过查看过滤器来查看，例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing/events/signal/signal_generate</span><br><span class="line"># echo &quot;((sig &gt;= 10 &amp;&amp; sig &lt; 15) || dsig == 17) &amp;&amp; comm != bash&quot; &gt; filter</span><br><span class="line">-bash: echo: write error: Invalid argument</span><br><span class="line"># cat filter</span><br><span class="line">((sig &gt;= 10 &amp;&amp; sig &lt; 15) || dsig == 17) &amp;&amp; comm != bash</span><br><span class="line">^</span><br><span class="line">parse_error: Field not found</span><br></pre></td></tr></table></figure>
+<p>目前，错误的插入符号（‘^’）总是出现在过滤器字符串的开头；即使没有更精确的位置信息，错误消息仍然应该是有用的。</p>
+<h2 id="5-3、Clearing-filters"><a href="#5-3、Clearing-filters" class="headerlink" title="5.3、Clearing filters"></a>5.3、Clearing filters</h2><p>清除某个event的filter，echo 0 到对应event的filter文件。</p>
+<p>清除某个subsystem中所有events的filter，echo 0 到对应subsystem的filter文件。</p>
+<h2 id="5-4、Subsystem-filters"><a href="#5-4、Subsystem-filters" class="headerlink" title="5.4、Subsystem filters"></a>5.4、Subsystem filters</h2><p>为了方便起见，可以将子系统中的每个事件的过滤器作为一个组来设置或清除，将一个过滤器表达式写入子系统根目录下的过滤器文件中。但是请注意，如果子系统内的任何事件的过滤器缺少子系统过滤器中指定的字段，或者如果过滤器不能应用于任何其他原因，则该事件的过滤器将保留其以前的设置。这可能导致过滤器的意外混合，这可能导致混淆（对可能认为不同的过滤器有效的用户）跟踪输出。只有引用公共字段的过滤器才能保证成功地传播到所有事件。</p>
+<p>下面是几个子系统过滤器示例，也说明了以上几点：</p>
+<p>清除sched subsystem中所有events的filter：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing/events/sched</span><br><span class="line"># echo 0 &gt; filter</span><br><span class="line"># cat sched_switch/filter</span><br><span class="line">none</span><br><span class="line"># cat sched_wakeup/filter</span><br><span class="line">none</span><br></pre></td></tr></table></figure>
+<p>使用sched subsystem中所有events都有的通用字段来设置filter(所有event将以同样的filter结束)：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing/events/sched</span><br><span class="line"># echo common_pid == 0 &gt; filter</span><br><span class="line"># cat sched_switch/filter</span><br><span class="line">common_pid == 0</span><br><span class="line"># cat sched_wakeup/filter</span><br><span class="line">common_pid == 0</span><br></pre></td></tr></table></figure>
+<p>尝试使用sched subsystem中非所有events通用字段来配置filter(所有没有prev_pid字段的event将保留原有的filter)：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing/events/sched</span><br><span class="line"># echo prev_pid == 0 &gt; filter</span><br><span class="line"># cat sched_switch/filter</span><br><span class="line">prev_pid == 0</span><br><span class="line"># cat sched_wakeup/filter</span><br><span class="line">common_pid == 0</span><br></pre></td></tr></table></figure>
+<h2 id="5-5、-PID-filtering"><a href="#5-5、-PID-filtering" class="headerlink" title="5.5、 PID filtering"></a>5.5、 PID filtering</h2><p>顶级文件夹下的set_event_pid 文件，可以给所有event配置PID过滤：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># cd /sys/kernel/debug/tracing</span><br><span class="line"># echo $$ &gt; set_event_pid</span><br><span class="line"># echo 1 &gt; events/enable</span><br></pre></td></tr></table></figure>
+<p>以上配置将会只追踪当前进程。</p>
+<p>追加PID使用 ‘&gt;&gt;’：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo 123 244 1 &gt;&gt; set_event_pid</span><br></pre></td></tr></table></figure>
+<h1 id="6、Event-triggers"><a href="#6、Event-triggers" class="headerlink" title="6、Event triggers"></a>6、Event triggers</h1><p>跟踪事件可以有条件地调用trigger ‘commands’，它可以采取各种形式并在下面详细描述；示例将enabling or disabling其他trace event，或者在trace event命中时调用stack trace。每当调用具有附加触发器的trace event时，就会调用与该event相关联的 trigger commands。任何给定的触发器还可以具有与它相关联的第5节（事件过滤）中描述的相同形式的事件过滤器。如果调用的事件通过关联的筛选器，则该命令将被调用。如果没有与触发器关联的过滤器，它总是通过。</p>
+<p>Triggers将会从event上增加或者移除，通过将触发表达式写入给定event的“trigger”文件。</p>
+<p>给定的event可以有任意数量的trigger与它相关联，个别命令可能在这方面有所限制。</p>
+<p>Event triggers是在“soft”模式上实现的，这意味如果一个event有一个或者多个trigger与之相关联，即使该event是disable状态但实质上已经被actived，然后在“soft”模式中被disable。也就是说，tracepoint 将被调用，但将不会被跟踪，除非它被正式的enable。该方案允许即使disable的event也可以调用trigger，并且还允许当前event filter实现用于有条件地调用trigger。</p>
+<p>设置event triggers的语法大约基于设置set_ftrace_filter ‘ftrace filter commands’ 的语法（可以参考‘Filter commands’ section of <a href="https://www.kernel.org/doc/html/latest/trace/ftrace.html" target="_blank" rel="noopener">Documentation/trace/ftrace.txt</a>），但存在很大的差异，并且实现目前并没有以任何方式与之联系，因此要小心在两者之间进行相等。 </p>
+<h2 id="6-1、Expression-syntax"><a href="#6-1、Expression-syntax" class="headerlink" title="6.1、Expression syntax"></a>6.1、Expression syntax</h2><p>使用echo command 到‘trigger’文件的形式来增加Trigger：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;command[:count] [if filter]&apos; &gt; trigger</span><br></pre></td></tr></table></figure>
+<p>移除Trigger使用同样的命令，但是加上了 ‘!’ 前缀：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!command[:count] [if filter]&apos; &gt; trigger</span><br></pre></td></tr></table></figure>
+<p>在移除Trigger时 [if filter]部分不参与匹配，所以可以让其在‘!’ command中缺席也可以完成同样的功能。</p>
+<p>filter部分的语法和上一节 ‘Event filtering’ 中描述的相同。</p>
+<p>为了方便使用，当前filter只支持使用‘&gt;’增加或删除单条trigger，没有明确的 ‘&gt;&gt;’ 支持(实际上‘&gt;’的作用就相当于‘&gt;&gt;’)或者截短支持移除所有的trigger(必须使用‘!’命令逐条移除)。</p>
+<h2 id="6-2、Supported-trigger-commands"><a href="#6-2、Supported-trigger-commands" class="headerlink" title="6.2、Supported trigger commands"></a>6.2、Supported trigger commands</h2><p>支持以下命令：</p>
+<ul>
+<li><p>enable_event/disable_event</p>
+<p>  这些命令可以enable or disable其他的trace event，当triggering event被命中时。当这些命令被注册，其他的trace event变为active，但是在“soft” mode下disable。这时，tracepoint会被调用但是不会被trace。这些event tracepoint一直呆在这种模式中一直到trigger被触发。</p>
+<p>  举例，以下的trigger导致kmalloc events被trace当一个read系统调用进入，:1 表明该行为只发生一次：</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;enable_event:kmem:kmalloc:1&apos; &gt; \</span><br><span class="line">/sys/kernel/debug/tracing/events/syscalls/sys_enter_read/trigger</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<pre><code>以下的trigger导致kmalloc events被disable trace当一个read系统调用退出，每次退出都会调用：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;disable_event:kmem:kmalloc&apos; &gt; \</span><br><span class="line">/sys/kernel/debug/tracing/events/syscalls/sys_exit_read/trigger</span><br></pre></td></tr></table></figure>
+
+
+命令格式如下：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">enable_event:&lt;system&gt;:&lt;event&gt;[:count]</span><br><span class="line">disable_event:&lt;system&gt;:&lt;event&gt;[:count]</span><br></pre></td></tr></table></figure>
+
+
+移除命令：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!enable_event:kmem:kmalloc:1&apos; &gt; \</span><br><span class="line">    /sys/kernel/debug/tracing/events/syscalls/sys_enter_read/trigger</span><br><span class="line"></span><br><span class="line"># echo &apos;!disable_event:kmem:kmalloc&apos; &gt; \</span><br><span class="line">    /sys/kernel/debug/tracing/events/syscalls/sys_exit_read/trigger</span><br></pre></td></tr></table></figure>
+
+
+注意：每个 triggering event可以有任意多个触发动作，但是每种触发动作只能有一个。例如，sys_enter_read可以触发enable kmem:kmalloc和sched:sched_switch，但是kmem:kmalloc不能有两个版本kmem:kmalloc and kmem:kmalloc:1或者是‘kmem:kmalloc if bytes_req == 256’ and ‘kmem:kmalloc if bytes_alloc == 256’(他们开源组合成单个filter在kmem:kmalloc event中)
+</code></pre><ul>
+<li><p>stacktrace</p>
+<p>  这个命令在trace buffer中dump出堆栈调用，在triggering event发生时。</p>
+<p>  举例，以下的trigger dump出堆栈调用，在每次kmalloc tracepoint被命中：</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;stacktrace&apos; &gt; \</span><br><span class="line">  /sys/kernel/debug/tracing/events/kmem/kmalloc/trigger</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<pre><code>以下的trigger dump出堆栈调用，在kmalloc请求bytes_req &gt;= 65536的前5次
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;stacktrace:5 if bytes_req &gt;= 65536&apos; &gt; \</span><br><span class="line">    /sys/kernel/debug/tracing/events/kmem/kmalloc/trigger</span><br></pre></td></tr></table></figure>
+
+
+命令格式如下：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">stacktrace[:count]</span><br></pre></td></tr></table></figure>
+
+
+移除命令：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!stacktrace&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/kmem/kmalloc/trigger</span><br><span class="line"></span><br><span class="line"># echo &apos;!stacktrace:5 if bytes_req &gt;= 65536&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/kmem/kmalloc/trigger</span><br></pre></td></tr></table></figure>
+
+
+后者也可以通过下面的（没有过滤器）更简单地去除：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!stacktrace:5&apos; &gt; \</span><br><span class="line">  /sys/kernel/debug/tracing/events/kmem/kmalloc/trigger</span><br></pre></td></tr></table></figure>
+
+
+注意：每个trace event只能有一个stacktrace触发器。
+</code></pre><ul>
+<li><p>snapshot</p>
+<p>  这个命令导致snapshot被触发当triggering event发生时。</p>
+<p>  以下命令每次创建一个snapshot当block request queue被unplugged并且depth &gt; 1。如果你想trace一系列的events or functions，快照trace buffer将会抓住这些events，在 trigger event发生时：</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;snapshot if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">  /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<pre><code>只snapshot一次：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;snapshot:1 if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">  /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br></pre></td></tr></table></figure>
+
+
+移除命令：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!snapshot if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br><span class="line"></span><br><span class="line"># echo &apos;!snapshot:1 if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br></pre></td></tr></table></figure>
+
+
+注意：每个trace event只能有一个snapshot触发器。
+</code></pre><ul>
+<li><p>traceon/traceoff</p>
+<p>  这个命令将会把整个trace tracing on/off当event被命中。parameter 决定了系统 turned on/off 多少次。没有描述就是无限制。</p>
+<p>  以下命令将 turns tracing off 在block request queue第一次unplugged并且depth &gt; 1，如果您当时正在跟踪一组事件或函数，则可以检查跟踪缓冲区，以查看导致触发事件的事件序列：</p>
+  <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;traceoff:1 if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">  /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<pre><code>一直disable tracing 当nr_rq &gt; 1:
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;traceoff if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br></pre></td></tr></table></figure>
+
+
+移除命令：
+
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># echo &apos;!traceoff:1 if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br><span class="line"></span><br><span class="line"># echo &apos;!traceoff if nr_rq &gt; 1&apos; &gt; \</span><br><span class="line">      /sys/kernel/debug/tracing/events/block/block_unplug/trigger</span><br></pre></td></tr></table></figure>
+
+
+注意：每个trace event只能有一个traceon or traceoff触发器。
+</code></pre><ul>
+<li><p>hist</p>
+<p>  组合触发。这个命令聚合多个trace event的字段到一个hash表中。</p>
+<p>  查看<a href="https://www.kernel.org/doc/Documentation/trace/histogram.txt" target="_blank" rel="noopener">Documentation/trace/histogram.txt</a>更多的细节和用例。</p>
+</li>
+</ul>
+<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><p><a href="https://www.kernel.org/doc/html/latest/trace/events.html" target="_blank" rel="noopener">1、Event Tracing</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/trace-event/" rel="tag"># trace event</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/05/23/ftrace_use_ftrace/" rel="next" title="Linux Ftrace 2.1、ftrace的使用">
+                <i class="fa fa-chevron-left"></i> Linux Ftrace 2.1、ftrace的使用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/05/24/ftrace_use_kprobe_event/" rel="prev" title="Linux Ftrace 2.3、kprobe event的使用">
+                Linux Ftrace 2.3、kprobe event的使用 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、Introduction："><span class="nav-number">1.</span> <span class="nav-text">1、Introduction：</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、-Using-Event-Tracing"><span class="nav-number">2.</span> <span class="nav-text">2、 Using Event Tracing</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1、Via-the-‘set-event’-interface"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、Via the ‘set_event’ interface</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2、Via-the-‘enable’-toggle"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、Via the ‘enable’ toggle</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3、Boot-option"><span class="nav-number">2.3.</span> <span class="nav-text">2.3、Boot option</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、Defining-an-event-enabled-tracepoint"><span class="nav-number">3.</span> <span class="nav-text">3、Defining an event-enabled tracepoint</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4、Event-formats"><span class="nav-number">4.</span> <span class="nav-text">4、Event formats</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5、Event-filtering"><span class="nav-number">5.</span> <span class="nav-text">5、Event filtering</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#5-1、Expression-syntax"><span class="nav-number">5.1.</span> <span class="nav-text">5.1、Expression syntax</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-2、Setting-filters"><span class="nav-number">5.2.</span> <span class="nav-text">5.2、Setting filters</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-3、Clearing-filters"><span class="nav-number">5.3.</span> <span class="nav-text">5.3、Clearing filters</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-4、Subsystem-filters"><span class="nav-number">5.4.</span> <span class="nav-text">5.4、Subsystem filters</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#5-5、-PID-filtering"><span class="nav-number">5.5.</span> <span class="nav-text">5.5、 PID filtering</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#6、Event-triggers"><span class="nav-number">6.</span> <span class="nav-text">6、Event triggers</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#6-1、Expression-syntax"><span class="nav-number">6.1.</span> <span class="nav-text">6.1、Expression syntax</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#6-2、Supported-trigger-commands"><span class="nav-number">6.2.</span> <span class="nav-text">6.2、Supported trigger commands</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考资料"><span class="nav-number">7.</span> <span class="nav-text">参考资料</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/05/23/ftrace_use_trace_event/";
+        this.page.identifier = "2018/05/23/ftrace_use_trace_event/";
+        this.page.title = 'Linux Ftrace 2.2、trace event的使用';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

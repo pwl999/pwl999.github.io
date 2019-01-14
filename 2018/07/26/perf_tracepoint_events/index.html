@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="perf复用了ftrace中trace_event的所有插桩点(即tracepoint)，trace数据即可以通过ftrace的通道提供，也可以被包装成perf_event供perf工具使用。 可以通过perf list命令来查看系统中的tracpoint event，可以看到和/sys/kernel/debug/tracing/events/路径下的trace_event一致： 12345678">
+<meta name="keywords" content="perf">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Linux Perf 1.2、tracepoint events">
+<meta property="og:url" content="http://yoursite.com/2018/07/26/perf_tracepoint_events/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="perf复用了ftrace中trace_event的所有插桩点(即tracepoint)，trace数据即可以通过ftrace的通道提供，也可以被包装成perf_event供perf工具使用。 可以通过perf list命令来查看系统中的tracpoint event，可以看到和/sys/kernel/debug/tracing/events/路径下的trace_event一致： 12345678">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_tp_provide_data.png">
+<meta property="og:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_tp_sample_format.png">
+<meta property="og:updated_time" content="2019-01-14T02:22:13.584Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Linux Perf 1.2、tracepoint events">
+<meta name="twitter:description" content="perf复用了ftrace中trace_event的所有插桩点(即tracepoint)，trace数据即可以通过ftrace的通道提供，也可以被包装成perf_event供perf工具使用。 可以通过perf list命令来查看系统中的tracpoint event，可以看到和/sys/kernel/debug/tracing/events/路径下的trace_event一致： 12345678">
+<meta name="twitter:image" content="http://yoursite.com/images/perf_k/perf_k_pmu_tp_provide_data.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/07/26/perf_tracepoint_events/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Linux Perf 1.2、tracepoint events | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/07/26/perf_tracepoint_events/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Linux Perf 1.2、tracepoint events
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-07-26 15:44:34" itemprop="dateCreated datePublished" datetime="2018-07-26T15:44:34+08:00">2018-07-26</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-01-14 10:22:13" itemprop="dateModified" datetime="2019-01-14T10:22:13+08:00">2019-01-14</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/07/26/perf_tracepoint_events/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/07/26/perf_tracepoint_events/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>perf复用了ftrace中trace_event的所有插桩点(即tracepoint)，trace数据即可以通过ftrace的通道提供，也可以被包装成perf_event供perf工具使用。</p>
+<p>可以通过perf list命令来查看系统中的tracpoint event，可以看到和/sys/kernel/debug/tracing/events/路径下的trace_event一致：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"># simpleperf list tracepoint | more</span><br><span class="line">List of tracepoint events:</span><br><span class="line">  almk:almk_shrink</span><br><span class="line">  almk:almk_vmpressure</span><br><span class="line">  asoc:snd_soc_bias_level_done</span><br><span class="line">  asoc:snd_soc_bias_level_start</span><br><span class="line">  asoc:snd_soc_dapm_connected</span><br><span class="line">  asoc:snd_soc_dapm_done</span><br><span class="line">  asoc:snd_soc_dapm_path</span><br><span class="line">  asoc:snd_soc_dapm_start</span><br><span class="line">  asoc:snd_soc_dapm_walk_done</span><br><span class="line">  asoc:snd_soc_dapm_widget_event_done</span><br><span class="line">  asoc:snd_soc_dapm_widget_event_start</span><br><span class="line">  asoc:snd_soc_dapm_widget_power</span><br></pre></td></tr></table></figure>
+<h1 id="1、原理介绍："><a href="#1、原理介绍：" class="headerlink" title="1、原理介绍："></a>1、原理介绍：</h1><p>trace_event在定义的时候，已经把trace_point、trace_event的callback函数、perf_event的callback函数全都给定义好了。只需要使用现成的架构把perf_event的callback函数给注册到trace_point上去就行了。</p>
+<p>include/trace/trace_event.h:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">/* (1) trace_event_class的定义 */</span><br><span class="line">#undef DECLARE_EVENT_CLASS</span><br><span class="line">#define DECLARE_EVENT_CLASS(call, proto, args, tstruct, assign, print)	\</span><br><span class="line">_TRACE_PERF_PROTO(call, PARAMS(proto));					\</span><br><span class="line">static char print_fmt_##call[] = print;					\</span><br><span class="line">static struct trace_event_class __used __refdata event_class_##call = &#123; \</span><br><span class="line">	.system			= TRACE_SYSTEM_STRING,			\</span><br><span class="line">	.define_fields		= trace_event_define_fields_##call,	\</span><br><span class="line">	.fields			= LIST_HEAD_INIT(event_class_##call.fields),\</span><br><span class="line">	.raw_init		= trace_event_raw_init,			\</span><br><span class="line">	</span><br><span class="line">	/* (1.1) trace_event的回调函数 */</span><br><span class="line">	.probe			= trace_event_raw_event_##call,		\</span><br><span class="line">	</span><br><span class="line">	/* (1.2) 注册函数，把callback函数加入到tracepoint中 */</span><br><span class="line">	.reg			= trace_event_reg,			\</span><br><span class="line">	</span><br><span class="line">	/* (1.3) perf_event部分的定义 */</span><br><span class="line">	_TRACE_PERF_INIT(call)						\</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">/* (2) trace_event_call的定义 */</span><br><span class="line">#undef DEFINE_EVENT</span><br><span class="line">#define DEFINE_EVENT(template, call, proto, args)			\</span><br><span class="line">									\</span><br><span class="line">static struct trace_event_call __used event_##call = &#123;			\</span><br><span class="line"></span><br><span class="line">    /* (2.1) 对trace_event_class的引用 */</span><br><span class="line">	.class			= &amp;event_class_##template,		\</span><br><span class="line">	</span><br><span class="line">	/* (2.2) tracepoint的定义 */</span><br><span class="line">	&#123;								\</span><br><span class="line">		.tp			= &amp;__tracepoint_##call,		\</span><br><span class="line">	&#125;,								\</span><br><span class="line">	.event.funcs		= &amp;trace_event_type_funcs_##template,	\</span><br><span class="line">	.print_fmt		= print_fmt_##template,			\</span><br><span class="line">	.flags			= TRACE_EVENT_FL_TRACEPOINT,		\</span><br><span class="line">&#125;;									\</span><br><span class="line">static struct trace_event_call __used					\</span><br><span class="line">__attribute__((section(&quot;_ftrace_events&quot;))) *__event_##call = &amp;event_##call</span><br></pre></td></tr></table></figure>
+<p>_TRACE_PERF_INIT()宏的展开：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">#ifdef CONFIG_PERF_EVENTS</span><br><span class="line"></span><br><span class="line">#define _TRACE_PERF_PROTO(call, proto)					\</span><br><span class="line">	static notrace void						\</span><br><span class="line">	perf_trace_##call(void *__data, proto);</span><br><span class="line"></span><br><span class="line">#define _TRACE_PERF_INIT(call)						\</span><br><span class="line"></span><br><span class="line">    /* (1.3) perf_event的回调函数：perf_trace_##call() */</span><br><span class="line">	.perf_probe		= perf_trace_##call,</span><br><span class="line"></span><br><span class="line">#else</span><br><span class="line">#define _TRACE_PERF_PROTO(call, proto)</span><br><span class="line">#define _TRACE_PERF_INIT(call)</span><br><span class="line">#endif /* CONFIG_PERF_EVENTS */</span><br></pre></td></tr></table></figure>
+<p>继续追踪perf_event的回调函数，include/trace/perf.h:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></td><td class="code"><pre><span class="line">#undef DECLARE_EVENT_CLASS</span><br><span class="line">#define DECLARE_EVENT_CLASS(call, proto, args, tstruct, assign, print)	\</span><br><span class="line">static notrace void							\</span><br><span class="line">perf_trace_##call(void *__data, proto)					\</span><br><span class="line">&#123;									\</span><br><span class="line">	struct trace_event_call *event_call = __data;			\</span><br><span class="line">	struct trace_event_data_offsets_##call __maybe_unused __data_offsets;\</span><br><span class="line">	struct trace_event_raw_##call *entry;				\</span><br><span class="line">	struct pt_regs *__regs;						\</span><br><span class="line">	u64 __addr = 0, __count = 1;					\</span><br><span class="line">	struct task_struct *__task = NULL;				\</span><br><span class="line">	struct hlist_head *head;					\</span><br><span class="line">	int __entry_size;						\</span><br><span class="line">	int __data_size;						\</span><br><span class="line">	int rctx;							\</span><br><span class="line">									\</span><br><span class="line">	__data_size = trace_event_get_offsets_##call(&amp;__data_offsets, args); \</span><br><span class="line">									\</span><br><span class="line">	head = this_cpu_ptr(event_call-&gt;perf_events);			\</span><br><span class="line">	if (__builtin_constant_p(!__task) &amp;&amp; !__task &amp;&amp;			\</span><br><span class="line">				hlist_empty(head))			\</span><br><span class="line">		return;							\</span><br><span class="line">									\</span><br><span class="line">    /* (1) 计算需要存储的trace数据的长度 */</span><br><span class="line">	__entry_size = ALIGN(__data_size + sizeof(*entry) + sizeof(u32),\</span><br><span class="line">			     sizeof(u64));				\</span><br><span class="line">	__entry_size -= sizeof(u32);					\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">	/* (2) 分配存储数据的tmp buffer */</span><br><span class="line">	entry = perf_trace_buf_prepare(__entry_size,			\</span><br><span class="line">			event_call-&gt;event.type, &amp;__regs, &amp;rctx);	\</span><br><span class="line">	if (!entry)							\</span><br><span class="line">		return;							\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">	/* (3) get当前register */</span><br><span class="line">	perf_fetch_caller_regs(__regs);					\</span><br><span class="line">									\</span><br><span class="line">	</span><br><span class="line">	/* (4) 给动态成员的占位符赋值：offset + size */</span><br><span class="line">	tstruct								\</span><br><span class="line">									\</span><br><span class="line">	</span><br><span class="line">	/* (5) 记录trace数据到tmp buffer中 */</span><br><span class="line">	&#123; assign; &#125;							\</span><br><span class="line">									\</span><br><span class="line">	</span><br><span class="line">	/* (6) 提交trace数据给连接到本tracepoint上的所有perf_event，拷贝tmp buffer到perf_event的ringbuffer中 */</span><br><span class="line">	perf_trace_buf_submit(entry, __entry_size, rctx, __addr,	\</span><br><span class="line">		__count, __regs, head, __task);				\</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们接下来看一下详细的过程和数据格式。</p>
+<h1 id="2、event-init"><a href="#2、event-init" class="headerlink" title="2、event init"></a>2、event init</h1><p>tracepoint pmu的定义如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">static struct pmu perf_tracepoint = &#123;</span><br><span class="line">	.task_ctx_nr	= perf_sw_context,</span><br><span class="line"></span><br><span class="line">	.event_init	= perf_tp_event_init,</span><br><span class="line">	.add		= perf_trace_add,</span><br><span class="line">	.del		= perf_trace_del,</span><br><span class="line">	.start		= perf_swevent_start,</span><br><span class="line">	.stop		= perf_swevent_stop,</span><br><span class="line">	.read		= perf_swevent_read,</span><br><span class="line"></span><br><span class="line">	.events_across_hotplug = 1,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在调用perf_event_open()系统调用创建新的perf_event的时候，会调用到pmu-&gt;event_init()函数。</p>
+<p>perf_event_open() -&gt; perf_event_alloc() -&gt; perf_init_event() -&gt; perf_try_init_event() -&gt; pmu-&gt;event_init(event) -&gt; perf_tp_event_init()：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br></pre></td><td class="code"><pre><span class="line">static int perf_tp_event_init(struct perf_event *event)</span><br><span class="line">&#123;</span><br><span class="line">	int err;</span><br><span class="line"></span><br><span class="line">    /* (1) attr.type类型不对，出错返回 */</span><br><span class="line">	if (event-&gt;attr.type != PERF_TYPE_TRACEPOINT)</span><br><span class="line">		return -ENOENT;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * no branch sampling for tracepoint events</span><br><span class="line">	 */</span><br><span class="line">	/* (2) tracepoint sample数据中不支持分支采样 */</span><br><span class="line">	if (has_branch_stack(event))</span><br><span class="line">		return -EOPNOTSUPP;</span><br><span class="line">    </span><br><span class="line">    /* (3) 继续init */</span><br><span class="line">	err = perf_trace_init(event);</span><br><span class="line">	if (err)</span><br><span class="line">		return err;</span><br><span class="line"></span><br><span class="line">	event-&gt;destroy = tp_perf_event_destroy;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">int perf_trace_init(struct perf_event *p_event)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_event_call *tp_event;</span><br><span class="line">	u64 event_id = p_event-&gt;attr.config;</span><br><span class="line">	int ret = -EINVAL;</span><br><span class="line"></span><br><span class="line">	mutex_lock(&amp;event_mutex);</span><br><span class="line">	</span><br><span class="line">	/* (3.1) 遍历trace_event_call链表，找到type等于attr.config的trace_event_call */</span><br><span class="line">	list_for_each_entry(tp_event, &amp;ftrace_events, list) &#123;</span><br><span class="line">		if (tp_event-&gt;event.type == event_id &amp;&amp;</span><br><span class="line">		    tp_event-&gt;class &amp;&amp; tp_event-&gt;class-&gt;reg &amp;&amp;</span><br><span class="line">		    try_module_get(tp_event-&gt;mod)) &#123;</span><br><span class="line">		    </span><br><span class="line">		    /* (3.2) 继续初始化 */</span><br><span class="line">			ret = perf_trace_event_init(tp_event, p_event);</span><br><span class="line">			if (ret)</span><br><span class="line">				module_put(tp_event-&gt;mod);</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	mutex_unlock(&amp;event_mutex);</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int perf_trace_event_init(struct trace_event_call *tp_event,</span><br><span class="line">				 struct perf_event *p_event)</span><br><span class="line">&#123;</span><br><span class="line">	int ret;</span><br><span class="line"></span><br><span class="line">    /* (3.2.1) 权限判断 */</span><br><span class="line">	ret = perf_trace_event_perm(tp_event, p_event);</span><br><span class="line">	if (ret)</span><br><span class="line">		return ret;</span><br><span class="line"></span><br><span class="line">    /* (3.2.2) register操作 */</span><br><span class="line">	ret = perf_trace_event_reg(tp_event, p_event);</span><br><span class="line">	if (ret)</span><br><span class="line">		return ret;</span><br><span class="line"></span><br><span class="line">    /* (3.2.3) open操作，对tracepoint来说这部分为空 */</span><br><span class="line">	ret = perf_trace_event_open(p_event);</span><br><span class="line">	if (ret) &#123;</span><br><span class="line">		perf_trace_event_unreg(p_event);</span><br><span class="line">		return ret;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int perf_trace_event_reg(struct trace_event_call *tp_event,</span><br><span class="line">				struct perf_event *p_event)</span><br><span class="line">&#123;</span><br><span class="line">	struct hlist_head __percpu *list;</span><br><span class="line">	int ret = -ENOMEM;</span><br><span class="line">	int cpu;</span><br><span class="line"></span><br><span class="line">	p_event-&gt;tp_event = tp_event;</span><br><span class="line">	if (tp_event-&gt;perf_refcount++ &gt; 0)</span><br><span class="line">		return 0;</span><br><span class="line"></span><br><span class="line">	list = alloc_percpu(struct hlist_head);</span><br><span class="line">	if (!list)</span><br><span class="line">		goto fail;</span><br><span class="line"></span><br><span class="line">    /* (3.2.2.1) 初始化trace_event_call上per_cpu的perf_event挂载链表：tp_event-&gt;perf_events </span><br><span class="line">        如果perf_event需要接收tracepoint的数据，需要按绑定的cpu挂载到对应的per_cpu链表上</span><br><span class="line">     */</span><br><span class="line">	for_each_possible_cpu(cpu)</span><br><span class="line">		INIT_HLIST_HEAD(per_cpu_ptr(list, cpu));</span><br><span class="line"></span><br><span class="line">	tp_event-&gt;perf_events = list;</span><br><span class="line"></span><br><span class="line">    /* (3.2.2.2) 分配tmp buffer空间，buffer都是per_cpu的每个cpu上都有</span><br><span class="line">        context包括4种：task, softirq, hardirq, nmi.</span><br><span class="line">     */</span><br><span class="line">	if (!total_ref_count) &#123;</span><br><span class="line">		char __percpu *buf;</span><br><span class="line">		int i;</span><br><span class="line"></span><br><span class="line">		for (i = 0; i &lt; PERF_NR_CONTEXTS; i++) &#123;</span><br><span class="line">			buf = (char __percpu *)alloc_percpu(perf_trace_t);</span><br><span class="line">			if (!buf)</span><br><span class="line">				goto fail;</span><br><span class="line"></span><br><span class="line">			perf_trace_buf[i] = buf;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (3.2.2.3) 调用class-&gt;reg(TRACE_REG_PERF_REGISTER)注册 */</span><br><span class="line">	ret = tp_event-&gt;class-&gt;reg(tp_event, TRACE_REG_PERF_REGISTER, NULL);</span><br><span class="line">	if (ret)</span><br><span class="line">		goto fail;</span><br><span class="line"></span><br><span class="line">	total_ref_count++;</span><br><span class="line">	return 0;</span><br><span class="line"></span><br><span class="line">fail:</span><br><span class="line">	if (!total_ref_count) &#123;</span><br><span class="line">		int i;</span><br><span class="line"></span><br><span class="line">		for (i = 0; i &lt; PERF_NR_CONTEXTS; i++) &#123;</span><br><span class="line">			free_percpu(perf_trace_buf[i]);</span><br><span class="line">			perf_trace_buf[i] = NULL;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (!--tp_event-&gt;perf_refcount) &#123;</span><br><span class="line">		free_percpu(tp_event-&gt;perf_events);</span><br><span class="line">		tp_event-&gt;perf_events = NULL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>tp_event-&gt;class-&gt;reg()函数在trace_event_class定义时，已经确定为trace_event_reg()函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line">int trace_event_reg(struct trace_event_call *call,</span><br><span class="line">		    enum trace_reg type, void *data)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_event_file *file = data;</span><br><span class="line"></span><br><span class="line">	WARN_ON(!(call-&gt;flags &amp; TRACE_EVENT_FL_TRACEPOINT));</span><br><span class="line">	switch (type) &#123;</span><br><span class="line">	</span><br><span class="line">	/* (1) 把trace_event的callback函数注册到tracepoint上 */</span><br><span class="line">	case TRACE_REG_REGISTER:</span><br><span class="line">		return tracepoint_probe_register(call-&gt;tp,</span><br><span class="line">						 call-&gt;class-&gt;probe,</span><br><span class="line">						 file);</span><br><span class="line">	case TRACE_REG_UNREGISTER:</span><br><span class="line">		tracepoint_probe_unregister(call-&gt;tp,</span><br><span class="line">					    call-&gt;class-&gt;probe,</span><br><span class="line">					    file);</span><br><span class="line">		return 0;</span><br><span class="line"></span><br><span class="line">#ifdef CONFIG_PERF_EVENTS</span><br><span class="line"></span><br><span class="line">    /* (2) 把perf_event的callback函数注册到tracepoint上 */</span><br><span class="line">	case TRACE_REG_PERF_REGISTER:</span><br><span class="line">		return tracepoint_probe_register(call-&gt;tp,</span><br><span class="line">						 call-&gt;class-&gt;perf_probe,</span><br><span class="line">						 call);</span><br><span class="line">	case TRACE_REG_PERF_UNREGISTER:</span><br><span class="line">		tracepoint_probe_unregister(call-&gt;tp,</span><br><span class="line">					    call-&gt;class-&gt;perf_probe,</span><br><span class="line">					    call);</span><br><span class="line">		return 0;</span><br><span class="line">	case TRACE_REG_PERF_OPEN:</span><br><span class="line">	case TRACE_REG_PERF_CLOSE:</span><br><span class="line">	case TRACE_REG_PERF_ADD:</span><br><span class="line">	case TRACE_REG_PERF_DEL:</span><br><span class="line">		return 0;</span><br><span class="line">#endif</span><br><span class="line">	&#125;</span><br><span class="line">	return 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>经过上述初始化注册以后，perf_event的callback函数已经插入到tracepoint中。此时如果tracepoint被命中，perf_event的callback函数会被调用，但是trace数据无人接收，因为tp_event-&gt;perf_events链表中还没有接收的perf_event。</p>
+<h1 id="3、event-add-del"><a href="#3、event-add-del" class="headerlink" title="3、event add/del"></a>3、event add/del</h1><p><img src="/images/perf_k/perf_k_pmu_tp_provide_data.png" alt="perf_k_pmu_tp_provide_data"></p>
+<p>承接上一步perf_event注册以后，perf_event的回调函数已经可以被tracepoint调用，但是perf_event仍然收不到数据。因为这个时候perf_event还处于enable/inactive状态，需要处于active状态才能收到数据。</p>
+<p>一个tracepoint会给多个perf_event提供数据，只有将perf_event加入到tp_event-&gt;perf_events per_cpu链表中才能收到数据。所以对tracepoint perf_event的start/stop就是操作tp_event-&gt;perf_events per_cpu链表。</p>
+<p>在上一章“perf_event内核框架”中已经阐明，task维度的perf_event需要和task一起调度，其回调函数最后控制的就是perf_event的启动和停止。</p>
+<p>context_switch() -&gt; finish_task_switch() -&gt; perf_event_task_sched_in() -&gt; __perf_event_task_sched_in() -&gt; perf_event_context_sched_in() -&gt; perf_event_sched_in() -&gt; ctx_sched_in() -&gt; ctx_pinned_sched_in()/ctx_flexible_sched_in() -&gt; group_sched_in() -&gt; event_sched_in() -&gt; pmu-&gt;add(event, PERF_EF_START) -&gt; perf_trace_add():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">int perf_trace_add(struct perf_event *p_event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_event_call *tp_event = p_event-&gt;tp_event;</span><br><span class="line">	struct hlist_head __percpu *pcpu_list;</span><br><span class="line">	struct hlist_head *list;</span><br><span class="line"></span><br><span class="line">	pcpu_list = tp_event-&gt;perf_events;</span><br><span class="line">	if (WARN_ON_ONCE(!pcpu_list))</span><br><span class="line">		return -EINVAL;</span><br><span class="line"></span><br><span class="line">	if (!(flags &amp; PERF_EF_START))</span><br><span class="line">		p_event-&gt;hw.state = PERF_HES_STOPPED;</span><br><span class="line"></span><br><span class="line">    /* (1) 将perf_event加入到tp_event-&gt;perf_events的当前cpu链表中 */</span><br><span class="line">	list = this_cpu_ptr(pcpu_list);</span><br><span class="line">	hlist_add_head_rcu(&amp;p_event-&gt;hlist_entry, list);</span><br><span class="line"></span><br><span class="line">    /* (2) 空操作 */</span><br><span class="line">	return tp_event-&gt;class-&gt;reg(tp_event, TRACE_REG_PERF_ADD, p_event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>context_switch() -&gt; prepare_task_switch() -&gt; perf_event_task_sched_out() -&gt; __perf_event_task_sched_out() -&gt; perf_event_context_sched_out() -&gt; ctx_sched_out() -&gt; group_sched_out() -&gt; event_sched_out() -&gt; pmu-&gt;del() -&gt; perf_trace_del():</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">void perf_trace_del(struct perf_event *p_event, int flags)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_event_call *tp_event = p_event-&gt;tp_event;</span><br><span class="line">	</span><br><span class="line">	/* (1) 将perf_event从tp_event-&gt;perf_events的链表中删除 */</span><br><span class="line">	if (!hlist_unhashed(&amp;p_event-&gt;hlist_entry))</span><br><span class="line">		hlist_del_rcu(&amp;p_event-&gt;hlist_entry);</span><br><span class="line">		</span><br><span class="line">	/* (2) 空操作 */</span><br><span class="line">	tp_event-&gt;class-&gt;reg(tp_event, TRACE_REG_PERF_DEL, p_event);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="4、event-数据采集"><a href="#4、event-数据采集" class="headerlink" title="4、event 数据采集"></a>4、event 数据采集</h1><p>perf_event的主要功能就是提供count类型或者sample类型的trace数据。</p>
+<p>tracepoint pmu提供trace数据的方式是被动的：tracepoint被命中后，perf callback函数被调用后，累加perf_event的count值，如果perf_event分配了ringbuffer记录sample数据。</p>
+<h2 id="4-1、count数据"><a href="#4-1、count数据" class="headerlink" title="4.1、count数据"></a>4.1、count数据</h2><p>我们在定义用户trace_event时使用__perf_count()宏指定每次tracepoint命中count的累加值。例如：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">DECLARE_EVENT_CLASS(sched_stat_runtime,</span><br><span class="line"></span><br><span class="line">	TP_PROTO(struct task_struct *tsk, u64 runtime, u64 vruntime),</span><br><span class="line"></span><br><span class="line">    /* (1) 指定每次命中，count累加runtime */</span><br><span class="line">	TP_ARGS(tsk, __perf_count(runtime), vruntime),</span><br><span class="line"></span><br><span class="line">	TP_STRUCT__entry(</span><br><span class="line">		__array( char,	comm,	TASK_COMM_LEN	)</span><br><span class="line">		__field( pid_t,	pid			)</span><br><span class="line">		__field( u64,	runtime			)</span><br><span class="line">		__field( u64,	vruntime			)</span><br><span class="line">	),</span><br><span class="line"></span><br><span class="line">	TP_fast_assign(</span><br><span class="line">		memcpy(__entry-&gt;comm, tsk-&gt;comm, TASK_COMM_LEN);</span><br><span class="line">		__entry-&gt;pid		= tsk-&gt;pid;</span><br><span class="line">		__entry-&gt;runtime	= runtime;</span><br><span class="line">		__entry-&gt;vruntime	= vruntime;</span><br><span class="line">	),</span><br><span class="line"></span><br><span class="line">	TP_printk(&quot;comm=%s pid=%d runtime=%Lu [ns] vruntime=%Lu [ns]&quot;,</span><br><span class="line">			__entry-&gt;comm, __entry-&gt;pid,</span><br><span class="line">			(unsigned long long)__entry-&gt;runtime,</span><br><span class="line">			(unsigned long long)__entry-&gt;vruntime)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>如果没有使用__perf_count()宏定义，默认每次tracepoint命中count加1。</p>
+<p>看看具体的代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line">/* (1.1) __perf_addr()宏，指定sample时PERF_SAMPLE_ADDR的值 */</span><br><span class="line">#undef __perf_addr</span><br><span class="line">#define __perf_addr(a)	(__addr = (a))</span><br><span class="line"></span><br><span class="line">/* (1.2) __perf_count()宏，指定count的累加值 */</span><br><span class="line">#undef __perf_count</span><br><span class="line">#define __perf_count(c)	(__count = (c))</span><br><span class="line"></span><br><span class="line">/* (1.3) __perf_task()宏，指定由某个task上绑定的perf_event来接收trace数据 */</span><br><span class="line">#undef __perf_task</span><br><span class="line">#define __perf_task(t)	(__task = (t))</span><br><span class="line"></span><br><span class="line">#undef DECLARE_EVENT_CLASS</span><br><span class="line">#define DECLARE_EVENT_CLASS(call, proto, args, tstruct, assign, print)	\</span><br><span class="line">static notrace void							\</span><br><span class="line">perf_trace_##call(void *__data, proto)					\</span><br><span class="line">&#123;									\</span><br><span class="line">	struct trace_event_call *event_call = __data;			\</span><br><span class="line">	struct trace_event_data_offsets_##call __maybe_unused __data_offsets;\</span><br><span class="line">	struct trace_event_raw_##call *entry;				\</span><br><span class="line">	struct pt_regs *__regs;						\</span><br><span class="line">	</span><br><span class="line">	/* (1.4) 如果没有使用宏指定，默认值：</span><br><span class="line">	    __addr = 0</span><br><span class="line">	    __count = 1</span><br><span class="line">	    __task = NULL</span><br><span class="line">	 */</span><br><span class="line">	u64 __addr = 0, __count = 1;					\</span><br><span class="line">	struct task_struct *__task = NULL;				\</span><br><span class="line">	struct hlist_head *head;					\</span><br><span class="line">	int __entry_size;						\</span><br><span class="line">	int __data_size;						\</span><br><span class="line">	int rctx;							\</span><br><span class="line">									\</span><br><span class="line">	/* (2.1) 获取动态成员的长度 */</span><br><span class="line">	__data_size = trace_event_get_offsets_##call(&amp;__data_offsets, args); \</span><br><span class="line">									\</span><br><span class="line">	/* (3) 获取tracepoint的本cpu perf_event链表，需要本cpu tracepoint数据的perf_event都链接于此 */</span><br><span class="line">	head = this_cpu_ptr(event_call-&gt;perf_events);			\</span><br><span class="line">	if (__builtin_constant_p(!__task) &amp;&amp; !__task &amp;&amp;			\</span><br><span class="line">				hlist_empty(head))			\</span><br><span class="line">		return;							\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">    /* (2.2) 计算需要存储的raw data的总长度：动态长度 + 固定成员长度 */</span><br><span class="line">	__entry_size = ALIGN(__data_size + sizeof(*entry) + sizeof(u32),\</span><br><span class="line">			     sizeof(u64));				\</span><br><span class="line">	__entry_size -= sizeof(u32);					\</span><br><span class="line">									\</span><br><span class="line">	/* (4) 根据长度获得tmp buffer </span><br><span class="line">	    并得到当前的context：task, softirq, hardirq, nmi.</span><br><span class="line">	 */</span><br><span class="line">	entry = perf_trace_buf_prepare(__entry_size,			\</span><br><span class="line">			event_call-&gt;event.type, &amp;__regs, &amp;rctx);	\</span><br><span class="line">	if (!entry)							\</span><br><span class="line">		return;							\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">	/* (5) get当前register */</span><br><span class="line">	perf_fetch_caller_regs(__regs);					\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">	/* (6) 给动态成员的占位符赋值：offset + size */</span><br><span class="line">	tstruct								\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">	/* (7) 记录trace数据到tmp buffer中 */</span><br><span class="line">	&#123; assign; &#125;							\</span><br><span class="line">									\</span><br><span class="line">									</span><br><span class="line">	/* (6) 提交raw data数据给连接到本tracepoint上的所有perf_event，拷贝tmp buffer到perf_event的ringbuffer中 </span><br><span class="line">	    注意：这里的数据只是raw data数据，整个perf的sample数据还包括其他一些数据</span><br><span class="line">	 */</span><br><span class="line">	perf_trace_buf_submit(entry, __entry_size, rctx, __addr,	\</span><br><span class="line">		__count, __regs, head, __task);				\</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>perf_trace_buf_prepare()函数的作用是获取一块tmp buffer，为了避免互斥根据当前的context(task, softirq, hardirq, nmi)和当前cpu，从per_cpu变量中分配到一块对应的buffer：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br></pre></td><td class="code"><pre><span class="line">void *perf_trace_buf_prepare(int size, unsigned short type,</span><br><span class="line">			     struct pt_regs **regs, int *rctxp)</span><br><span class="line">&#123;</span><br><span class="line">	struct trace_entry *entry;</span><br><span class="line">	unsigned long flags;</span><br><span class="line">	char *raw_data;</span><br><span class="line">	int pc;</span><br><span class="line"></span><br><span class="line">	BUILD_BUG_ON(PERF_MAX_TRACE_SIZE % sizeof(unsigned long));</span><br><span class="line"></span><br><span class="line">	if (WARN_ONCE(size &gt; PERF_MAX_TRACE_SIZE,</span><br><span class="line">			&quot;perf buffer not large enough&quot;))</span><br><span class="line">		return NULL;</span><br><span class="line"></span><br><span class="line">	pc = preempt_count();</span><br><span class="line"></span><br><span class="line">    /* (4.1) 获取当前的context，并且防止递归进入 */</span><br><span class="line">	*rctxp = perf_swevent_get_recursion_context();</span><br><span class="line">	if (*rctxp &lt; 0)</span><br><span class="line">		return NULL;</span><br><span class="line"></span><br><span class="line">    /* (4.2) 根据context。获取到保存reg的tmp buffer */</span><br><span class="line">	if (regs)</span><br><span class="line">		*regs = this_cpu_ptr(&amp;__perf_regs[*rctxp]);</span><br><span class="line">		</span><br><span class="line">	/* (4.3) 根据context。获取到保存trace data的tmp buffer */</span><br><span class="line">	raw_data = this_cpu_ptr(perf_trace_buf[*rctxp]);</span><br><span class="line"></span><br><span class="line">	/* zero the dead bytes from align to not leak stack to user */</span><br><span class="line">	memset(&amp;raw_data[size - sizeof(u64)], 0, sizeof(u64));</span><br><span class="line"></span><br><span class="line">	entry = (struct trace_entry *)raw_data;</span><br><span class="line">	local_save_flags(flags);</span><br><span class="line">	</span><br><span class="line">	/* (4.4) 给tmp trace data buffer中的comm字段赋值 */</span><br><span class="line">	tracing_generic_entry_update(entry, flags, pc);</span><br><span class="line">	entry-&gt;type = type;</span><br><span class="line"></span><br><span class="line">	return raw_data;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">int perf_swevent_get_recursion_context(void)</span><br><span class="line">&#123;</span><br><span class="line">	struct swevent_htable *swhash = this_cpu_ptr(&amp;swevent_htable);</span><br><span class="line"></span><br><span class="line">	return get_recursion_context(swhash-&gt;recursion);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static inline int get_recursion_context(int *recursion)</span><br><span class="line">&#123;</span><br><span class="line">	int rctx;</span><br><span class="line"></span><br><span class="line">	if (in_nmi())</span><br><span class="line">		rctx = 3;</span><br><span class="line">	else if (in_irq())</span><br><span class="line">		rctx = 2;</span><br><span class="line">	else if (in_softirq())</span><br><span class="line">		rctx = 1;</span><br><span class="line">	else</span><br><span class="line">		rctx = 0;</span><br><span class="line"></span><br><span class="line">	if (recursion[rctx])</span><br><span class="line">		return -1;</span><br><span class="line"></span><br><span class="line">	recursion[rctx]++;</span><br><span class="line">	barrier();</span><br><span class="line"></span><br><span class="line">	return rctx;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>perf_trace_buf_submit()负责提交数据给this_cpu_ptr(event_call-&gt;perf_events)链表上等待的perf_event：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br></pre></td><td class="code"><pre><span class="line">static inline void</span><br><span class="line">perf_trace_buf_submit(void *raw_data, int size, int rctx, u64 addr,</span><br><span class="line">		       u64 count, struct pt_regs *regs, void *head,</span><br><span class="line">		       struct task_struct *task)</span><br><span class="line">&#123;</span><br><span class="line">	perf_tp_event(addr, count, raw_data, size, regs, head, rctx, task);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">void perf_tp_event(u64 addr, u64 count, void *record, int entry_size,</span><br><span class="line">		   struct pt_regs *regs, struct hlist_head *head, int rctx,</span><br><span class="line">		   struct task_struct *task)</span><br><span class="line">&#123;</span><br><span class="line">	struct perf_sample_data data;</span><br><span class="line">	struct perf_event *event;</span><br><span class="line"></span><br><span class="line">    /* (6.1) 存放raw data */</span><br><span class="line">	struct perf_raw_record raw = &#123;</span><br><span class="line">		.size = entry_size,</span><br><span class="line">		.data = record,</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">    /* (6.2) 初始化sample data */</span><br><span class="line">	perf_sample_data_init(&amp;data, addr, 0);</span><br><span class="line">	data.raw = &amp;raw;</span><br><span class="line"></span><br><span class="line">    /* (6.3) 把sample数据逐个发送给this_cpu_ptr(event_call-&gt;perf_events)链表上链接的perf_event */</span><br><span class="line">	hlist_for_each_entry_rcu(event, head, hlist_entry) &#123;</span><br><span class="line">		if (perf_tp_event_match(event, &amp;data, regs))</span><br><span class="line">			perf_swevent_event(event, count, &amp;data, regs);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * If we got specified a target task, also iterate its context and</span><br><span class="line">	 * deliver this event there too.</span><br><span class="line">	 */</span><br><span class="line">	/* (6.4) __perf_task()宏，指定由某个task上绑定的perf_event来接收sample数据 */</span><br><span class="line">	if (task &amp;&amp; task != current) &#123;</span><br><span class="line">		struct perf_event_context *ctx;</span><br><span class="line">		struct trace_entry *entry = record;</span><br><span class="line"></span><br><span class="line">		rcu_read_lock();</span><br><span class="line">		ctx = rcu_dereference(task-&gt;perf_event_ctxp[perf_sw_context]);</span><br><span class="line">		if (!ctx)</span><br><span class="line">			goto unlock;</span><br><span class="line"></span><br><span class="line">		list_for_each_entry_rcu(event, &amp;ctx-&gt;event_list, event_entry) &#123;</span><br><span class="line">			if (event-&gt;attr.type != PERF_TYPE_TRACEPOINT)</span><br><span class="line">				continue;</span><br><span class="line">			if (event-&gt;attr.config != entry-&gt;type)</span><br><span class="line">				continue;</span><br><span class="line">			if (perf_tp_event_match(event, &amp;data, regs))</span><br><span class="line">				perf_swevent_event(event, count, &amp;data, regs);</span><br><span class="line">		&#125;</span><br><span class="line">unlock:</span><br><span class="line">		rcu_read_unlock();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	perf_swevent_put_recursion_context(rctx);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void perf_swevent_event(struct perf_event *event, u64 nr,</span><br><span class="line">			       struct perf_sample_data *data,</span><br><span class="line">			       struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line"></span><br><span class="line">    /* (6.3.1) 重点：</span><br><span class="line">        perf_event的count值在这里累加</span><br><span class="line">     */</span><br><span class="line">	local64_add(nr, &amp;event-&gt;count);</span><br><span class="line"></span><br><span class="line">	if (!regs)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (6.3.2) 没有指定sample方式的perf_event，不需要sample数据，直接返回 */</span><br><span class="line">	if (!is_sampling_event(event))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	if ((event-&gt;attr.sample_type &amp; PERF_SAMPLE_PERIOD) &amp;&amp; !event-&gt;attr.freq) &#123;</span><br><span class="line">		data-&gt;period = nr;</span><br><span class="line">		return perf_swevent_overflow(event, 1, data, regs);</span><br><span class="line">	&#125; else</span><br><span class="line">		data-&gt;period = event-&gt;hw.last_period;</span><br><span class="line"></span><br><span class="line">	if (nr == 1 &amp;&amp; hwc-&gt;sample_period == 1 &amp;&amp; !event-&gt;attr.freq)</span><br><span class="line">		return perf_swevent_overflow(event, 1, data, regs);</span><br><span class="line"></span><br><span class="line">	if (local64_add_negative(nr, &amp;hwc-&gt;period_left))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">	perf_swevent_overflow(event, 0, data, regs);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="4-2、sample数据"><a href="#4-2、sample数据" class="headerlink" title="4.2、sample数据"></a>4.2、sample数据</h2><p>我们来继续分析sample类型数据的上报。有两种上报方式：period、freq。</p>
+<ul>
+<li><p>period上报方式：以每period间隔的方式上报。有3个相关的参数：</p>
+<p>  event-&gt;hw.last_period       // 当前的period值<br>  event-&gt;hw.period_left       // 到period一个周期还剩多久，这是一个负值，取值范围(-last_period, 0)<br>  event-&gt;hw.sample_period     // 最新的period值，只有当上一周期执行完后，才能更新：last_period = sample_period  </p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br></pre></td><td class="code"><pre><span class="line">static void perf_swevent_event(struct perf_event *event, u64 nr,</span><br><span class="line">			       struct perf_sample_data *data,</span><br><span class="line">			       struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line"></span><br><span class="line">    /* (1) 重点：</span><br><span class="line">        perf_event的count值在这里累加</span><br><span class="line">     */</span><br><span class="line">	local64_add(nr, &amp;event-&gt;count);</span><br><span class="line"></span><br><span class="line">	if (!regs)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (2) 没有指定sample方式的perf_event，不需要sample数据，直接返回 */</span><br><span class="line">	if (!is_sampling_event(event))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (3.1) 如果指定PERF_SAMPLE_PERIOD，且是period模式 </span><br><span class="line">        不理period的限定，上报sample数据和当前data-&gt;period数据</span><br><span class="line">        perf_swevent_overflow()的overflow参数 = 1，说明不理period的时间限制</span><br><span class="line">     */</span><br><span class="line">	if ((event-&gt;attr.sample_type &amp; PERF_SAMPLE_PERIOD) &amp;&amp; !event-&gt;attr.freq) &#123;</span><br><span class="line">		data-&gt;period = nr;</span><br><span class="line">		return perf_swevent_overflow(event, 1, data, regs);</span><br><span class="line">	&#125; else</span><br><span class="line">		data-&gt;period = event-&gt;hw.last_period;</span><br><span class="line"></span><br><span class="line">    /* (3.2) 如果hwc-&gt;sample_period == 1，且是period模式 </span><br><span class="line">        每次都是上报，不需要重新设置period，所以overflow参数 = 1</span><br><span class="line">     */</span><br><span class="line">	if (nr == 1 &amp;&amp; hwc-&gt;sample_period == 1 &amp;&amp; !event-&gt;attr.freq)</span><br><span class="line">		return perf_swevent_overflow(event, 1, data, regs);</span><br><span class="line"></span><br><span class="line">    /* (4.1) 判断period有没有到期，没有到期的数据丢弃返回。 */</span><br><span class="line">	if (local64_add_negative(nr, &amp;hwc-&gt;period_left))</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (4.2) period到期，上报数据。 */</span><br><span class="line">	perf_swevent_overflow(event, 0, data, regs);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void perf_swevent_overflow(struct perf_event *event, u64 overflow,</span><br><span class="line">				    struct perf_sample_data *data,</span><br><span class="line">				    struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	int throttle = 0;</span><br><span class="line"></span><br><span class="line">    /* (4.2.1) overflow=0，说明是period到期后进来的，需要重新设置period </span><br><span class="line">        执行perf_swevent_set_period()返回的overflow是距离上一次上报经历了多少个period</span><br><span class="line">     */</span><br><span class="line">	if (!overflow)</span><br><span class="line">		overflow = perf_swevent_set_period(event);</span><br><span class="line"></span><br><span class="line">	if (hwc-&gt;interrupts == MAX_INTERRUPTS)</span><br><span class="line">		return;</span><br><span class="line"></span><br><span class="line">    /* (4.2.2) overflow是上一次经历了多少个period，或者是overflow=1强制进来的</span><br><span class="line">        每个period上报一次数据</span><br><span class="line">     */</span><br><span class="line">	for (; overflow; overflow--) &#123;</span><br><span class="line">		if (__perf_event_overflow(event, throttle,</span><br><span class="line">					    data, regs)) &#123;</span><br><span class="line">			/*</span><br><span class="line">			 * We inhibit the overflow from happening when</span><br><span class="line">			 * hwc-&gt;interrupts == MAX_INTERRUPTS.</span><br><span class="line">			 */</span><br><span class="line">			break;</span><br><span class="line">		&#125;</span><br><span class="line">		throttle = 1;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static int __perf_event_overflow(struct perf_event *event,</span><br><span class="line">				   int throttle, struct perf_sample_data *data,</span><br><span class="line">				   struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	int events = atomic_read(&amp;event-&gt;event_limit);</span><br><span class="line">	struct hw_perf_event *hwc = &amp;event-&gt;hw;</span><br><span class="line">	u64 seq;</span><br><span class="line">	int ret = 0;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Non-sampling counters might still use the PMI to fold short</span><br><span class="line">	 * hardware counters, ignore those.</span><br><span class="line">	 */</span><br><span class="line">	/* (4.2.2.1) 没有sample数据上报的返回 */</span><br><span class="line">	if (unlikely(!is_sampling_event(event)))</span><br><span class="line">		return 0;</span><br><span class="line"></span><br><span class="line">    /* (4.2.2.2) throttle的判断，还没看懂？ */</span><br><span class="line">	seq = __this_cpu_read(perf_throttled_seq);</span><br><span class="line">	if (seq != hwc-&gt;interrupts_seq) &#123;</span><br><span class="line">		hwc-&gt;interrupts_seq = seq;</span><br><span class="line">		hwc-&gt;interrupts = 1;</span><br><span class="line">	&#125; else &#123;</span><br><span class="line">		hwc-&gt;interrupts++;</span><br><span class="line">		if (unlikely(throttle</span><br><span class="line">			     &amp;&amp; hwc-&gt;interrupts &gt;= max_samples_per_tick)) &#123;</span><br><span class="line">			__this_cpu_inc(perf_throttled_count);</span><br><span class="line">			hwc-&gt;interrupts = MAX_INTERRUPTS;</span><br><span class="line">			perf_log_throttle(event, 0);</span><br><span class="line">			tick_nohz_full_kick();</span><br><span class="line">			ret = 1;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (4.2.2.4) 如果是freq模式，根据count的发生频率，重新计算period值 */</span><br><span class="line">	if (event-&gt;attr.freq) &#123;</span><br><span class="line">		u64 now = perf_clock();</span><br><span class="line">		s64 delta = now - hwc-&gt;freq_time_stamp;</span><br><span class="line"></span><br><span class="line">		hwc-&gt;freq_time_stamp = now;</span><br><span class="line"></span><br><span class="line">		if (delta &gt; 0 &amp;&amp; delta &lt; 2*TICK_NSEC)</span><br><span class="line">			perf_adjust_period(event, delta, hwc-&gt;last_period, true);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * XXX event_limit might not quite work as expected on inherited</span><br><span class="line">	 * events</span><br><span class="line">	 */</span><br><span class="line"></span><br><span class="line">    /* (4.2.2.5) perf_event pending的处理，没看懂？ */</span><br><span class="line">	event-&gt;pending_kill = POLL_IN;</span><br><span class="line">	if (events &amp;&amp; atomic_dec_and_test(&amp;event-&gt;event_limit)) &#123;</span><br><span class="line">		ret = 1;</span><br><span class="line">		event-&gt;pending_kill = POLL_HUP;</span><br><span class="line">		event-&gt;pending_disable = 1;</span><br><span class="line">		irq_work_queue(&amp;event-&gt;pending);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">    /* (4.2.2.6) 实际上报sample数据的地方了：</span><br><span class="line">        调用event自己的overflow_handler()函数，或者默认perf_event_output()函数</span><br><span class="line">     */</span><br><span class="line">	if (event-&gt;overflow_handler)</span><br><span class="line">		event-&gt;overflow_handler(event, data, regs);</span><br><span class="line">	else</span><br><span class="line">		perf_event_output(event, data, regs);</span><br><span class="line"></span><br><span class="line">	if (*perf_event_fasync(event) &amp;&amp; event-&gt;pending_kill) &#123;</span><br><span class="line">		event-&gt;pending_wakeup = 1;</span><br><span class="line">		irq_work_queue(&amp;event-&gt;pending);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return ret;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>perf_event_output()是默认的上报sample数据函数：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br></pre></td><td class="code"><pre><span class="line">void perf_event_output(struct perf_event *event,</span><br><span class="line">			struct perf_sample_data *data,</span><br><span class="line">			struct pt_regs *regs)</span><br><span class="line">&#123;</span><br><span class="line">	struct perf_output_handle handle;</span><br><span class="line">	struct perf_event_header header;</span><br><span class="line"></span><br><span class="line">	/* protect the callchain buffers */</span><br><span class="line">	rcu_read_lock();</span><br><span class="line"></span><br><span class="line">    /* (1) 计算sample数据的总长度，并且根据attr.sample_type保存额外的数据 */</span><br><span class="line">	perf_prepare_sample(&amp;header, data, event, regs);</span><br><span class="line"></span><br><span class="line">    /* (2) 根据总size在event的ringbuffer中分配空间 */</span><br><span class="line">	if (perf_output_begin(&amp;handle, event, header.size))</span><br><span class="line">		goto exit;</span><br><span class="line"></span><br><span class="line">    /* (3) 输出数据到ringbuffer中 */</span><br><span class="line">	perf_output_sample(&amp;handle, &amp;header, data, event);</span><br><span class="line"></span><br><span class="line">    /* (4) 把rb-&gt;head指针刷入rb-&gt;user_page-&gt;data_head */</span><br><span class="line">	perf_output_end(&amp;handle);</span><br><span class="line"></span><br><span class="line">exit:</span><br><span class="line">	rcu_read_unlock();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">int perf_output_begin(struct perf_output_handle *handle,</span><br><span class="line">		      struct perf_event *event, unsigned int size)</span><br><span class="line">&#123;</span><br><span class="line">	struct ring_buffer *rb;</span><br><span class="line">	unsigned long tail, offset, head;</span><br><span class="line">	int have_lost, page_shift;</span><br><span class="line">	struct &#123;</span><br><span class="line">		struct perf_event_header header;</span><br><span class="line">		u64			 id;</span><br><span class="line">		u64			 lost;</span><br><span class="line">	&#125; lost_event;</span><br><span class="line"></span><br><span class="line">	rcu_read_lock();</span><br><span class="line">	/*</span><br><span class="line">	 * For inherited events we send all the output towards the parent.</span><br><span class="line">	 */</span><br><span class="line">	/* (2.1) 由于inherit创建的子进程，都使用父进程的ringbuffer */</span><br><span class="line">	if (event-&gt;parent)</span><br><span class="line">		event = event-&gt;parent;</span><br><span class="line"></span><br><span class="line">	rb = rcu_dereference(event-&gt;rb);</span><br><span class="line">	if (unlikely(!rb))</span><br><span class="line">		goto out;</span><br><span class="line"></span><br><span class="line">	if (unlikely(!rb-&gt;nr_pages))</span><br><span class="line">		goto out;</span><br><span class="line"></span><br><span class="line">	handle-&gt;rb    = rb;</span><br><span class="line">	handle-&gt;event = event;</span><br><span class="line"></span><br><span class="line">	have_lost = local_read(&amp;rb-&gt;lost);</span><br><span class="line">	if (unlikely(have_lost)) &#123;</span><br><span class="line">		size += sizeof(lost_event);</span><br><span class="line">		if (event-&gt;attr.sample_id_all)</span><br><span class="line">			size += event-&gt;id_header_size;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	perf_output_get_handle(handle);</span><br><span class="line"></span><br><span class="line">    /* (2.2) 在ringbuffer中寻找一块空间 */</span><br><span class="line">	do &#123;</span><br><span class="line">	    /* (2.2.1) tail指针从user_page中获取，head指针从rb结构中获取</span><br><span class="line">	        只有把数据写入确认写入以后，才会把head指针的改动从rb结构刷入user_page</span><br><span class="line">	     */</span><br><span class="line">		tail = READ_ONCE(rb-&gt;user_page-&gt;data_tail);</span><br><span class="line">		offset = head = local_read(&amp;rb-&gt;head);</span><br><span class="line">		if (!rb-&gt;overwrite &amp;&amp;</span><br><span class="line">		    unlikely(CIRC_SPACE(head, tail, perf_data_size(rb)) &lt; size))</span><br><span class="line">			goto fail;</span><br><span class="line"></span><br><span class="line">		/*</span><br><span class="line">		 * The above forms a control dependency barrier separating the</span><br><span class="line">		 * @tail load above from the data stores below. Since the @tail</span><br><span class="line">		 * load is required to compute the branch to fail below.</span><br><span class="line">		 *</span><br><span class="line">		 * A, matches D; the full memory barrier userspace SHOULD issue</span><br><span class="line">		 * after reading the data and before storing the new tail</span><br><span class="line">		 * position.</span><br><span class="line">		 *</span><br><span class="line">		 * See perf_output_put_handle().</span><br><span class="line">		 */</span><br><span class="line"></span><br><span class="line">		head += size;</span><br><span class="line">	&#125; while (local_cmpxchg(&amp;rb-&gt;head, offset, head) != offset);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * We rely on the implied barrier() by local_cmpxchg() to ensure</span><br><span class="line">	 * none of the data stores below can be lifted up by the compiler.</span><br><span class="line">	 */</span><br><span class="line"></span><br><span class="line">	if (unlikely(head - local_read(&amp;rb-&gt;wakeup) &gt; rb-&gt;watermark))</span><br><span class="line">		local_add(rb-&gt;watermark, &amp;rb-&gt;wakeup);</span><br><span class="line"></span><br><span class="line">	page_shift = PAGE_SHIFT + page_order(rb);</span><br><span class="line"></span><br><span class="line">    /* (2.3) 计算分配得到的buffer的第一个page偏移和size */</span><br><span class="line">	handle-&gt;page = (offset &gt;&gt; page_shift) &amp; (rb-&gt;nr_pages - 1);</span><br><span class="line">	offset &amp;= (1UL &lt;&lt; page_shift) - 1;</span><br><span class="line">	handle-&gt;addr = rb-&gt;data_pages[handle-&gt;page] + offset;</span><br><span class="line">	handle-&gt;size = (1UL &lt;&lt; page_shift) - offset;</span><br><span class="line"></span><br><span class="line">	if (unlikely(have_lost)) &#123;</span><br><span class="line">		struct perf_sample_data sample_data;</span><br><span class="line"></span><br><span class="line">		lost_event.header.size = sizeof(lost_event);</span><br><span class="line">		lost_event.header.type = PERF_RECORD_LOST;</span><br><span class="line">		lost_event.header.misc = 0;</span><br><span class="line">		lost_event.id          = event-&gt;id;</span><br><span class="line">		lost_event.lost        = local_xchg(&amp;rb-&gt;lost, 0);</span><br><span class="line"></span><br><span class="line">		perf_event_header__init_id(&amp;lost_event.header,</span><br><span class="line">					   &amp;sample_data, event);</span><br><span class="line">		perf_output_put(handle, lost_event);</span><br><span class="line">		perf_event__output_id_sample(event, handle, &amp;sample_data);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	return 0;</span><br><span class="line"></span><br><span class="line">fail:</span><br><span class="line">	local_inc(&amp;rb-&gt;lost);</span><br><span class="line">	perf_output_put_handle(handle);</span><br><span class="line">out:</span><br><span class="line">	rcu_read_unlock();</span><br><span class="line"></span><br><span class="line">	return -ENOSPC;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">|→</span><br><span class="line"></span><br><span class="line">void perf_output_end(struct perf_output_handle *handle)</span><br><span class="line">&#123;</span><br><span class="line">	perf_output_put_handle(handle);</span><br><span class="line">	rcu_read_unlock();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static void perf_output_put_handle(struct perf_output_handle *handle)</span><br><span class="line">&#123;</span><br><span class="line">	struct ring_buffer *rb = handle-&gt;rb;</span><br><span class="line">	unsigned long head;</span><br><span class="line"></span><br><span class="line">again:</span><br><span class="line">	head = local_read(&amp;rb-&gt;head);</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * IRQ/NMI can happen here, which means we can miss a head update.</span><br><span class="line">	 */</span><br><span class="line"></span><br><span class="line">	if (!local_dec_and_test(&amp;rb-&gt;nest))</span><br><span class="line">		goto out;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Since the mmap() consumer (userspace) can run on a different CPU:</span><br><span class="line">	 *</span><br><span class="line">	 *   kernel				user</span><br><span class="line">	 *</span><br><span class="line">	 *   if (LOAD -&gt;data_tail) &#123;		LOAD -&gt;data_head</span><br><span class="line">	 *			(A)		smp_rmb()	(C)</span><br><span class="line">	 *	STORE $data			LOAD $data</span><br><span class="line">	 *	smp_wmb()	(B)		smp_mb()	(D)</span><br><span class="line">	 *	STORE -&gt;data_head		STORE -&gt;data_tail</span><br><span class="line">	 *   &#125;</span><br><span class="line">	 *</span><br><span class="line">	 * Where A pairs with D, and B pairs with C.</span><br><span class="line">	 *</span><br><span class="line">	 * In our case (A) is a control dependency that separates the load of</span><br><span class="line">	 * the -&gt;data_tail and the stores of $data. In case -&gt;data_tail</span><br><span class="line">	 * indicates there is no room in the buffer to store $data we do not.</span><br><span class="line">	 *</span><br><span class="line">	 * D needs to be a full barrier since it separates the data READ</span><br><span class="line">	 * from the tail WRITE.</span><br><span class="line">	 *</span><br><span class="line">	 * For B a WMB is sufficient since it separates two WRITEs, and for C</span><br><span class="line">	 * an RMB is sufficient since it separates two READs.</span><br><span class="line">	 *</span><br><span class="line">	 * See perf_output_begin().</span><br><span class="line">	 */</span><br><span class="line">	smp_wmb(); /* B, matches C */</span><br><span class="line">	rb-&gt;user_page-&gt;data_head = head;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Now check if we missed an update -- rely on previous implied</span><br><span class="line">	 * compiler barriers to force a re-read.</span><br><span class="line">	 */</span><br><span class="line">	if (unlikely(head != local_read(&amp;rb-&gt;head))) &#123;</span><br><span class="line">		local_inc(&amp;rb-&gt;nest);</span><br><span class="line">		goto again;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	if (handle-&gt;wakeup != local_read(&amp;rb-&gt;wakeup))</span><br><span class="line">		perf_output_wakeup(handle);</span><br><span class="line"></span><br><span class="line">out:</span><br><span class="line">	preempt_enable();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/images/perf_k/perf_k_pmu_tp_sample_format.png" alt="perf_k_pmu_tp_sample_format"></p>
+<p>perf_event_type中详细描述了各种type类型的sample数据排列模式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br></pre></td><td class="code"><pre><span class="line">enum perf_event_type &#123;</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * If perf_event_attr.sample_id_all is set then all event types will</span><br><span class="line">	 * have the sample_type selected fields related to where/when</span><br><span class="line">	 * (identity) an event took place (TID, TIME, ID, STREAM_ID, CPU,</span><br><span class="line">	 * IDENTIFIER) described in PERF_RECORD_SAMPLE below, it will be stashed</span><br><span class="line">	 * just after the perf_event_header and the fields already present for</span><br><span class="line">	 * the existing fields, i.e. at the end of the payload. That way a newer</span><br><span class="line">	 * perf.data file will be supported by older perf tools, with these new</span><br><span class="line">	 * optional fields being ignored.</span><br><span class="line">	 *</span><br><span class="line">	 * struct sample_id &#123;</span><br><span class="line">	 * 	&#123; u32			pid, tid; &#125; &amp;&amp; PERF_SAMPLE_TID</span><br><span class="line">	 * 	&#123; u64			time;     &#125; &amp;&amp; PERF_SAMPLE_TIME</span><br><span class="line">	 * 	&#123; u64			id;       &#125; &amp;&amp; PERF_SAMPLE_ID</span><br><span class="line">	 * 	&#123; u64			stream_id;&#125; &amp;&amp; PERF_SAMPLE_STREAM_ID</span><br><span class="line">	 * 	&#123; u32			cpu, res; &#125; &amp;&amp; PERF_SAMPLE_CPU</span><br><span class="line">	 *	&#123; u64			id;	  &#125; &amp;&amp; PERF_SAMPLE_IDENTIFIER</span><br><span class="line">	 * &#125; &amp;&amp; perf_event_attr::sample_id_all</span><br><span class="line">	 *</span><br><span class="line">	 * Note that PERF_SAMPLE_IDENTIFIER duplicates PERF_SAMPLE_ID.  The</span><br><span class="line">	 * advantage of PERF_SAMPLE_IDENTIFIER is that its position is fixed</span><br><span class="line">	 * relative to header.size.</span><br><span class="line">	 */</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * The MMAP events record the PROT_EXEC mappings so that we can</span><br><span class="line">	 * correlate userspace IPs to code. They have the following structure:</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *</span><br><span class="line">	 *	u32				pid, tid;</span><br><span class="line">	 *	u64				addr;</span><br><span class="line">	 *	u64				len;</span><br><span class="line">	 *	u64				pgoff;</span><br><span class="line">	 *	char				filename[];</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_MMAP			= 1,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u64				id;</span><br><span class="line">	 *	u64				lost;</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_LOST			= 2,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *</span><br><span class="line">	 *	u32				pid, tid;</span><br><span class="line">	 *	char				comm[];</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_COMM			= 3,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u32				pid, ppid;</span><br><span class="line">	 *	u32				tid, ptid;</span><br><span class="line">	 *	u64				time;</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_EXIT			= 4,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u64				time;</span><br><span class="line">	 *	u64				id;</span><br><span class="line">	 *	u64				stream_id;</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_THROTTLE			= 5,</span><br><span class="line">	PERF_RECORD_UNTHROTTLE			= 6,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u32				pid, ppid;</span><br><span class="line">	 *	u32				tid, ptid;</span><br><span class="line">	 *	u64				time;</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_FORK			= 7,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u32				pid, tid;</span><br><span class="line">	 *</span><br><span class="line">	 *	struct read_format		values;</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_READ			= 8,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *</span><br><span class="line">	 *	#</span><br><span class="line">	 *	# Note that PERF_SAMPLE_IDENTIFIER duplicates PERF_SAMPLE_ID.</span><br><span class="line">	 *	# The advantage of PERF_SAMPLE_IDENTIFIER is that its position</span><br><span class="line">	 *	# is fixed relative to header.</span><br><span class="line">	 *	#</span><br><span class="line">	 *</span><br><span class="line">	 *	&#123; u64			id;	  &#125; &amp;&amp; PERF_SAMPLE_IDENTIFIER</span><br><span class="line">	 *	&#123; u64			ip;	  &#125; &amp;&amp; PERF_SAMPLE_IP</span><br><span class="line">	 *	&#123; u32			pid, tid; &#125; &amp;&amp; PERF_SAMPLE_TID</span><br><span class="line">	 *	&#123; u64			time;     &#125; &amp;&amp; PERF_SAMPLE_TIME</span><br><span class="line">	 *	&#123; u64			addr;     &#125; &amp;&amp; PERF_SAMPLE_ADDR</span><br><span class="line">	 *	&#123; u64			id;	  &#125; &amp;&amp; PERF_SAMPLE_ID</span><br><span class="line">	 *	&#123; u64			stream_id;&#125; &amp;&amp; PERF_SAMPLE_STREAM_ID</span><br><span class="line">	 *	&#123; u32			cpu, res; &#125; &amp;&amp; PERF_SAMPLE_CPU</span><br><span class="line">	 *	&#123; u64			period;   &#125; &amp;&amp; PERF_SAMPLE_PERIOD</span><br><span class="line">	 *</span><br><span class="line">	 *	&#123; struct read_format	values;	  &#125; &amp;&amp; PERF_SAMPLE_READ</span><br><span class="line">	 *</span><br><span class="line">	 *	&#123; u64			nr,</span><br><span class="line">	 *	  u64			ips[nr];  &#125; &amp;&amp; PERF_SAMPLE_CALLCHAIN</span><br><span class="line">	 *</span><br><span class="line">	 *	#</span><br><span class="line">	 *	# The RAW record below is opaque data wrt the ABI</span><br><span class="line">	 *	#</span><br><span class="line">	 *	# That is, the ABI doesn&apos;t make any promises wrt to</span><br><span class="line">	 *	# the stability of its content, it may vary depending</span><br><span class="line">	 *	# on event, hardware, kernel version and phase of</span><br><span class="line">	 *	# the moon.</span><br><span class="line">	 *	#</span><br><span class="line">	 *	# In other words, PERF_SAMPLE_RAW contents are not an ABI.</span><br><span class="line">	 *	#</span><br><span class="line">	 *</span><br><span class="line">	 *	&#123; u32			size;</span><br><span class="line">	 *	  char                  data[size];&#125;&amp;&amp; PERF_SAMPLE_RAW</span><br><span class="line">	 *</span><br><span class="line">	 *	&#123; u64                   nr;</span><br><span class="line">	 *        &#123; u64 from, to, flags &#125; lbr[nr];&#125; &amp;&amp; PERF_SAMPLE_BRANCH_STACK</span><br><span class="line">	 *</span><br><span class="line">	 * 	&#123; u64			abi; # enum perf_sample_regs_abi</span><br><span class="line">	 * 	  u64			regs[weight(mask)]; &#125; &amp;&amp; PERF_SAMPLE_REGS_USER</span><br><span class="line">	 *</span><br><span class="line">	 * 	&#123; u64			size;</span><br><span class="line">	 * 	  char			data[size];</span><br><span class="line">	 * 	  u64			dyn_size; &#125; &amp;&amp; PERF_SAMPLE_STACK_USER</span><br><span class="line">	 *</span><br><span class="line">	 *	&#123; u64			weight;   &#125; &amp;&amp; PERF_SAMPLE_WEIGHT</span><br><span class="line">	 *	&#123; u64			data_src; &#125; &amp;&amp; PERF_SAMPLE_DATA_SRC</span><br><span class="line">	 *	&#123; u64			transaction; &#125; &amp;&amp; PERF_SAMPLE_TRANSACTION</span><br><span class="line">	 *	&#123; u64			abi; # enum perf_sample_regs_abi</span><br><span class="line">	 *	  u64			regs[weight(mask)]; &#125; &amp;&amp; PERF_SAMPLE_REGS_INTR</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_SAMPLE			= 9,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * The MMAP2 records are an augmented version of MMAP, they add</span><br><span class="line">	 * maj, min, ino numbers to be used to uniquely identify each mapping</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *</span><br><span class="line">	 *	u32				pid, tid;</span><br><span class="line">	 *	u64				addr;</span><br><span class="line">	 *	u64				len;</span><br><span class="line">	 *	u64				pgoff;</span><br><span class="line">	 *	u32				maj;</span><br><span class="line">	 *	u32				min;</span><br><span class="line">	 *	u64				ino;</span><br><span class="line">	 *	u64				ino_generation;</span><br><span class="line">	 *	u32				prot, flags;</span><br><span class="line">	 *	char				filename[];</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_MMAP2			= 10,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Records that new data landed in the AUX buffer part.</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 * 	struct perf_event_header	header;</span><br><span class="line">	 *</span><br><span class="line">	 * 	u64				aux_offset;</span><br><span class="line">	 * 	u64				aux_size;</span><br><span class="line">	 *	u64				flags;</span><br><span class="line">	 * 	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_AUX				= 11,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Indicates that instruction trace has started</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u32				pid;</span><br><span class="line">	 *	u32				tid;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_ITRACE_START		= 12,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Records the dropped/lost sample number.</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *</span><br><span class="line">	 *	u64				lost;</span><br><span class="line">	 *	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_LOST_SAMPLES		= 13,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * Records a context switch in or out (flagged by</span><br><span class="line">	 * PERF_RECORD_MISC_SWITCH_OUT). See also</span><br><span class="line">	 * PERF_RECORD_SWITCH_CPU_WIDE.</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_SWITCH			= 14,</span><br><span class="line"></span><br><span class="line">	/*</span><br><span class="line">	 * CPU-wide version of PERF_RECORD_SWITCH with next_prev_pid and</span><br><span class="line">	 * next_prev_tid that are the next (switching out) or previous</span><br><span class="line">	 * (switching in) pid/tid.</span><br><span class="line">	 *</span><br><span class="line">	 * struct &#123;</span><br><span class="line">	 *	struct perf_event_header	header;</span><br><span class="line">	 *	u32				next_prev_pid;</span><br><span class="line">	 *	u32				next_prev_tid;</span><br><span class="line">	 *	struct sample_id		sample_id;</span><br><span class="line">	 * &#125;;</span><br><span class="line">	 */</span><br><span class="line">	PERF_RECORD_SWITCH_CPU_WIDE		= 15,</span><br><span class="line"></span><br><span class="line">	PERF_RECORD_MAX,			/* non-ABI */</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/perf/" rel="tag"># perf</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/07/25/perf_event_architecture/" rel="next" title="Linux Perf 1.1、perf_event内核框架">
+                <i class="fa fa-chevron-left"></i> Linux Perf 1.1、perf_event内核框架
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/07/31/perf_software_events/" rel="prev" title="Linux Perf 1.3、software events">
+                Linux Perf 1.3、software events <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、原理介绍："><span class="nav-number">1.</span> <span class="nav-text">1、原理介绍：</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、event-init"><span class="nav-number">2.</span> <span class="nav-text">2、event init</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、event-add-del"><span class="nav-number">3.</span> <span class="nav-text">3、event add/del</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4、event-数据采集"><span class="nav-number">4.</span> <span class="nav-text">4、event 数据采集</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1、count数据"><span class="nav-number">4.1.</span> <span class="nav-text">4.1、count数据</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2、sample数据"><span class="nav-number">4.2.</span> <span class="nav-text">4.2、sample数据</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/07/26/perf_tracepoint_events/";
+        this.page.identifier = "2018/07/26/perf_tracepoint_events/";
+        this.page.title = 'Linux Perf 1.2、tracepoint events';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

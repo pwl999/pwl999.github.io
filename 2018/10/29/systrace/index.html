@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next gemini use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css">
+
+<link href="/css/main.css?v=6.6.0" rel="stylesheet" type="text/css">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=6.6.0">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=6.6.0">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=6.6.0" color="#222">
+
+
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Gemini',
+    version: '6.6.0',
+    sidebar: {"position":"left","display":"post","offset":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="上图基本就能说清systrace的整个框架：  1、systrace调用atrace抓取目标机的trace数据； 2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件； 3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分">
+<meta name="keywords" content="systrace">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Systrace">
+<meta property="og:url" content="http://yoursite.com/2018/10/29/systrace/index.html">
+<meta property="og:site_name" content="pwl999&#39;s blog">
+<meta property="og:description" content="上图基本就能说清systrace的整个框架：  1、systrace调用atrace抓取目标机的trace数据； 2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件； 3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="http://yoursite.com/images/systrace/systrace.png">
+<meta property="og:image" content="http://yoursite.com/images/systrace/trace_html.png">
+<meta property="og:updated_time" content="2019-01-14T02:21:49.494Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Systrace">
+<meta name="twitter:description" content="上图基本就能说清systrace的整个框架：  1、systrace调用atrace抓取目标机的trace数据； 2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件； 3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分">
+<meta name="twitter:image" content="http://yoursite.com/images/systrace/systrace.png">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2018/10/29/systrace/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Systrace | pwl999's blog</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+    .use-motion .motion-element,
+    .use-motion .brand,
+    .use-motion .menu-item,
+    .sidebar-inner,
+    .use-motion .post-block,
+    .use-motion .pagination,
+    .use-motion .comments,
+    .use-motion .post-header,
+    .use-motion .post-body,
+    .use-motion .collection-title { opacity: initial; }
+
+    .use-motion .logo,
+    .use-motion .site-title,
+    .use-motion .site-subtitle {
+      opacity: initial;
+      top: initial;
+    }
+
+    .use-motion .logo-line-before i { left: initial; }
+    .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope="" itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope="" itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">pwl999's blog</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-about">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/about/" rel="section"><i class="menu-item-icon fa fa-fw fa-user"></i> <br>关于</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-tags">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/tags/" rel="section"><i class="menu-item-icon fa fa-fw fa-tags"></i> <br>标签</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope="" itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2018/10/29/systrace/">
+
+    <span hidden itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="pwl999">
+      <meta itemprop="description" content="RTFSC(Read The Fucking Source Code)">
+      <meta itemprop="image" content="/images/touxiang/ycqs.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope="" itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="pwl999's blog">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Systrace
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+
+          
+            <i class="fa fa-thumb-tack"></i>
+            <font color="7D26CD">置顶</font>
+            <span class="post-meta-divider">|</span>
+          
+
+        <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2018-10-29 18:35:57" itemprop="dateCreated datePublished" datetime="2018-10-29T18:35:57+08:00">2018-10-29</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-01-14 10:21:49" itemprop="dateModified" datetime="2019-01-14T10:21:49+08:00">2019-01-14</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope="" itemtype="http://schema.org/Thing"><a href="/categories/Trace/" itemprop="url" rel="index"><span itemprop="name">Trace</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a href="/2018/10/29/systrace/#comments" itemprop="discussionUrl">
+                
+                  <span class="post-comments-count disqus-comment-count" data-disqus-identifier="2018/10/29/systrace/" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><img src="/images/systrace/systrace.png" alt="systrace"></p>
+<p>上图基本就能说清systrace的整个框架：</p>
+<ul>
+<li>1、systrace调用atrace抓取目标机的trace数据；</li>
+<li>2、systrace把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件；</li>
+<li>3、使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分析trace数据。背后是Trace-Viewer的脚本在运行；</li>
+</ul>
+<p>内核态和用户态的存储trace数据的实现：</p>
+<ul>
+<li>1、内核trace信息，通过trace event记录到ftrace的buffer中；</li>
+<li>2、用户态(app/java framework/native)是通过使用Trace类来记录trace信息的，也是记录到内核ftrace buffer当中的，是通过”/sys/kernel/debug/tracing/trace_marker”接口记录的。</li>
+</ul>
+<h1 id="1、systrace的使用"><a href="#1、systrace的使用" class="headerlink" title="1、systrace的使用"></a>1、systrace的使用</h1><p>在定位Android性能问题的时候，我们经常会用到systrace工具。配置到adb，连接上目标手机，在主机侧使用类似命令启动systrace：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">ASOP_ROOT/external/chromium-trace/catapult/systrace/bin$ ./systrace -o trace.html -t 10 gfx view wm am dalvik input sched freq idle</span><br><span class="line">Starting tracing (10 seconds)</span><br><span class="line">Tracing completed. Collecting output...</span><br><span class="line">Outputting Systrace results...</span><br><span class="line">Tracing complete, writing results</span><br><span class="line"></span><br><span class="line">Wrote trace HTML file: file:///ASOP_ROOT/external/chromium-trace/catapult/systrace/bin/trace.html</span><br></pre></td></tr></table></figure>
+<p>systrace命令在ASOP源码包的ASOP_ROOT/external/chromium-trace/catapult/systrace/bin路径下。上述命令的参数：</p>
+<ul>
+<li>‘-t 10’，指定了抓取trace的时长为10s；</li>
+<li>‘-o trace.html’，指定了trace的输出文件；</li>
+<li>‘gfx view wm am dalvik input sched freq idle’，指定了需要抓取的事件；</li>
+</ul>
+<p>在命令启动以后，我们就可以在目标机上进行滑动、启动app等一系列操作，10s内的这些操作都会被记录下来最后dump进trace.html文件。我们可以通过google的chrome浏览器来查看、分析trace.html：’google-chrome trace.html’。</p>
+<p><img src="/images/systrace/trace_html.png" alt="trace_html"></p>
+<p>可以通过’-l’选项来查看目标机支持的systrace事件全集：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">$ ./systrace -l</span><br><span class="line">         gfx - Graphics</span><br><span class="line">       input - Input</span><br><span class="line">        view - View System</span><br><span class="line">     webview - WebView</span><br><span class="line">          wm - Window Manager</span><br><span class="line">          am - Activity Manager</span><br><span class="line">          sm - Sync Manager</span><br><span class="line">       audio - Audio</span><br><span class="line">       video - Video</span><br><span class="line">      camera - Camera</span><br><span class="line">         hal - Hardware Modules</span><br><span class="line">         app - Application</span><br><span class="line">         res - Resource Loading</span><br><span class="line">      dalvik - Dalvik VM</span><br><span class="line">          rs - RenderScript</span><br><span class="line">      bionic - Bionic C Library</span><br><span class="line">       power - Power Management</span><br><span class="line">          pm - Package Manager</span><br><span class="line">          ss - System Server</span><br><span class="line">    database - Database</span><br><span class="line">     network - Network</span><br><span class="line">         adb - ADB</span><br><span class="line">         pdx - PDX services</span><br><span class="line">       sched - CPU Scheduling</span><br><span class="line">         irq - IRQ Events</span><br><span class="line">        freq - CPU Frequency</span><br><span class="line">        idle - CPU Idle</span><br><span class="line">        disk - Disk I/O</span><br><span class="line">       workq - Kernel Workqueues</span><br><span class="line">  memreclaim - Kernel Memory Reclaim</span><br><span class="line">  regulators - Voltage and Current Regulators</span><br><span class="line">  binder_driver - Binder Kernel driver</span><br><span class="line">  binder_lock - Binder global lock trace</span><br><span class="line">   pagecache - Page cache</span><br><span class="line"></span><br><span class="line">NOTE: more categories may be available with adb root</span><br></pre></td></tr></table></figure>
+<p>还可以通过’–help’选项来查看systrace命令的详细选项：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></td><td class="code"><pre><span class="line">$ ./systrace --help</span><br><span class="line">Usage: systrace [options] [category1 [category2 ...]]</span><br><span class="line"></span><br><span class="line">Example: systrace -b 32768 -t 15 gfx input view sched freq</span><br><span class="line"></span><br><span class="line">Options:</span><br><span class="line">  -h, --help            show this help message and exit</span><br><span class="line">  -o FILE               write trace output to FILE</span><br><span class="line">  -j, --json            write a JSON file</span><br><span class="line">  --link-assets         (deprecated)</span><br><span class="line">  --asset-dir=ASSET_DIR</span><br><span class="line">                        (deprecated)</span><br><span class="line">  -e DEVICE_SERIAL_NUMBER, --serial=DEVICE_SERIAL_NUMBER</span><br><span class="line">                        adb device serial number</span><br><span class="line">  --timeout=TIMEOUT     timeout for start and stop tracing (seconds)</span><br><span class="line">  --collection-timeout=COLLECTION_TIMEOUT</span><br><span class="line">                        timeout for data collection (seconds)</span><br><span class="line">  -t N, --time=N        trace for N seconds</span><br><span class="line">  --target=TARGET       choose tracing target (android or  linux)</span><br><span class="line">  -b N, --buf-size=N    use a trace buffer size  of N KB</span><br><span class="line">  -l, --list-categories</span><br><span class="line">                        list the available categories and exit</span><br><span class="line"></span><br><span class="line">  Atrace options:</span><br><span class="line">    --atrace-categories=ATRACE_CATEGORIES</span><br><span class="line">                        Select atrace categories with a comma-delimited list,</span><br><span class="line">                        e.g. --atrace-categories=cat1,cat2,cat3</span><br><span class="line">    -k KFUNCS, --ktrace=KFUNCS</span><br><span class="line">                        specify a comma-separated list of kernel functions to</span><br><span class="line">                        trace</span><br><span class="line">    --no-compress       Tell the device not to send the trace data in</span><br><span class="line">                        compressed form.</span><br><span class="line">    -a APP_NAME, --app=APP_NAME</span><br><span class="line">                        enable application-level tracing for comma-separated</span><br><span class="line">                        list of app cmdlines</span><br><span class="line">    --from-file=FROM_FILE</span><br><span class="line">                        read the trace from a file (compressed) rather than</span><br><span class="line">                        running a live trace</span><br><span class="line"></span><br><span class="line">  BattOr trace options:</span><br><span class="line">    --battor-categories=BATTOR_CATEGORIES</span><br><span class="line">                        Select battor categories with a comma-delimited list,</span><br><span class="line">                        e.g. --battor-categories=cat1,cat2,cat3</span><br><span class="line">    --serial-map=SERIAL_MAP</span><br><span class="line">                        File containing pregenerated map of phone serial</span><br><span class="line">                        numbers to BattOr serial numbers.</span><br><span class="line">    --battor-path=BATTOR_PATH</span><br><span class="line">                        specify a BattOr path to use</span><br><span class="line">    --battor            Use the BattOr tracing agent.</span><br><span class="line"></span><br><span class="line">  Ftrace options:</span><br><span class="line">    --ftrace-categories=FTRACE_CATEGORIES</span><br><span class="line">                        Select ftrace categories with a comma-delimited list,</span><br><span class="line">                        e.g. --ftrace-categories=cat1,cat2,cat3</span><br><span class="line"></span><br><span class="line">  WALT trace options:</span><br><span class="line">    --walt              Use the WALT tracing agent. WALT is a device for</span><br><span class="line">                        measuring latency of physical sensors on phones and</span><br><span class="line">                        computers. See https://github.com/google/walt</span><br></pre></td></tr></table></figure>
+<h1 id="2、主机systrace命令的实现-python"><a href="#2、主机systrace命令的实现-python" class="headerlink" title="2、主机systrace命令的实现(python)"></a>2、主机systrace命令的实现(python)</h1><p>systrace实质上是一个python文件，整个python相关包在ASOP_ROOT/external/chromium-trace/catapult/路径下，以此路径为根(root=ASOP_ROOT/external/chromium-trace/catapult)，我们来分析它的实现过程：</p>
+<p>./systrace/bin/systrace:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">import os</span><br><span class="line">import sys</span><br><span class="line"></span><br><span class="line"># (1) 将&apos;./systrace/&apos;路径加入到python的搜索路径 #</span><br><span class="line">_SYSTRACE_DIR = os.path.abspath(</span><br><span class="line">    os.path.join(os.path.dirname(__file__), os.path.pardir))</span><br><span class="line">sys.path.insert(0, _SYSTRACE_DIR)</span><br><span class="line"></span><br><span class="line"># (2) 这样就能找到&apos;./systrace/systrace/run_systrace.py&apos;模块并导入 #</span><br><span class="line">from systrace import run_systrace</span><br><span class="line"></span><br><span class="line"># (3) 调用run_systrace.py模块中的main()函数 #</span><br><span class="line">if __name__ == &apos;__main__&apos;:</span><br><span class="line">  sys.exit(run_systrace.main())</span><br></pre></td></tr></table></figure>
+<p>↓</p>
+<p>./systrace/systrace/run_systrace.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"># (3.1) main()函数继续调用main_impl()函数 #</span><br><span class="line">def main():</span><br><span class="line">  main_impl(sys.argv)</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">def main_impl(arguments):</span><br><span class="line">  # Parse the command line options.</span><br><span class="line">  </span><br><span class="line">  # (3.1.1) 将用户输入的参数解析为options和categories #</span><br><span class="line">  options, categories = parse_options(arguments)</span><br><span class="line"></span><br><span class="line">  # Override --atrace-categories and --ftrace-categories flags if command-line</span><br><span class="line">  # categories are provided.</span><br><span class="line">  </span><br><span class="line">  # (3.1.2) 如果解析出了trace事件categories #</span><br><span class="line">  # 根据options.target指定的平台&apos;android&apos;/&apos;linux&apos;，来给options中的选项赋值 #</span><br><span class="line">  # 平台是使用sytrace命令的&apos;--target=TARGET&apos;选项来指定的，如果没有指定默认值是&apos;android&apos; #</span><br><span class="line">  if categories:</span><br><span class="line">    if options.target == &apos;android&apos;:</span><br><span class="line">      options.atrace_categories = categories</span><br><span class="line">    elif options.target == &apos;linux&apos;:</span><br><span class="line">      options.ftrace_categories = categories</span><br><span class="line">    else:</span><br><span class="line">      raise RuntimeError(&apos;Categories are only valid for atrace/ftrace. Target &apos;</span><br><span class="line">                         &apos;platform must be either Android or Linux.&apos;)</span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">./systrace/systrace/run_systrace.py：</span><br><span class="line">  # Include atrace categories by default in Systrace.</span><br><span class="line">  # (3.1.3) 如果平台是&apos;android&apos;，且没有指定trace事件，给出默认的trace事件 #</span><br><span class="line">  if options.target == &apos;android&apos; and not options.atrace_categories:</span><br><span class="line">    options.atrace_categories = atrace_agent.DEFAULT_CATEGORIES</span><br><span class="line"></span><br><span class="line">  # (3.1.4) 如果平台是&apos;android&apos;，且不是从文件中读取数据，那么就是从实际的目标机中读取数据了 #</span><br><span class="line">  if options.target == &apos;android&apos; and not options.from_file:</span><br><span class="line">    # 初始化adb #</span><br><span class="line">    initialize_devil()</span><br><span class="line">    # 如果没有指定目标机的serialnumber，尝试读取 #</span><br><span class="line">    if not options.device_serial_number:</span><br><span class="line">      devices = [a.GetDeviceSerial() for a in adb_wrapper.AdbWrapper.Devices()]</span><br><span class="line">      if len(devices) == 0:</span><br><span class="line">        raise RuntimeError(&apos;No ADB devices connected.&apos;)</span><br><span class="line">      elif len(devices) &gt;= 2:</span><br><span class="line">        raise RuntimeError(&apos;Multiple devices connected, serial number required&apos;)</span><br><span class="line">      options.device_serial_number = devices[0]</span><br><span class="line"></span><br><span class="line">  # If list_categories is selected, just print the list of categories.</span><br><span class="line">  # In this case, use of the tracing controller is not necessary.</span><br><span class="line">  # (3.1.5) 如果当前是&apos;systrace -l&apos;命令，列出目标机支持的所有trace事件后直接返回 #</span><br><span class="line">  if options.list_categories:</span><br><span class="line">    if options.target == &apos;android&apos;:</span><br><span class="line">      # 调用&apos;systrace/systrace/tracing_agents/atrace_agent.py&apos;文件中的list_categories()函数 #</span><br><span class="line">      # 最后调用的是`adb shell atrace --list_categories&apos;命令 #</span><br><span class="line">      atrace_agent.list_categories(options)</span><br><span class="line">    elif options.target == &apos;linux&apos;:</span><br><span class="line">      ftrace_agent.list_categories(options)</span><br><span class="line">    return</span><br><span class="line"></span><br><span class="line">  # Set up the systrace runner and start tracing.</span><br><span class="line">  # (3.1.6) 如果是普通的trace命令，根据&apos;systrace/systrace/systrace_runner.py&apos;模块中的SystraceRunner类来创建对象 #</span><br><span class="line">  controller = systrace_runner.SystraceRunner(</span><br><span class="line">      os.path.dirname(os.path.abspath(__file__)), options)</span><br><span class="line">      </span><br><span class="line">  # (3.1.6.1) 开始tracing #</span><br><span class="line">  controller.StartTracing()</span><br><span class="line"></span><br><span class="line">  # Wait for the given number of seconds or until the user presses enter.</span><br><span class="line">  # pylint: disable=superfluous-parens</span><br><span class="line">  # (need the parens so no syntax error if trying to load with Python 3)</span><br><span class="line">  if options.from_file is not None:</span><br><span class="line">    print(&apos;Reading results from file.&apos;)</span><br><span class="line">  elif options.trace_time:</span><br><span class="line">    print(&apos;Starting tracing (%d seconds)&apos; % options.trace_time)</span><br><span class="line">    time.sleep(options.trace_time)</span><br><span class="line">  else:</span><br><span class="line">    raw_input(&apos;Starting tracing (stop with enter)&apos;)</span><br><span class="line"></span><br><span class="line">  # Stop tracing and collect the output.</span><br><span class="line">  print(&apos;Tracing completed. Collecting output...&apos;)</span><br><span class="line">  </span><br><span class="line">  # (3.1.6.2) 停止tracing #</span><br><span class="line">  controller.StopTracing()</span><br><span class="line">  </span><br><span class="line">  print(&apos;Outputting Systrace results...&apos;)</span><br><span class="line">  </span><br><span class="line">  # (3.1.6.3) 输出tracing结果到文件中 #</span><br><span class="line">  controller.OutputSystraceResults(write_json=options.write_json)</span><br></pre></td></tr></table></figure>
+<p>我们可以看到trace过的重点最后落在SystraceRunner对象的创建，以及.StartTracing()/.StopTracing()/.OutputSystraceResults()几个方法上。</p>
+<p>下面我们详细分析一下这几个步骤的实现过程。</p>
+<h2 id="2-1、SystraceRunner类的初始化"><a href="#2-1、SystraceRunner类的初始化" class="headerlink" title="2.1、SystraceRunner类的初始化"></a>2.1、SystraceRunner类的初始化</h2><p>SystraceRunner类在systrace_runner.py文件当中，我们来查看起具体实现。</p>
+<p>./systrace/systrace/systrace_runner.py:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">AGENT_MODULES = [android_process_data_agent, atrace_agent,</span><br><span class="line">                 atrace_from_file_agent, battor_trace_agent,</span><br><span class="line">                 ftrace_agent, walt_agent]</span><br><span class="line"></span><br><span class="line">class SystraceRunner(object):</span><br><span class="line">  def __init__(self, script_dir, options):</span><br><span class="line">    &quot;&quot;&quot;Constructor.</span><br><span class="line"></span><br><span class="line">    Args:</span><br><span class="line">        script_dir: Directory containing the trace viewer script</span><br><span class="line">                    (systrace_trace_viewer.html)</span><br><span class="line">        options: Object containing command line options.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    # Parse command line arguments and create agents.</span><br><span class="line">    self._script_dir = script_dir</span><br><span class="line">    self._out_filename = options.output_file</span><br><span class="line">    </span><br><span class="line">    # (1)  #</span><br><span class="line">    agents_with_config = tracing_controller.CreateAgentsWithConfig(</span><br><span class="line">        options, AGENT_MODULES)</span><br><span class="line">        </span><br><span class="line">    # (2)  #</span><br><span class="line">    controller_config = tracing_controller.GetControllerConfig(options)</span><br><span class="line"></span><br><span class="line">    # Set up tracing controller.</span><br><span class="line">    </span><br><span class="line">    # (3)  #</span><br><span class="line">    self._tracing_controller = tracing_controller.TracingController(</span><br><span class="line">        agents_with_config, controller_config)</span><br></pre></td></tr></table></figure>
+<ul>
+<li>1、分析tracing_controller.CreateAgentsWithConfig()的实现；</li>
+</ul>
+<p>./systrace/systrace/tracing_controller.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">def CreateAgentsWithConfig(options, modules):</span><br><span class="line">  &quot;&quot;&quot;Create tracing agents.</span><br><span class="line"></span><br><span class="line">  This function will determine which tracing agents are valid given the</span><br><span class="line">  options and create those agents along with their corresponding configuration</span><br><span class="line">  object.</span><br><span class="line">  Args:</span><br><span class="line">    options: The command-line options.</span><br><span class="line">    modules: The modules for either Systrace or profile_chrome.</span><br><span class="line">             TODO(washingtonp): After all profile_chrome agents are in</span><br><span class="line">             Systrace, this parameter will no longer be valid.</span><br><span class="line">  Returns:</span><br><span class="line">    A list of AgentWithConfig options containing agents and their corresponding</span><br><span class="line">    configuration object.</span><br><span class="line">  &quot;&quot;&quot;</span><br><span class="line">  result = []</span><br><span class="line">  </span><br><span class="line">  # (1.1) 遍历modules中的agent调用相应的函数。对&apos;android&apos;来说，基本只会调用到atrace_agent、android_process_data_agent  #</span><br><span class="line">  for module in modules:</span><br><span class="line">  </span><br><span class="line">    # (1.1.1) #</span><br><span class="line">    config = module.get_config(options)</span><br><span class="line">    </span><br><span class="line">    # (1.1.2) #</span><br><span class="line">    agent = module.try_create_agent(config)</span><br><span class="line">    </span><br><span class="line">    if agent and config:</span><br><span class="line">      # (1.1.3) 创建一个AgentWithConfig类的对象，用来存储config和agent #</span><br><span class="line">      result.append(AgentWithConfig(agent, config))</span><br><span class="line">  return [x for x in result if x and x.agent]</span><br></pre></td></tr></table></figure>
+<p>|→</p>
+<p>./systrace/systrace/tracing_agents/atrace_agent.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"># (1.1.1) 创建一个AtraceConfig类的对象，用来存储optios中的相关配置 #</span><br><span class="line">def get_config(options):</span><br><span class="line">  return AtraceConfig(options.atrace_categories,</span><br><span class="line">                      options.trace_buf_size, options.kfuncs,</span><br><span class="line">                      options.app_name, options.compress_trace_data,</span><br><span class="line">                      options.from_file, options.device_serial_number,</span><br><span class="line">                      options.trace_time, options.target)</span><br><span class="line">                      </span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">class AtraceConfig(tracing_agents.TracingConfig):</span><br><span class="line">  def __init__(self, atrace_categories, trace_buf_size, kfuncs,</span><br><span class="line">               app_name, compress_trace_data, from_file,</span><br><span class="line">               device_serial_number, trace_time, target):</span><br><span class="line">    tracing_agents.TracingConfig.__init__(self)</span><br><span class="line">    self.atrace_categories = atrace_categories</span><br><span class="line">    self.trace_buf_size = trace_buf_size</span><br><span class="line">    self.kfuncs = kfuncs</span><br><span class="line">    self.app_name = app_name</span><br><span class="line">    self.compress_trace_data = compress_trace_data</span><br><span class="line">    self.from_file = from_file</span><br><span class="line">    self.device_serial_number = device_serial_number</span><br><span class="line">    self.trace_time = trace_time</span><br><span class="line">    self.target = target</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"># (1.1.2) 创建一个AtraceAgent类的对象 #</span><br><span class="line">def try_create_agent(config):</span><br><span class="line">  &quot;&quot;&quot;Create an Atrace agent.</span><br><span class="line"></span><br><span class="line">  Args:</span><br><span class="line">      config: Command line config.</span><br><span class="line">  &quot;&quot;&quot;</span><br><span class="line">  </span><br><span class="line">  # 根据config的配置，判断当前Atrace agent是否需要创建 #</span><br><span class="line">  if config.target != &apos;android&apos;:</span><br><span class="line">    return None</span><br><span class="line">  if config.from_file is not None:</span><br><span class="line">    return None</span><br><span class="line"></span><br><span class="line">  if not config.atrace_categories:</span><br><span class="line">    return None</span><br><span class="line"></span><br><span class="line">  # Check device SDK version.</span><br><span class="line">  device_sdk_version = util.get_device_sdk_version()</span><br><span class="line">  if device_sdk_version &lt; version_codes.JELLY_BEAN_MR2:</span><br><span class="line">    print (&apos;Device SDK versions &lt; 18 (Jellybean MR2) not supported.\n&apos;</span><br><span class="line">           &apos;Your device SDK version is %d.&apos; % device_sdk_version)</span><br><span class="line">    return None</span><br><span class="line"></span><br><span class="line">  return AtraceAgent(device_sdk_version)</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">class AtraceAgent(tracing_agents.TracingAgent):</span><br><span class="line"></span><br><span class="line">  def __init__(self, device_sdk_version):</span><br><span class="line">    super(AtraceAgent, self).__init__()</span><br><span class="line">    self._device_sdk_version = device_sdk_version</span><br><span class="line">    self._adb = None</span><br><span class="line">    self._trace_data = None</span><br><span class="line">    self._tracer_args = None</span><br><span class="line">    self._collection_thread = None</span><br><span class="line">    self._device_utils = None</span><br><span class="line">    self._device_serial_number = None</span><br><span class="line">    self._config = None</span><br><span class="line">    self._categories = None</span><br></pre></td></tr></table></figure>
+<p>|→</p>
+<p>./systrace/systrace/tracing_agents/android_process_data_agent.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">def try_create_agent(config):</span><br><span class="line">  if config.target != &apos;android&apos;:</span><br><span class="line">    return None</span><br><span class="line">  if config.from_file is not None:</span><br><span class="line">    return None</span><br><span class="line">  return AndroidProcessDataAgent()</span><br><span class="line">  </span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">class AndroidProcessDataAgent(tracing_agents.TracingAgent):</span><br><span class="line">  def __init__(self):</span><br><span class="line">    super(AndroidProcessDataAgent, self).__init__()</span><br><span class="line">    self._trace_data = &quot;&quot;</span><br><span class="line">    self._device = None</span><br></pre></td></tr></table></figure>
+<ul>
+<li>2、分析tracing_controller.GetControllerConfig()的实现；</li>
+</ul>
+<p>./systrace/systrace/tracing_controller.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"># (2.1) 创建一个TracingControllerConfig类的对象，用来存储optios中的相关配置 #</span><br><span class="line">def GetControllerConfig(options):</span><br><span class="line">  return TracingControllerConfig(options.output_file, options.trace_time,</span><br><span class="line">                                 options.write_json,</span><br><span class="line">                                 options.link_assets, options.asset_dir,</span><br><span class="line">                                 options.timeout, options.collection_timeout,</span><br><span class="line">                                 options.device_serial_number, options.target)</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">class TracingControllerConfig(tracing_agents.TracingConfig):</span><br><span class="line">  def __init__(self, output_file, trace_time, write_json,</span><br><span class="line">               link_assets, asset_dir, timeout, collection_timeout,</span><br><span class="line">               device_serial_number, target):</span><br><span class="line">    tracing_agents.TracingConfig.__init__(self)</span><br><span class="line">    self.output_file = output_file</span><br><span class="line">    self.trace_time = trace_time</span><br><span class="line">    self.write_json = write_json</span><br><span class="line">    self.link_assets = link_assets</span><br><span class="line">    self.asset_dir = asset_dir</span><br><span class="line">    self.timeout = timeout</span><br><span class="line">    self.collection_timeout = collection_timeout</span><br><span class="line">    self.device_serial_number = device_serial_number</span><br><span class="line">    self.target = target</span><br></pre></td></tr></table></figure>
+<ul>
+<li>3、分析tracing_controller.TracingController()的实现；</li>
+</ul>
+<p>./systrace/systrace/tracing_controller.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"># (3.1) 创建一个TracingController类的对象，稍后的start/stop/output操作都使用该对象的方法 #</span><br><span class="line">class TracingController(object):</span><br><span class="line">  def __init__(self, agents_with_config, controller_config):</span><br><span class="line">    &quot;&quot;&quot;Create tracing controller.</span><br><span class="line"></span><br><span class="line">    Create a tracing controller object. Note that the tracing</span><br><span class="line">    controller is also a tracing agent.</span><br><span class="line"></span><br><span class="line">    Args:</span><br><span class="line">       agents_with_config: List of tracing agents for this controller with the</span><br><span class="line">                           corresponding tracing configuration objects.</span><br><span class="line">       controller_config:  Configuration options for the tracing controller.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    self._child_agents = None</span><br><span class="line">    </span><br><span class="line">    # (3.1.1) 存储agent对象和config #</span><br><span class="line">    self._child_agents_with_config = agents_with_config</span><br><span class="line">    # (3.1.2) 新建一个TracingControllerAgent类的对象 #</span><br><span class="line">    self._controller_agent = TracingControllerAgent()</span><br><span class="line">    # (3.1.3) 存储controller层级的config #</span><br><span class="line">    self._controller_config = controller_config</span><br><span class="line">    self._trace_in_progress = False</span><br><span class="line">    self.all_results = None</span><br></pre></td></tr></table></figure>
+<h2 id="2-2、SystraceRunner-StartTracing"><a href="#2-2、SystraceRunner-StartTracing" class="headerlink" title="2.2、SystraceRunner.StartTracing()"></a>2.2、SystraceRunner.StartTracing()</h2><p>入口是SystraceRunner类的.StartTracing()方法，./systrace/systrace/systrace_runner.py:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">class SystraceRunner(object):</span><br><span class="line"></span><br><span class="line">  def StartTracing(self):</span><br><span class="line">    # (1)  #</span><br><span class="line">    self._tracing_controller.StartTracing()</span><br></pre></td></tr></table></figure>
+<p>↓</p>
+<p>继续调用到TracingController类的.StartTracing()方法，./systrace/systrace/tracing_controller.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line">class TracingController(object):</span><br><span class="line"></span><br><span class="line">  def StartTracing(self):</span><br><span class="line">    &quot;&quot;&quot;Start tracing for all tracing agents.</span><br><span class="line"></span><br><span class="line">    This function starts tracing for both the controller tracing agent</span><br><span class="line">    and the child tracing agents.</span><br><span class="line"></span><br><span class="line">    Returns:</span><br><span class="line">        Boolean indicating whether or not the start tracing succeeded.</span><br><span class="line">        Start tracing is considered successful if at least the</span><br><span class="line">        controller tracing agent was started.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    </span><br><span class="line">    # (1.1) 设置对象中的tracing启动标志 #</span><br><span class="line">    assert not self._trace_in_progress, &apos;Trace already in progress.&apos;</span><br><span class="line">    self._trace_in_progress = True</span><br><span class="line"></span><br><span class="line">    # Start the controller tracing agents. Controller tracing agent</span><br><span class="line">    # must be started successfully to proceed.</span><br><span class="line">    # (1.2) 启动成员对象_controller_agent的.StartAgentTracing()方法 #</span><br><span class="line">    # 记录一些log #</span><br><span class="line">    if not self._controller_agent.StartAgentTracing(</span><br><span class="line">        self._controller_config,</span><br><span class="line">        timeout=self._controller_config.timeout):</span><br><span class="line">      print &apos;Unable to start controller tracing agent.&apos;</span><br><span class="line">      return False</span><br><span class="line"></span><br><span class="line">    # Start the child tracing agents.</span><br><span class="line">    succ_agents = []</span><br><span class="line">    # (1.3) 逐个启动agent list中agent的.StartAgentTracing()方法 #</span><br><span class="line">    # 对&apos;Android&apos;来说，就一个agent：AtraceAgent #</span><br><span class="line">    for agent_and_config in self._child_agents_with_config:</span><br><span class="line">      agent = agent_and_config.agent</span><br><span class="line">      config = agent_and_config.config</span><br><span class="line">      </span><br><span class="line">      # 启动agent #</span><br><span class="line">      if agent.StartAgentTracing(config,</span><br><span class="line">                                 timeout=self._controller_config.timeout):</span><br><span class="line">        # 把启动成功的agent加入succ_agents list #</span><br><span class="line">        succ_agents.append(agent)</span><br><span class="line">      else:</span><br><span class="line">        print &apos;Agent %s not started.&apos; % str(agent)</span><br><span class="line"></span><br><span class="line">    # Print warning if all agents not started.</span><br><span class="line">    na = len(self._child_agents_with_config)</span><br><span class="line">    ns = len(succ_agents)</span><br><span class="line">    if ns &lt; na:</span><br><span class="line">      print &apos;Warning: Only %d of %d tracing agents started.&apos; % (ns, na)</span><br><span class="line">    self._child_agents = succ_agents</span><br><span class="line">    return True</span><br></pre></td></tr></table></figure>
+<p>|→</p>
+<p>继续调用到AtraceAgent类的.StartTracing()方法，./systrace/systrace/tracing_agents/atrace_agent.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">class AtraceAgent(tracing_agents.TracingAgent):</span><br><span class="line"></span><br><span class="line">  @py_utils.Timeout(tracing_agents.START_STOP_TIMEOUT)</span><br><span class="line">  def StartAgentTracing(self, config, timeout=None):</span><br><span class="line">    assert config.atrace_categories, &apos;Atrace categories are missing!&apos;</span><br><span class="line">    self._config = config</span><br><span class="line">    </span><br><span class="line">    # systrace命令下达的需要trace的事件 #</span><br><span class="line">    self._categories = config.atrace_categories</span><br><span class="line">    if isinstance(self._categories, list):</span><br><span class="line">      self._categories = &apos;,&apos;.join(self._categories)</span><br><span class="line">    </span><br><span class="line">    # 使用&apos;atrace --list_categories&apos;获取的目标机支持的可trace事件 #</span><br><span class="line">    avail_cats = get_available_categories(config, self._device_sdk_version)</span><br><span class="line">    </span><br><span class="line">    # (1.3.1) 判断命令中是否有目标机不支持的trace事件 #</span><br><span class="line">    unavailable = [x for x in self._categories.split(&apos;,&apos;) if</span><br><span class="line">        x not in avail_cats]</span><br><span class="line">    self._categories = [x for x in self._categories.split(&apos;,&apos;) if</span><br><span class="line">        x in avail_cats]</span><br><span class="line">    if unavailable:</span><br><span class="line">      print &apos;These categories are unavailable: &apos; + &apos; &apos;.join(unavailable)</span><br><span class="line">    self._device_utils = device_utils.DeviceUtils(config.device_serial_number)</span><br><span class="line">    self._device_serial_number = config.device_serial_number</span><br><span class="line">    </span><br><span class="line">    # (1.3.2) 构造参数：&apos;atrace ... categories&apos; #</span><br><span class="line">    # &apos;...&apos;包括以下选项： #</span><br><span class="line">    # &apos;-z&apos;: compress_trace_data #</span><br><span class="line">    # &apos;-t trace_time&apos;  #</span><br><span class="line">    # &apos;-b trace_buf_size&apos;  #</span><br><span class="line">    # &apos;-a app_name&apos;  #</span><br><span class="line">    # &apos;-k kfuncs&apos;  #</span><br><span class="line">    self._tracer_args = _construct_atrace_args(config,</span><br><span class="line">                                               self._categories)</span><br><span class="line">    # (1.3.3) 执行命令：&apos;atrace ... categories --async_start&apos; #</span><br><span class="line">    self._device_utils.RunShellCommand(</span><br><span class="line">        self._tracer_args + [&apos;--async_start&apos;], check_return=True)</span><br><span class="line">    return True</span><br></pre></td></tr></table></figure>
+<p>|→</p>
+<p>继续调用到AndroidProcessDataAgent类的.StartTracing()方法，./systrace/systrace/tracing_agents/android_process_data_agent.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line">class AndroidProcessDataAgent(tracing_agents.TracingAgent):</span><br><span class="line"></span><br><span class="line">  @py_utils.Timeout(tracing_agents.START_STOP_TIMEOUT)</span><br><span class="line">  def StartAgentTracing(self, config, timeout=None):</span><br><span class="line">    self._device = device_utils.DeviceUtils(config.device_serial_number)</span><br><span class="line">    self._trace_data += self._get_process_snapshot()</span><br><span class="line">    return True</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">  def _get_process_snapshot(self):</span><br><span class="line">    use_legacy = False</span><br><span class="line">    try:</span><br><span class="line">      dump = self._device.RunShellCommand( \</span><br><span class="line">          PS_COMMAND_PROC, check_return=True, as_root=True, shell=True)</span><br><span class="line">    except AdbShellCommandFailedError:</span><br><span class="line">      use_legacy = True</span><br><span class="line"></span><br><span class="line">    # Check length of 2 as we execute two commands, which in case of failure</span><br><span class="line">    # on old devices output 1 line each.</span><br><span class="line">    if use_legacy or len(dump) == 2:</span><br><span class="line">      logging.debug(&apos;Couldn\&apos;t parse ps dump, trying legacy method ...&apos;)</span><br><span class="line">      dump = self._device.RunShellCommand( \</span><br><span class="line">          PS_COMMAND_PROC_LEGACY, check_return=True, as_root=True, shell=True)</span><br><span class="line">      if len(dump) == 2:</span><br><span class="line">        logging.error(&apos;Unable to extract process data!&apos;)</span><br><span class="line">        return &quot;&quot;</span><br><span class="line"></span><br><span class="line">    return &apos;\n&apos;.join(dump) + &apos;\n&apos;</span><br><span class="line">    </span><br><span class="line"># 实际上就是在StartTracing()和StopTracing()时，各调用一次如下的ps命令 #</span><br><span class="line">PS_COMMAND_PROC = &quot;ps -A -o USER,PID,PPID,VSIZE,RSS,WCHAN,ADDR=PC,S,NAME,COMM&quot; \</span><br><span class="line">    &quot;&amp;&amp; ps -AT -o USER,PID,TID,CMD&quot;</span><br></pre></td></tr></table></figure>
+<h2 id="2-3、SystraceRunner-StopTracing"><a href="#2-3、SystraceRunner-StopTracing" class="headerlink" title="2.3、SystraceRunner.StopTracing()"></a>2.3、SystraceRunner.StopTracing()</h2><p>入口是SystraceRunner类的.StopTracing()方法，./systrace/systrace/systrace_runner.py:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">class SystraceRunner(object):</span><br><span class="line"></span><br><span class="line">  def StopTracing(self):</span><br><span class="line">    # (1)  #</span><br><span class="line">    self._tracing_controller.StopTracing()</span><br></pre></td></tr></table></figure>
+<p>↓</p>
+<p>继续调用到TracingController类的.StopTracing()方法，./systrace/systrace/tracing_controller.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line">class TracingController(object):</span><br><span class="line"></span><br><span class="line">  def StopTracing(self):</span><br><span class="line">    &quot;&quot;&quot;Issue clock sync marker and stop tracing for all tracing agents.</span><br><span class="line"></span><br><span class="line">    This function stops both the controller tracing agent</span><br><span class="line">    and the child tracing agents. It issues a clock sync marker prior</span><br><span class="line">    to stopping tracing.</span><br><span class="line"></span><br><span class="line">    Returns:</span><br><span class="line">        Boolean indicating whether or not the stop tracing succeeded</span><br><span class="line">        for all agents.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    </span><br><span class="line">    # (1.1) 清除对象中的tracing启动标志 #</span><br><span class="line">    assert self._trace_in_progress, &apos;No trace in progress.&apos;</span><br><span class="line">    self._trace_in_progress = False</span><br><span class="line"></span><br><span class="line">    # Issue the clock sync marker and stop the child tracing agents.</span><br><span class="line">    self._IssueClockSyncMarker()</span><br><span class="line">    succ_agents = []</span><br><span class="line">    # (1.2) 逐个调用agent list中agent的.StopAgentTracing()方法 #</span><br><span class="line">    # 对&apos;Android&apos;来说，就一个agent：AtraceAgent #</span><br><span class="line">    for agent in self._child_agents:</span><br><span class="line">      if agent.StopAgentTracing(timeout=self._controller_config.timeout):</span><br><span class="line">        succ_agents.append(agent)</span><br><span class="line">      else:</span><br><span class="line">        print &apos;Agent %s not stopped.&apos; % str(agent)</span><br><span class="line"></span><br><span class="line">    # Stop the controller tracing agent. Controller tracing agent</span><br><span class="line">    # must be stopped successfully to proceed.</span><br><span class="line">    # (1.3) 调用成员对象_controller_agent的.StartAgentTracing()方法 #</span><br><span class="line">    # 记录一些log #</span><br><span class="line">    if not self._controller_agent.StopAgentTracing(</span><br><span class="line">        timeout=self._controller_config.timeout):</span><br><span class="line">      print &apos;Unable to stop controller tracing agent.&apos;</span><br><span class="line">      return False</span><br><span class="line"></span><br><span class="line">    # Print warning if all agents not stopped.</span><br><span class="line">    na = len(self._child_agents)</span><br><span class="line">    ns = len(succ_agents)</span><br><span class="line">    if ns &lt; na:</span><br><span class="line">      print &apos;Warning: Only %d of %d tracing agents stopped.&apos; % (ns, na)</span><br><span class="line">      self._child_agents = succ_agents</span><br><span class="line"></span><br><span class="line">    # Collect the results from all the stopped tracing agents.</span><br><span class="line">    all_results = []</span><br><span class="line">    # (1.4) 汇总agent list中agent和成员对象_controller_agent所有的result #</span><br><span class="line">    for agent in self._child_agents + [self._controller_agent]:</span><br><span class="line">      try:</span><br><span class="line">        result = agent.GetResults(</span><br><span class="line">            timeout=self._controller_config.collection_timeout)</span><br><span class="line">        if not result:</span><br><span class="line">          print &apos;Warning: Timeout when getting results from %s.&apos; % str(agent)</span><br><span class="line">          continue</span><br><span class="line">        if result.source_name in [r.source_name for r in all_results]:</span><br><span class="line">          print (&apos;Warning: Duplicate tracing agents named %s.&apos; %</span><br><span class="line">                 result.source_name)</span><br><span class="line">        all_results.append(result)</span><br><span class="line">      # Check for exceptions. If any exceptions are seen, reraise and abort.</span><br><span class="line">      # Note that a timeout exception will be swalloed by the timeout</span><br><span class="line">      # mechanism and will not get to that point (it will return False instead</span><br><span class="line">      # of the trace result, which will be dealt with above)</span><br><span class="line">      except:</span><br><span class="line">        print &apos;Warning: Exception getting results from %s:&apos; % str(agent)</span><br><span class="line">        print sys.exc_info()[0]</span><br><span class="line">        raise</span><br><span class="line">    self.all_results = all_results</span><br><span class="line">    return all_results</span><br></pre></td></tr></table></figure>
+<p>|→</p>
+<p>继续调用到AtraceAgent类的.StopAgentTracing()方法，./systrace/systrace/tracing_agents/atrace_agent.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br></pre></td><td class="code"><pre><span class="line">class AtraceAgent(tracing_agents.TracingAgent):</span><br><span class="line"></span><br><span class="line">  @py_utils.Timeout(tracing_agents.START_STOP_TIMEOUT)</span><br><span class="line">  def StopAgentTracing(self, timeout=None):</span><br><span class="line">    &quot;&quot;&quot;Stops tracing and starts collecting results.</span><br><span class="line"></span><br><span class="line">    To synchronously retrieve the results after calling this function,</span><br><span class="line">    call GetResults().</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    </span><br><span class="line">    # (1.2.1) 启动stop tracing的线程 #</span><br><span class="line">    self._collection_thread = threading.Thread(</span><br><span class="line">        target=self._collect_and_preprocess)</span><br><span class="line">    self._collection_thread.start()</span><br><span class="line">    return True</span><br><span class="line">    </span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">  def _collect_and_preprocess(self):</span><br><span class="line">    &quot;&quot;&quot;Collects and preprocesses trace data.</span><br><span class="line"></span><br><span class="line">    Stores results in self._trace_data.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    </span><br><span class="line">    # (1.2.1.1) dump trace数据，并stop tracing #</span><br><span class="line">    trace_data = self._collect_trace_data()</span><br><span class="line">    </span><br><span class="line">    # (1.2.1.2) 对获取的trace数据进行预处理 #</span><br><span class="line">    self._trace_data = self._preprocess_trace_data(trace_data)</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line">    </span><br><span class="line">  def _collect_trace_data(self):</span><br><span class="line">    &quot;&quot;&quot;Reads the output from atrace and stops the trace.&quot;&quot;&quot;</span><br><span class="line">    </span><br><span class="line">    # (1.2.1.1.1) dump出trace数据 #</span><br><span class="line">    # 执行命令：&apos;atrace ... categories --async_dump&apos; #</span><br><span class="line">    dump_cmd = self._tracer_args + [&apos;--async_dump&apos;]</span><br><span class="line">    result = self._device_utils.RunShellCommand(</span><br><span class="line">        dump_cmd, raw_output=True, large_output=True, check_return=True)</span><br><span class="line"></span><br><span class="line">    # (1.2.1.1.2) 找到trace数据中&apos;TRACE\:&apos;开头的位置 #</span><br><span class="line">    data_start = re.search(TRACE_START_REGEXP, result)</span><br><span class="line">    if data_start:</span><br><span class="line">      data_start = data_start.end(0)</span><br><span class="line">    else:</span><br><span class="line">      raise IOError(&apos;Unable to get atrace data. Did you forget adb root?&apos;)</span><br><span class="line">      </span><br><span class="line">    # (1.2.1.1.3) 清除trace数据中类似无效数据：r&apos;^capturing trace\.\.\. done|^capturing trace\.\.\.&apos; #</span><br><span class="line">    output = re.sub(ADB_IGNORE_REGEXP, &apos;&apos;, result[data_start:])</span><br><span class="line">    </span><br><span class="line">    # (1.2.1.1.4) stop tracing #</span><br><span class="line">    # 执行命令：&apos;atrace ... categories --async_stop&apos; #</span><br><span class="line">    self._stop_trace()</span><br><span class="line">    return output</span><br><span class="line"></span><br><span class="line">  def _preprocess_trace_data(self, trace_data):</span><br><span class="line">    &quot;&quot;&quot;Performs various processing on atrace data.</span><br><span class="line"></span><br><span class="line">    Args:</span><br><span class="line">      trace_data: The raw trace data.</span><br><span class="line">    Returns:</span><br><span class="line">      The processed trace data.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    </span><br><span class="line">    # (1.2.1.2.1) 对trace数据进行一些strp和解压 # </span><br><span class="line">    if trace_data:</span><br><span class="line">      trace_data = strip_and_decompress_trace(trace_data)</span><br><span class="line"></span><br><span class="line">    if not trace_data:</span><br><span class="line">      print &gt;&gt; sys.stderr, (&apos;No data was captured.  Output file was not &apos;</span><br><span class="line">                            &apos;written.&apos;)</span><br><span class="line">      sys.exit(1)</span><br><span class="line"></span><br><span class="line">    # (1.2.1.2.2) 修复MISSING_TGIDS # </span><br><span class="line">    if _FIX_MISSING_TGIDS:</span><br><span class="line">      # Gather proc data from device and patch tgids</span><br><span class="line">      procfs_dump = self._device_utils.RunShellCommand(</span><br><span class="line">          &apos;echo -n /proc/[0-9]*/task/[0-9]*&apos;,</span><br><span class="line">          shell=True, check_return=True)[0].split(&apos; &apos;)</span><br><span class="line">      pid2_tgid = extract_tgids(procfs_dump)</span><br><span class="line">      trace_data = fix_missing_tgids(trace_data, pid2_tgid)</span><br><span class="line"></span><br><span class="line">    # (1.2.1.2.3) 修复CIRCULAR_TRACES # </span><br><span class="line">    if _FIX_CIRCULAR_TRACES:</span><br><span class="line">      trace_data = fix_circular_traces(trace_data)</span><br><span class="line"></span><br><span class="line">    return trace_data</span><br></pre></td></tr></table></figure>
+<p>|→</p>
+<p>继续调用到AndroidProcessDataAgent类的.StopAgentTracing()方法，./systrace/systrace/tracing_agents/android_process_data_agent.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">class AndroidProcessDataAgent(tracing_agents.TracingAgent):</span><br><span class="line"></span><br><span class="line">  @py_utils.Timeout(tracing_agents.START_STOP_TIMEOUT)</span><br><span class="line">  def StopAgentTracing(self, timeout=None):</span><br><span class="line">    self._trace_data += self._get_process_snapshot()</span><br><span class="line">    return True</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">  def _get_process_snapshot(self):</span><br><span class="line">    use_legacy = False</span><br><span class="line">    try:</span><br><span class="line">      dump = self._device.RunShellCommand( \</span><br><span class="line">          PS_COMMAND_PROC, check_return=True, as_root=True, shell=True)</span><br><span class="line">    except AdbShellCommandFailedError:</span><br><span class="line">      use_legacy = True</span><br><span class="line"></span><br><span class="line">    # Check length of 2 as we execute two commands, which in case of failure</span><br><span class="line">    # on old devices output 1 line each.</span><br><span class="line">    if use_legacy or len(dump) == 2:</span><br><span class="line">      logging.debug(&apos;Couldn\&apos;t parse ps dump, trying legacy method ...&apos;)</span><br><span class="line">      dump = self._device.RunShellCommand( \</span><br><span class="line">          PS_COMMAND_PROC_LEGACY, check_return=True, as_root=True, shell=True)</span><br><span class="line">      if len(dump) == 2:</span><br><span class="line">        logging.error(&apos;Unable to extract process data!&apos;)</span><br><span class="line">        return &quot;&quot;</span><br><span class="line"></span><br><span class="line">    return &apos;\n&apos;.join(dump) + &apos;\n&apos;</span><br><span class="line">    </span><br><span class="line"># 实际上就是在StartTracing()和StopTracing()时，各调用一次如下的ps命令 #</span><br><span class="line">PS_COMMAND_PROC = &quot;ps -A -o USER,PID,PPID,VSIZE,RSS,WCHAN,ADDR=PC,S,NAME,COMM&quot; \</span><br><span class="line">    &quot;&amp;&amp; ps -AT -o USER,PID,TID,CMD&quot;</span><br></pre></td></tr></table></figure>
+<h2 id="2-4、SystraceRunner-OutputSystraceResults"><a href="#2-4、SystraceRunner-OutputSystraceResults" class="headerlink" title="2.4、SystraceRunner.OutputSystraceResults()"></a>2.4、SystraceRunner.OutputSystraceResults()</h2><p>入口是SystraceRunner类的.OutputSystraceResults()方法，./systrace/systrace/systrace_runner.py:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">class SystraceRunner(object):</span><br><span class="line"></span><br><span class="line">  def OutputSystraceResults(self, write_json=False):</span><br><span class="line">    &quot;&quot;&quot;Output the results of systrace to a file.</span><br><span class="line"></span><br><span class="line">    If output is necessary, then write the results of systrace to either (a)</span><br><span class="line">    a standalone HTML file, or (b) a json file which can be read by the</span><br><span class="line">    trace viewer.</span><br><span class="line"></span><br><span class="line">    Args:</span><br><span class="line">       write_json: Whether to output to a json file (if false, use HTML file)</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    print &apos;Tracing complete, writing results&apos;</span><br><span class="line">    if write_json:</span><br><span class="line">      # (1) 输出成jason格式 #</span><br><span class="line">      result = output_generator.GenerateJSONOutput(</span><br><span class="line">                  self._tracing_controller.all_results,</span><br><span class="line">                  self._out_filename)</span><br><span class="line">    else:</span><br><span class="line">      # (2) 输出成html格式 #</span><br><span class="line">      # all_results是上一步stoptracing时得到的trace结果 #</span><br><span class="line">      # _out_filename是使用&apos;-o&apos;选项指定的文件名 #</span><br><span class="line">      result = output_generator.GenerateHTMLOutput(</span><br><span class="line">                  self._tracing_controller.all_results,</span><br><span class="line">                  self._out_filename)</span><br><span class="line">    print &apos;\nWrote trace %s file: file://%s\n&apos; % ((&apos;JSON&apos; if write_json</span><br><span class="line">                                                   else &apos;HTML&apos;), result)</span><br></pre></td></tr></table></figure>
+<p>↓</p>
+<p>继续调用到output_generator模块中的GenerateHTMLOutput()函数，./systrace/systrace/output_generator.py：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">def GenerateHTMLOutput(trace_results, output_file_name):</span><br><span class="line">  &quot;&quot;&quot;Write the results of systrace to an HTML file.</span><br><span class="line"></span><br><span class="line">  Args:</span><br><span class="line">      trace_results: A list of TraceResults.</span><br><span class="line">      output_file_name: The name of the HTML file that the trace viewer</span><br><span class="line">          results should be written to.</span><br><span class="line">  &quot;&quot;&quot;</span><br><span class="line">  def _ReadAsset(src_dir, filename):</span><br><span class="line">    return open(os.path.join(src_dir, filename)).read()</span><br><span class="line"></span><br><span class="line">  # TODO(rnephew): The tracing output formatter is able to handle a single</span><br><span class="line">  # systrace trace just as well as it handles multiple traces. The obvious thing</span><br><span class="line">  # to do here would be to use it all for all systrace output: however, we want</span><br><span class="line">  # to continue using the legacy way of formatting systrace output when a single</span><br><span class="line">  # systrace and the tracing controller trace are present in order to match the</span><br><span class="line">  # Java verison of systrace. Java systrace is expected to be deleted at a later</span><br><span class="line">  # date. We should consolidate this logic when that happens.</span><br><span class="line"></span><br><span class="line">  # (2.1) 如果result list中成员个数大于3，使用新方法NewGenerateHTMLOutput #</span><br><span class="line">  if len(trace_results) &gt; 3:</span><br><span class="line">    NewGenerateHTMLOutput(trace_results, output_file_name)</span><br><span class="line">    return os.path.abspath(output_file_name)</span><br><span class="line"></span><br><span class="line">  systrace_dir = os.path.abspath(os.path.dirname(__file__))</span><br><span class="line"></span><br><span class="line">  # (2.2) 尝试更新./systrace/systrace/systrace_trace_viewer.html文件 #</span><br><span class="line">  try:</span><br><span class="line">    from systrace import update_systrace_trace_viewer</span><br><span class="line">  except ImportError:</span><br><span class="line">    pass</span><br><span class="line">  else:</span><br><span class="line">    update_systrace_trace_viewer.update()</span><br><span class="line"></span><br><span class="line">  trace_viewer_html = _ReadAsset(systrace_dir, &apos;systrace_trace_viewer.html&apos;)</span><br><span class="line"></span><br><span class="line">  # Open the file in binary mode to prevent python from changing the</span><br><span class="line">  # line endings, then write the prefix.</span><br><span class="line">  </span><br><span class="line">  # (2.3) 读出&apos;prefix.html&apos;,&apos;suffix.html&apos;,&apos;systrace_trace_viewer.html&apos;文件的内容备用 #</span><br><span class="line">  systrace_dir = os.path.abspath(os.path.dirname(__file__))</span><br><span class="line">  html_prefix = _ReadAsset(systrace_dir, &apos;prefix.html&apos;)</span><br><span class="line">  html_suffix = _ReadAsset(systrace_dir, &apos;suffix.html&apos;)</span><br><span class="line">  trace_viewer_html = _ReadAsset(systrace_dir,</span><br><span class="line">                                  &apos;systrace_trace_viewer.html&apos;)</span><br><span class="line"></span><br><span class="line">  # Open the file in binary mode to prevent python from changing the</span><br><span class="line">  # line endings, then write the prefix.</span><br><span class="line">  # (2.4) 打开一个名为&apos;xxx.html&apos;的输出文件，准备写入 #</span><br><span class="line">  html_file = open(output_file_name, &apos;wb&apos;)</span><br><span class="line">  </span><br><span class="line">  # (2.4.1) 首先写入&apos;prefix.html&apos;的内容 #</span><br><span class="line">  # 并且把其中的&apos;&#123;&#123;SYSTRACE_TRACE_VIEWER_HTML&#125;&#125;&apos;字符用&apos;systrace_trace_viewer.html&apos;的文件内容替换 #</span><br><span class="line">  html_file.write(html_prefix.replace(&apos;&#123;&#123;SYSTRACE_TRACE_VIEWER_HTML&#125;&#125;&apos;,</span><br><span class="line">                                      trace_viewer_html))</span><br><span class="line"></span><br><span class="line">  # Write the trace data itself. There is a separate section of the form</span><br><span class="line">  # &lt;script class=&quot;trace-data&quot; type=&quot;application/text&quot;&gt; ... &lt;/script&gt;</span><br><span class="line">  # for each tracing agent (including the controller tracing agent).</span><br><span class="line">  </span><br><span class="line">  # (2.4.2) 逐个按格式写入trace_results中的trace数据 #</span><br><span class="line">  html_file.write(&apos;&lt;!-- BEGIN TRACE --&gt;\n&apos;)</span><br><span class="line">  for result in trace_results:</span><br><span class="line">    html_file.write(&apos;  &lt;script class=&quot;trace-data&quot; type=&quot;application/text&quot;&gt;\n&apos;)</span><br><span class="line">    html_file.write(_ConvertToHtmlString(result.raw_data))</span><br><span class="line">    html_file.write(&apos;  &lt;/script&gt;\n&apos;)</span><br><span class="line">  html_file.write(&apos;&lt;!-- END TRACE --&gt;\n&apos;)</span><br><span class="line"></span><br><span class="line">  # Write the suffix and finish.</span><br><span class="line">  # (2.4.3) 最后写入&apos;suffix.html&apos;的内容 #</span><br><span class="line">  html_file.write(html_suffix)</span><br><span class="line">  html_file.close()</span><br><span class="line"></span><br><span class="line">  final_path = os.path.abspath(output_file_name)</span><br><span class="line">  return final_path</span><br></pre></td></tr></table></figure>
+<h1 id="2-4、执行的命令"><a href="#2-4、执行的命令" class="headerlink" title="2.4、执行的命令"></a>2.4、执行的命令</h1><p>我们在devil/devil/android/device_utils.py的RunShellCommand.run()和devil/devil/utils/cmd_helper.py的Popen()处加上调试打印，看到’./systrace -o trace.html -t 10 gfx view wm am dalvik input sched freq idle‘命令的具体执行过程如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">ASOP_ROOT/external/chromium-trace/catapult/systrace/bin/systrace -o trace.html -t 10 gfx view wm am dalvik input sched freq idle</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;devices&apos;]</span><br><span class="line">run: ( c=/data/local/tmp/cache_token;echo $EXTERNAL_STORAGE;cat $c 2&gt;/dev/null||echo;echo &quot;636d6fb8-d59c-11e8-ae24-b8ca3a959992&quot;&gt;$c &amp;&amp;getprop )&gt;/data/local/tmp/temp_file-4aec8d95e60eb</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( ( c=/data/local/tmp/cache_token;echo $EXTERNAL_STORAGE;cat $c 2&gt;/dev/null||echo;echo &quot;636d6fb8-d59c-11e8-ae24-b8ca3a959992&quot;&gt;$c &amp;&amp;getprop )&gt;/data/local/tmp/temp_file-4aec8d95e60eb );echo %$?&apos;]</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;pull&apos;, &apos;/data/local/tmp/temp_file-4aec8d95e60eb&apos;, &apos;/tmp/tmple_FOq/tmp_ReadFileWithPull&apos;]</span><br><span class="line">run: su 0 ls /root &amp;&amp; ! ls /root</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, Popen: [u&apos;/usr/bin/adb&apos;, &apos;shell&apos;&apos;-s&apos;, , &apos;8&apos;( su 0 ls72QADT5KWKRG&apos;,  /root &amp;&amp; ! ls /root &apos;shell&apos;, );echo&apos;rm -f /data/local/tmp/ %$?&apos;]temp_file-4aec8d95e60eb&apos;]</span><br><span class="line"></span><br><span class="line">run: ps -A -o USER,PID,PPID,VSIZE,RSS,WCHAN,ADDR=PC,S,NAME,COMM&amp;&amp; ps -AT -o USER,PID,TID,CMD</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( ps -A -o USER,PID,PPID,VSIZE,RSS,WCHAN,ADDR=PC,S,NAME,COMM&amp;&amp; ps -AT -o USER,PID,TID,CMD );echo %$?&apos;]</span><br><span class="line">run: atrace --list_categories</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( atrace --list_categories );echo %$?&apos;]</span><br><span class="line">run: atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_start</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_start );echo %$?&apos;]</span><br><span class="line">Starting tracing (10 seconds)</span><br><span class="line">Tracing completed. Collecting output...</span><br><span class="line">run: ps -A -o USER,PID,PPID,VSIZE,RSS,WCHAN,ADDR=PC,S,NAME,COMM&amp;&amp; ps -AT -o USER,PID,TID,CMD</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( ps -A -o USER,PID,PPID,VSIZE,RSS,WCHAN,ADDR=PC,S,NAME,COMM&amp;&amp; ps -AT -o USER,PID,TID,CMD );echo %$?&apos;]</span><br><span class="line">run: ( atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_dump )&gt;/data/local/tmp/temp_file-57edea8625b51</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( ( atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_dump )&gt;/data/local/tmp/temp_file-57edea8625b51 );echo %$?&apos;]</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;pull&apos;, &apos;/data/local/tmp/temp_file-57edea8625b51&apos;, &apos;/tmp/tmp_preLk/tmp_ReadFileWithPull&apos;]</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;rm -f /data/local/tmp/temp_file-57edea8625b51&apos;]</span><br><span class="line">run: atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_stop</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_stop );echo %$?&apos;]</span><br><span class="line">run: echo -n /proc/[0-9]*/task/[0-9]*</span><br><span class="line">Popen: [u&apos;/usr/bin/adb&apos;, &apos;-s&apos;, &apos;872QADT5KWKRG&apos;, &apos;shell&apos;, &apos;( echo -n /proc/[0-9]*/task/[0-9]* );echo %$?&apos;]</span><br><span class="line">Outputting Systrace results...</span><br><span class="line">Tracing complete, writing results</span><br><span class="line"></span><br><span class="line">Wrote trace HTML file: file:///home/pengweilin/sdb2/m1872/code/repo/external/chromium-trace/catapult/systrace/bin/pwl1.html</span><br></pre></td></tr></table></figure>
+<p>精简起来是调用目标机上的atrace命令实现的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">adb shell atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_start</span><br><span class="line">adb shell atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_dump &gt; /data/local/tmp/temp_file-57edea8625b51</span><br><span class="line">adb pull /data/local/tmp/temp_file-57edea8625b51 /tmp/tmp_preLk/tmp_ReadFileWithPull</span><br><span class="line">adb shell rm -f /data/local/tmp/temp_file-57edea8625b51</span><br><span class="line">adb shell atrace -z -t 10 -b 4096 gfx view wm am dalvik input sched freq idle --async_stop</span><br></pre></td></tr></table></figure>
+<h1 id="3、目标机atrace命令的实现-c"><a href="#3、目标机atrace命令的实现-c" class="headerlink" title="3、目标机atrace命令的实现(c++)"></a>3、目标机atrace命令的实现(c++)</h1><p>从上一节可以看到主机的systrace命令实际最后都是调用目标机上的atrace命令实现的。从atrace的命令格式上看，分为两部分：</p>
+<ul>
+<li>[options]：就是’-‘和’–’打头的选项；</li>
+<li>[categories…]：指定需要trace哪些事件。就是类似’gfx view wm am dalvik input sched freq idle’这些；</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">$ atrace --help</span><br><span class="line">usage: atrace [options] [categories...]</span><br><span class="line">options include:</span><br><span class="line">  -a appname      enable app-level tracing for a comma separated list of cmdlines</span><br><span class="line">  -b N            use a trace buffer size of N KB</span><br><span class="line">  -c              trace into a circular buffer</span><br><span class="line">  -f filename     use the categories written in a file as space-separated</span><br><span class="line">                    values in a line</span><br><span class="line">  -k fname,...    trace the listed kernel functions</span><br><span class="line">  -n              ignore signals</span><br><span class="line">  -s N            sleep for N seconds before tracing [default 0]</span><br><span class="line">  -t N            trace for N seconds [default 5]</span><br><span class="line">  -z              compress the trace dump</span><br><span class="line">  --async_start   start circular trace and return immediately</span><br><span class="line">  --async_dump    dump the current contents of circular trace buffer</span><br><span class="line">  --async_stop    stop tracing and dump the current contents of circular</span><br><span class="line">                    trace buffer</span><br><span class="line">  --stream        stream trace to stdout as it enters the trace buffer</span><br><span class="line">                    Note: this can take significant CPU time, and is best</span><br><span class="line">                    used for measuring things that are not affected by</span><br><span class="line">                    CPU performance, like pagecache usage.</span><br><span class="line">  --list_categories</span><br><span class="line">                  list the available tracing categories</span><br><span class="line"> -o filename      write the trace to the specified file instead</span><br><span class="line">                    of stdout.</span><br></pre></td></tr></table></figure>
+<p>atrace的源码在ASOP_ROOT/frameworks/native/cmds/atrace/atrace.cpp，我们来具体分析一下它的实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br></pre></td><td class="code"><pre><span class="line">int main(int argc, char **argv)</span><br><span class="line">&#123;</span><br><span class="line">    bool async = false;</span><br><span class="line">    bool traceStart = true;</span><br><span class="line">    bool traceStop = true;</span><br><span class="line">    bool traceDump = true;</span><br><span class="line">    bool traceStream = false;</span><br><span class="line"></span><br><span class="line">    /* (1) atrace跟&quot;--help&quot;选项，印出帮助信息 */</span><br><span class="line">    if (argc == 2 &amp;&amp; 0 == strcmp(argv[1], &quot;--help&quot;)) &#123;</span><br><span class="line">        showHelp(argv[0]);</span><br><span class="line">        exit(0);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /* (2) ftrace目录是否存在 */</span><br><span class="line">    if (!findTraceFiles()) &#123;</span><br><span class="line">        fprintf(stderr, &quot;No trace folder found\n&quot;);</span><br><span class="line">        exit(-1);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /* (3) 逐条解析atrace的命令参数 */</span><br><span class="line">    for (;;) &#123;</span><br><span class="line">        int ret;</span><br><span class="line">        int option_index = 0;</span><br><span class="line">        static struct option long_options[] = &#123;</span><br><span class="line">            &#123;&quot;async_start&quot;,     no_argument, 0,  0 &#125;,</span><br><span class="line">            &#123;&quot;async_stop&quot;,      no_argument, 0,  0 &#125;,</span><br><span class="line">            &#123;&quot;async_dump&quot;,      no_argument, 0,  0 &#125;,</span><br><span class="line">            &#123;&quot;list_categories&quot;, no_argument, 0,  0 &#125;,</span><br><span class="line">            &#123;&quot;stream&quot;,          no_argument, 0,  0 &#125;,</span><br><span class="line">            &#123;           0,                0, 0,  0 &#125;</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        /* (3.1) 尝试使用option来解析atrace的命令参数 */</span><br><span class="line">        ret = getopt_long(argc, argv, &quot;a:b:cf:k:ns:t:zo:&quot;,</span><br><span class="line">                          long_options, &amp;option_index);</span><br><span class="line"></span><br><span class="line">        /* (3.2) 如果使用option解析失败，尝试使用category来进行解析  */</span><br><span class="line">        if (ret &lt; 0) &#123;</span><br><span class="line">            for (int i = optind; i &lt; argc; i++) &#123;</span><br><span class="line">                if (!setCategoryEnable(argv[i], true)) &#123;</span><br><span class="line">                    fprintf(stderr, &quot;error enabling tracing category \&quot;%s\&quot;\n&quot;, argv[i]);</span><br><span class="line">                    exit(1);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">            break;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        /* (3.3) 根据解析出来的option，设置flag */</span><br><span class="line">        switch(ret) &#123;</span><br><span class="line">            case &apos;a&apos;:</span><br><span class="line">                g_debugAppCmdLine = optarg;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;b&apos;:</span><br><span class="line">                g_traceBufferSizeKB = atoi(optarg);</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;c&apos;:</span><br><span class="line">                g_traceOverwrite = true;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;f&apos;:</span><br><span class="line">                g_categoriesFile = optarg;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;k&apos;:</span><br><span class="line">                g_kernelTraceFuncs = optarg;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;n&apos;:</span><br><span class="line">                g_nohup = true;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;s&apos;:</span><br><span class="line">                g_initialSleepSecs = atoi(optarg);</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;t&apos;:</span><br><span class="line">                g_traceDurationSeconds = atoi(optarg);</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;z&apos;:</span><br><span class="line">                g_compress = true;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case &apos;o&apos;:</span><br><span class="line">                g_outputFile = optarg;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            case 0:</span><br><span class="line">                if (!strcmp(long_options[option_index].name, &quot;async_start&quot;)) &#123;</span><br><span class="line">                    async = true;</span><br><span class="line">                    traceStop = false;</span><br><span class="line">                    traceDump = false;</span><br><span class="line">                    g_traceOverwrite = true;</span><br><span class="line">                &#125; else if (!strcmp(long_options[option_index].name, &quot;async_stop&quot;)) &#123;</span><br><span class="line">                    async = true;</span><br><span class="line">                    traceStart = false;</span><br><span class="line">                &#125; else if (!strcmp(long_options[option_index].name, &quot;async_dump&quot;)) &#123;</span><br><span class="line">                    async = true;</span><br><span class="line">                    traceStart = false;</span><br><span class="line">                    traceStop = false;</span><br><span class="line">                &#125; else if (!strcmp(long_options[option_index].name, &quot;stream&quot;)) &#123;</span><br><span class="line">                    traceStream = true;</span><br><span class="line">                    traceDump = false;</span><br><span class="line">                &#125; else if (!strcmp(long_options[option_index].name, &quot;list_categories&quot;)) &#123;</span><br><span class="line">                    listSupportedCategories();</span><br><span class="line">                    exit(0);</span><br><span class="line">                &#125;</span><br><span class="line">            break;</span><br><span class="line"></span><br><span class="line">            default:</span><br><span class="line">                fprintf(stderr, &quot;\n&quot;);</span><br><span class="line">                showHelp(argv[0]);</span><br><span class="line">                exit(-1);</span><br><span class="line">            break;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    registerSigHandler();</span><br><span class="line"></span><br><span class="line">    if (g_initialSleepSecs &gt; 0) &#123;</span><br><span class="line">        sleep(g_initialSleepSecs);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    bool ok = true;</span><br><span class="line">    /* (4) &quot;-- async_start&quot; option命令的实际执行动作 */</span><br><span class="line">    if (traceStart) &#123;</span><br><span class="line">        /* (4.1)  */</span><br><span class="line">        ok &amp;= setUpTrace();</span><br><span class="line">        </span><br><span class="line">        /* (4.2)  */</span><br><span class="line">        ok &amp;= startTrace();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    if (ok &amp;&amp; traceStart) &#123;</span><br><span class="line">        if (!traceStream) &#123;</span><br><span class="line">            printf(&quot;capturing trace...&quot;);</span><br><span class="line">            fflush(stdout);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // We clear the trace after starting it because tracing gets enabled for</span><br><span class="line">        // each CPU individually in the kernel. Having the beginning of the trace</span><br><span class="line">        // contain entries from only one CPU can cause &quot;begin&quot; entries without a</span><br><span class="line">        // matching &quot;end&quot; entry to show up if a task gets migrated from one CPU to</span><br><span class="line">        // another.</span><br><span class="line">        /* (4.3) 清除trace内容 */</span><br><span class="line">        ok = clearTrace();</span><br><span class="line"></span><br><span class="line">        /* (4.4) 通过trace_marker文件接口，写入同步信息 */</span><br><span class="line">        writeClockSyncMarker();</span><br><span class="line">        </span><br><span class="line">        /* (4.5) async==false的支持 */</span><br><span class="line">        if (ok &amp;&amp; !async &amp;&amp; !traceStream) &#123;</span><br><span class="line">            // Sleep to allow the trace to be captured.</span><br><span class="line">            struct timespec timeLeft;</span><br><span class="line">            timeLeft.tv_sec = g_traceDurationSeconds;</span><br><span class="line">            timeLeft.tv_nsec = 0;</span><br><span class="line">            do &#123;</span><br><span class="line">                if (g_traceAborted) &#123;</span><br><span class="line">                    break;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; while (nanosleep(&amp;timeLeft, &amp;timeLeft) == -1 &amp;&amp; errno == EINTR);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        /* (4.6) traceStream的支持 */</span><br><span class="line">        if (traceStream) &#123;</span><br><span class="line">            streamTrace();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Stop the trace and restore the default settings.</span><br><span class="line">    /* (5) &quot;-- async_stop&quot; option命令的实际执行动作 */</span><br><span class="line">    if (traceStop)</span><br><span class="line">        stopTrace();</span><br><span class="line"></span><br><span class="line">    /* (6) &quot;-- async_dump&quot; option命令的实际执行动作 */</span><br><span class="line">    if (ok &amp;&amp; traceDump) &#123;</span><br><span class="line">        if (!g_traceAborted) &#123;</span><br><span class="line">            printf(&quot; done\n&quot;);</span><br><span class="line">            fflush(stdout);</span><br><span class="line">            int outFd = STDOUT_FILENO;</span><br><span class="line">            if (g_outputFile) &#123;</span><br><span class="line">                outFd = open(g_outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);</span><br><span class="line">            &#125;</span><br><span class="line">            if (outFd == -1) &#123;</span><br><span class="line">                printf(&quot;Failed to open &apos;%s&apos;, err=%d&quot;, g_outputFile, errno);</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                dprintf(outFd, &quot;TRACE:\n&quot;);</span><br><span class="line">                dumpTrace(outFd);</span><br><span class="line">                if (g_outputFile) &#123;</span><br><span class="line">                    close(outFd);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            printf(&quot;\ntrace aborted.\n&quot;);</span><br><span class="line">            fflush(stdout);</span><br><span class="line">        &#125;</span><br><span class="line">        clearTrace();</span><br><span class="line">    &#125; else if (!ok) &#123;</span><br><span class="line">        fprintf(stderr, &quot;unable to start tracing\n&quot;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Reset the trace buffer size to 1.</span><br><span class="line">    if (traceStop)</span><br><span class="line">        cleanUpTrace();</span><br><span class="line"></span><br><span class="line">    return g_traceAborted ? 1 : 0;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-1、categories"><a href="#3-1、categories" class="headerlink" title="3.1、categories"></a>3.1、categories</h2><p>categories指的是可被trace的事件的类别，它的全集如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br></pre></td><td class="code"><pre><span class="line">/* Tracing categories */</span><br><span class="line">static const TracingCategory k_categories[] = &#123;</span><br><span class="line">    &#123; &quot;gfx&quot;,        &quot;Graphics&quot;,         ATRACE_TAG_GRAPHICS, &#123;</span><br><span class="line">        &#123; OPT,      &quot;events/mdss/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;input&quot;,      &quot;Input&quot;,            ATRACE_TAG_INPUT, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;view&quot;,       &quot;View System&quot;,      ATRACE_TAG_VIEW, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;webview&quot;,    &quot;WebView&quot;,          ATRACE_TAG_WEBVIEW, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;wm&quot;,         &quot;Window Manager&quot;,   ATRACE_TAG_WINDOW_MANAGER, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;am&quot;,         &quot;Activity Manager&quot;, ATRACE_TAG_ACTIVITY_MANAGER, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;sm&quot;,         &quot;Sync Manager&quot;,     ATRACE_TAG_SYNC_MANAGER, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;audio&quot;,      &quot;Audio&quot;,            ATRACE_TAG_AUDIO, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;video&quot;,      &quot;Video&quot;,            ATRACE_TAG_VIDEO, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;camera&quot;,     &quot;Camera&quot;,           ATRACE_TAG_CAMERA, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;hal&quot;,        &quot;Hardware Modules&quot;, ATRACE_TAG_HAL, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;app&quot;,        &quot;Application&quot;,      ATRACE_TAG_APP, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;res&quot;,        &quot;Resource Loading&quot;, ATRACE_TAG_RESOURCES, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;dalvik&quot;,     &quot;Dalvik VM&quot;,        ATRACE_TAG_DALVIK, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;rs&quot;,         &quot;RenderScript&quot;,     ATRACE_TAG_RS, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;bionic&quot;,     &quot;Bionic C Library&quot;, ATRACE_TAG_BIONIC, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;power&quot;,      &quot;Power Management&quot;, ATRACE_TAG_POWER, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;pm&quot;,         &quot;Package Manager&quot;,  ATRACE_TAG_PACKAGE_MANAGER, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;ss&quot;,         &quot;System Server&quot;,    ATRACE_TAG_SYSTEM_SERVER, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;database&quot;,   &quot;Database&quot;,         ATRACE_TAG_DATABASE, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;network&quot;,    &quot;Network&quot;,          ATRACE_TAG_NETWORK, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;adb&quot;,        &quot;ADB&quot;,              ATRACE_TAG_ADB, &#123; &#125; &#125;,</span><br><span class="line">    &#123; k_coreServiceCategory, &quot;Core services&quot;, 0, &#123; &#125; &#125;,</span><br><span class="line">    &#123; k_pdxServiceCategory, &quot;PDX services&quot;, 0, &#123; &#125; &#125;,</span><br><span class="line">    &#123; &quot;sched&quot;,      &quot;CPU Scheduling&quot;,   0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/sched/sched_switch/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/sched/sched_wakeup/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/sched/sched_waking/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/sched/sched_blocked_reason/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/sched/sched_cpu_hotplug/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/cgroup/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;irq&quot;,        &quot;IRQ Events&quot;,   0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/irq/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/ipi/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;i2c&quot;,        &quot;I2C Events&quot;,   0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/i2c/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/i2c/i2c_read/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/i2c/i2c_write/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/i2c/i2c_result/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/i2c/i2c_reply/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/i2c/smbus_read/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/i2c/smbus_write/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/i2c/smbus_result/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/i2c/smbus_reply/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;freq&quot;,       &quot;CPU Frequency&quot;,    0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/power/cpu_frequency/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/power/clock_set_rate/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/power/cpu_frequency_limits/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;membus&quot;,     &quot;Memory Bus Utilization&quot;, 0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/memory_bus/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;idle&quot;,       &quot;CPU Idle&quot;,         0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/power/cpu_idle/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;disk&quot;,       &quot;Disk I/O&quot;,         0, &#123;</span><br><span class="line">        &#123; OPT,      &quot;events/f2fs/f2fs_sync_file_enter/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/f2fs/f2fs_sync_file_exit/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/f2fs/f2fs_write_begin/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/f2fs/f2fs_write_end/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/ext4/ext4_da_write_begin/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/ext4/ext4_da_write_end/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/ext4/ext4_sync_file_enter/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/ext4/ext4_sync_file_exit/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/block/block_rq_issue/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/block/block_rq_complete/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;mmc&quot;,        &quot;eMMC commands&quot;,    0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/mmc/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;load&quot;,       &quot;CPU Load&quot;,         0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/cpufreq_interactive/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;sync&quot;,       &quot;Synchronization&quot;,  0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/sync/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;workq&quot;,      &quot;Kernel Workqueues&quot;, 0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/workqueue/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;memreclaim&quot;, &quot;Kernel Memory Reclaim&quot;, 0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/vmscan/mm_vmscan_direct_reclaim_begin/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/vmscan/mm_vmscan_direct_reclaim_end/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/vmscan/mm_vmscan_kswapd_wake/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/vmscan/mm_vmscan_kswapd_sleep/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/lowmemorykiller/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;regulators&quot;,  &quot;Voltage and Current Regulators&quot;, 0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/regulator/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;binder_driver&quot;, &quot;Binder Kernel driver&quot;, 0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/binder/binder_transaction/enable&quot; &#125;,</span><br><span class="line">        &#123; REQ,      &quot;events/binder/binder_transaction_received/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/binder/binder_set_priority/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;binder_lock&quot;, &quot;Binder global lock trace&quot;, 0, &#123;</span><br><span class="line">        &#123; OPT,      &quot;events/binder/binder_lock/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/binder/binder_locked/enable&quot; &#125;,</span><br><span class="line">        &#123; OPT,      &quot;events/binder/binder_unlock/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">    &#123; &quot;pagecache&quot;,  &quot;Page cache&quot;, 0, &#123;</span><br><span class="line">        &#123; REQ,      &quot;events/filemap/enable&quot; &#125;,</span><br><span class="line">    &#125; &#125;,</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>这些categories可以简单分为3类：</p>
+<ul>
+<li>1、使用内核ftrace的trace event实现的内核事件。例如”sched”，.sysfiles字段指定了trace event的路径；</li>
+<li>2、使用Trace类实现的用户态事件(app/java framework/native)。例如”input”，.tags字段指定了trace tag；</li>
+<li>3、service类型的事件。如k_coreServiceCategory和k_pdxServiceCategory；</li>
+</ul>
+<p>具体目标机可能只支持categories全集中的一部分，所以atrace会对命令参数中指定的categories本机是否支持进行判断：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line">main() -&gt; setCategoryEnable():</span><br><span class="line"></span><br><span class="line">static bool setCategoryEnable(const char* name, bool enable)</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 逐个判断命令参数中的categories，本机是否支持 */</span><br><span class="line">    for (size_t i = 0; i &lt; arraysize(k_categories); i++) &#123;</span><br><span class="line">        const TracingCategory&amp; c = k_categories[i];</span><br><span class="line">        if (strcmp(name, c.name) == 0) &#123;</span><br><span class="line">        </span><br><span class="line">            /* (2) 判断categories是否支持 */</span><br><span class="line">            if (isCategorySupported(c)) &#123;</span><br><span class="line">                g_categoryEnables[i] = enable;</span><br><span class="line">                return true;</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                /* (3) 如果本机不支持categories，原因是否是没有root权限？ */</span><br><span class="line">                if (isCategorySupportedForRoot(c)) &#123;</span><br><span class="line">                    fprintf(stderr, &quot;error: category \&quot;%s\&quot; requires root &quot;</span><br><span class="line">                            &quot;privileges.\n&quot;, name);</span><br><span class="line">                            </span><br><span class="line">                /* (4) 本机不支持categories，报错 */</span><br><span class="line">                &#125; else &#123;</span><br><span class="line">                    fprintf(stderr, &quot;error: category \&quot;%s\&quot; is not supported &quot;</span><br><span class="line">                            &quot;on this device.\n&quot;, name);</span><br><span class="line">                &#125;</span><br><span class="line">                return false;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    fprintf(stderr, &quot;error: unknown tracing category \&quot;%s\&quot;\n&quot;, name);</span><br><span class="line">    return false;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static bool isCategorySupported(const TracingCategory&amp; category)</span><br><span class="line">&#123;</span><br><span class="line">    /* (2.1) 如果category是k_coreServiceCategory，判断name是否为&quot;core_services&quot;，判断&quot;ro.atrace.core.services&quot;的property是否存在 */</span><br><span class="line">    if (strcmp(category.name, k_coreServiceCategory) == 0) &#123;</span><br><span class="line">        return !android::base::GetProperty(k_coreServicesProp, &quot;&quot;).empty();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    /* (2.2) 如果category是k_pdxServiceCategory，判断name是否为&quot;pdx&quot; */</span><br><span class="line">    if (strcmp(category.name, k_pdxServiceCategory) == 0) &#123;</span><br><span class="line">        return true;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    bool ok = category.tags != 0;</span><br><span class="line">    /* (2.2) 如果category是使用了内核的trace event，判断trace4event相应的文件是否存在是否可写 */</span><br><span class="line">    for (int i = 0; i &lt; MAX_SYS_FILES; i++) &#123;</span><br><span class="line">        const char* path = category.sysfiles[i].path;</span><br><span class="line">        bool req = category.sysfiles[i].required == REQ;</span><br><span class="line">        if (path != NULL) &#123;</span><br><span class="line">            if (req) &#123;</span><br><span class="line">                if (!fileIsWritable(path)) &#123;</span><br><span class="line">                    return false;</span><br><span class="line">                &#125; else &#123;</span><br><span class="line">                    ok = true;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                ok = true;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    return ok;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们也可以使用atrace命令的”–list_categories”选项，列出当前目标机支持的所有categories：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">main() -&gt; listSupportedCategories()：</span><br><span class="line"></span><br><span class="line">static void listSupportedCategories()</span><br><span class="line">&#123;</span><br><span class="line">    /* (1) 逐个遍历k_categories数组中的所有category */</span><br><span class="line">    for (size_t i = 0; i &lt; arraysize(k_categories); i++) &#123;</span><br><span class="line">        const TracingCategory&amp; c = k_categories[i];</span><br><span class="line">        </span><br><span class="line">        /* (2) 判断当前目标机系统是否支持 */</span><br><span class="line">        if (isCategorySupported(c)) &#123;</span><br><span class="line">            printf(&quot;  %10s - %s\n&quot;, c.name, c.longname);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-2、’–async-start’"><a href="#3-2、’–async-start’" class="headerlink" title="3.2、’–async_start’"></a>3.2、’–async_start’</h2><p>当atrace命令使用了’–async_start’选项以后，会启动指定的所有categories：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br></pre></td><td class="code"><pre><span class="line">static bool setUpTrace()</span><br><span class="line">&#123;</span><br><span class="line">    bool ok = true;</span><br><span class="line"></span><br><span class="line">    // Set up the tracing options.</span><br><span class="line">    /* (4.1.1) 如果categories是使用文件指定的，解析文件中的categories并使能 */</span><br><span class="line">    ok &amp;= setCategoriesEnableFromFile(g_categoriesFile);</span><br><span class="line">    </span><br><span class="line">    /* (4.1.2) 根据&apos;-c&apos;选项，配置trace event的overwrite：&quot;/sys/kernel/debug/tracing/options/overwrite&quot; */</span><br><span class="line">    ok &amp;= setTraceOverwriteEnable(g_traceOverwrite);</span><br><span class="line">    </span><br><span class="line">    /* (4.1.3) 根据&apos;-b&apos;选项，配置trace event的buffer size：&quot;/sys/kernel/debug/tracing/buffer_size_kb&quot; */</span><br><span class="line">    ok &amp;= setTraceBufferSizeKB(g_traceBufferSizeKB);</span><br><span class="line">    // TODO: Re-enable after stabilization</span><br><span class="line">    //ok &amp;= setCmdlineSize();</span><br><span class="line">    </span><br><span class="line">    /* (4.1.4) 根据选项，配置：&quot;/sys/kernel/debug/tracing/trace_clock&quot; */</span><br><span class="line">    ok &amp;= setClock();</span><br><span class="line">    </span><br><span class="line">    /* (4.1.5) 使能：&quot;/sys/kernel/debug/tracing/options/print-tgid&quot; */</span><br><span class="line">    ok &amp;= setPrintTgidEnableIfPresent(true);</span><br><span class="line">    </span><br><span class="line">    /* (4.1.6) 根据&apos;-k&apos;选项指定的需要trace的kernel 函数，</span><br><span class="line">        配置当前tracer为function_graph：&quot;/sys/kernel/debug/tracing/current_tracer&quot; </span><br><span class="line">        在filter中配置需要trace的函数名：&quot;/sys/kernel/debug/tracing/set_ftrace_filter&quot; </span><br><span class="line">    */</span><br><span class="line">    ok &amp;= setKernelTraceFuncs(g_kernelTraceFuncs);</span><br><span class="line"></span><br><span class="line">    // Set up the tags property.</span><br><span class="line">    uint64_t tags = 0;</span><br><span class="line">    /* (4.1.7) 把categories中需要trace的tag进行&apos;或&apos;操作，并配置到&quot;debug.atrace.tags.enableflags&quot;的property中 */</span><br><span class="line">    for (size_t i = 0; i &lt; arraysize(k_categories); i++) &#123;</span><br><span class="line">        if (g_categoryEnables[i]) &#123;</span><br><span class="line">            const TracingCategory &amp;c = k_categories[i];</span><br><span class="line">            tags |= c.tags;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    ok &amp;= setTagsProperty(tags);</span><br><span class="line"></span><br><span class="line">    bool coreServicesTagEnabled = false;</span><br><span class="line">    for (size_t i = 0; i &lt; arraysize(k_categories); i++) &#123;</span><br><span class="line">        if (strcmp(k_categories[i].name, k_coreServiceCategory) == 0) &#123;</span><br><span class="line">            coreServicesTagEnabled = g_categoryEnables[i];</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        // Set whether to poke PDX services in this session.</span><br><span class="line">        if (strcmp(k_categories[i].name, k_pdxServiceCategory) == 0) &#123;</span><br><span class="line">            g_tracePdx = g_categoryEnables[i];</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    /* (4.1.8) 根据&apos;-a&apos;选项指定的需要trace的app name，最多指定16个，</span><br><span class="line">        配置到&quot;debug.atrace.app_%d&quot;的property当中</span><br><span class="line">    */</span><br><span class="line">    std::string packageList(g_debugAppCmdLine);</span><br><span class="line">    if (coreServicesTagEnabled) &#123;</span><br><span class="line">        if (!packageList.empty()) &#123;</span><br><span class="line">            packageList += &quot;,&quot;;</span><br><span class="line">        &#125;</span><br><span class="line">        packageList += android::base::GetProperty(k_coreServicesProp, &quot;&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    ok &amp;= setAppCmdlineProperty(&amp;packageList[0]);</span><br><span class="line">    </span><br><span class="line">    /* (4.1.9) 让defaultServiceManager()中的所有service重新读取property，使修改的配置生效 */</span><br><span class="line">    ok &amp;= pokeBinderServices();</span><br><span class="line">    </span><br><span class="line">    /* (4.1.10) 让::android::hardware::defaultServiceManager()中的所有service重新读取property，使修改的配置生效 */</span><br><span class="line">    pokeHalServices();</span><br><span class="line"></span><br><span class="line">    /* (4.1.11) 如果categories指定了&quot;pdx&quot;，让pdx service重新读取property，使修改的配置生效 */</span><br><span class="line">    if (g_tracePdx) &#123;</span><br><span class="line">        ok &amp;= ServiceUtility::PokeServices();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    // Disable all the sysfs enables.  This is done as a separate loop from</span><br><span class="line">    // the enables to allow the same enable to exist in multiple categories.</span><br><span class="line">    /* (4.1.12) disable掉所有的trace event */</span><br><span class="line">    ok &amp;= disableKernelTraceEvents();</span><br><span class="line"></span><br><span class="line">    // Enable all the sysfs enables that are in an enabled category.</span><br><span class="line">    /* (4.1.13) 根据categories数组中的配置，使能相应的trace event */</span><br><span class="line">    for (size_t i = 0; i &lt; arraysize(k_categories); i++) &#123;</span><br><span class="line">        if (g_categoryEnables[i]) &#123;</span><br><span class="line">            const TracingCategory &amp;c = k_categories[i];</span><br><span class="line">            for (int j = 0; j &lt; MAX_SYS_FILES; j++) &#123;</span><br><span class="line">                const char* path = c.sysfiles[j].path;</span><br><span class="line">                bool required = c.sysfiles[j].required == REQ;</span><br><span class="line">                if (path != NULL) &#123;</span><br><span class="line">                    if (fileIsWritable(path)) &#123;</span><br><span class="line">                        ok &amp;= setKernelOptionEnable(path, true);</span><br><span class="line">                    &#125; else if (required) &#123;</span><br><span class="line">                        fprintf(stderr, &quot;error writing file %s\n&quot;, path);</span><br><span class="line">                        ok = false;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    return ok;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">static bool startTrace()</span><br><span class="line">&#123;</span><br><span class="line">    return setTracingEnabled(true);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">// Enable or disable kernel tracing.</span><br><span class="line">static bool setTracingEnabled(bool enable)</span><br><span class="line">&#123;</span><br><span class="line">    /* (4.2.1) 打开总开关：&quot;/sys/kernel/debug/tracing/tracing_on&quot; */</span><br><span class="line">    return setKernelOptionEnable(k_tracingOnPath, enable);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="3-3、’–async-dump’"><a href="#3-3、’–async-dump’" class="headerlink" title="3.3、’–async_dump’"></a>3.3、’–async_dump’</h2><p>当atrace命令使用了’–async_dump’选项以后，会dump出trace内容：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">main()</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">    /* (6) &quot;-- async_dump&quot; option命令的实际执行动作 */</span><br><span class="line">    if (ok &amp;&amp; traceDump) &#123;</span><br><span class="line">        if (!g_traceAborted) &#123;</span><br><span class="line">            printf(&quot; done\n&quot;);</span><br><span class="line">            fflush(stdout);</span><br><span class="line">            </span><br><span class="line">            /* (6.1) 默认的dump信息输出句柄 */</span><br><span class="line">            int outFd = STDOUT_FILENO;</span><br><span class="line">            </span><br><span class="line">            /* (6.2) 使用&apos;-o&apos;选项指定的dump信息输出句柄 */</span><br><span class="line">            if (g_outputFile) &#123;</span><br><span class="line">                outFd = open(g_outputFile, O_WRONLY | O_CREAT | O_TRUNC, 0644);</span><br><span class="line">            &#125;</span><br><span class="line">            if (outFd == -1) &#123;</span><br><span class="line">                printf(&quot;Failed to open &apos;%s&apos;, err=%d&quot;, g_outputFile, errno);</span><br><span class="line">            &#125; else &#123;</span><br><span class="line">                dprintf(outFd, &quot;TRACE:\n&quot;);</span><br><span class="line">                </span><br><span class="line">                /* (6.3) 读出&quot;/sys/kernel/debug/tracing/trace&quot;的内容dump到输出句柄 */</span><br><span class="line">                dumpTrace(outFd);</span><br><span class="line">                if (g_outputFile) &#123;</span><br><span class="line">                    close(outFd);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">            printf(&quot;\ntrace aborted.\n&quot;);</span><br><span class="line">            fflush(stdout);</span><br><span class="line">        &#125;</span><br><span class="line">        clearTrace();</span><br><span class="line">    &#125; else if (!ok) &#123;</span><br><span class="line">        fprintf(stderr, &quot;unable to start tracing\n&quot;);</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br></pre></td></tr></table></figure>
+<h2 id="3-4、’–async-stop’"><a href="#3-4、’–async-stop’" class="headerlink" title="3.4、’–async_stop’"></a>3.4、’–async_stop’</h2><p>当atrace命令使用了’–async_stop’选项以后，会停止所有categories的trace信息抓取：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">static void stopTrace()</span><br><span class="line">&#123;</span><br><span class="line">    setTracingEnabled(false);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">↓</span><br><span class="line"></span><br><span class="line">static bool setTracingEnabled(bool enable)</span><br><span class="line">&#123;</span><br><span class="line">    /* (5.1) 关闭总开关：&quot;/sys/kernel/debug/tracing/tracing_on&quot; */</span><br><span class="line">    return setKernelOptionEnable(k_tracingOnPath, enable);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="4、目标机Trace类的使用-java-c"><a href="#4、目标机Trace类的使用-java-c" class="headerlink" title="4、目标机Trace类的使用(java/c++)"></a>4、目标机Trace类的使用(java/c++)</h1><p>atrace只是一个控制命令，实际的trace数据路径是这样分工的：</p>
+<ul>
+<li>1、内核trace信息，通过trace event记录到ftrace的buffer中；</li>
+<li>2、用户态(app/java framework/native)是通过使用Trace类来记录trace信息的，实际上是通过”/sys/kernel/debug/tracing/trace_marker”接口记录到内核ftracebuffer当中的。</li>
+</ul>
+<p>我们查看atrace dump出来的原始信息，可以看到对应的”tracing_mark_write”字段：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ndroid.systemui-1856  ( 1856) [001] ...1 89888.553074: tracing_mark_write: S|1856|animator:alpha|62928891</span><br><span class="line">ndroid.systemui-1856  ( 1856) [001] ...1 89888.553096: tracing_mark_write: F|1856|animator:alpha|62928891</span><br><span class="line">ndroid.systemui-1856  ( 1856) [001] ...1 89888.553110: tracing_mark_write: S|1856|animator:scaleX|37096049</span><br><span class="line">ndroid.systemui-1856  ( 1856) [001] ...1 89888.553131: tracing_mark_write: F|1856|animator:scaleX|37096049</span><br></pre></td></tr></table></figure>
+<p>这样内核态和用户态的trace数据最后都写入到了ftrace buffer当中，也实现了时间同步，最后通过”/sys/kernel/debug/tracing/trace”接口读出。</p>
+<p>在用户态的各个层次是这样使用Trace类的：</p>
+<h2 id="4-1、app"><a href="#4-1、app" class="headerlink" title="4.1、app"></a>4.1、app</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">import android.os.Trace;</span><br><span class="line">Trace.beginSection(String sectionName)</span><br><span class="line">Trace.EndSection()</span><br></pre></td></tr></table></figure>
+<p>详细例子可以参考：<a href="https://developer.android.com/studio/command-line/systrace#java" target="_blank" rel="noopener">systrace </a></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line">public class MyAdapter extends RecyclerView.Adapter&lt;MyViewHolder&gt; &#123;</span><br><span class="line">    ...</span><br><span class="line">    @Override</span><br><span class="line">    public MyViewHolder onCreateViewHolder(ViewGroup parent, int viewType) &#123;</span><br><span class="line">        Trace.beginSection(&amp;quot;MyAdapter.onCreateViewHolder&amp;quot;);</span><br><span class="line">        MyViewHolder myViewHolder;</span><br><span class="line">        try &#123;</span><br><span class="line">            myViewHolder = MyViewHolder.newInstance(parent);</span><br><span class="line">        &#125; finally &#123;</span><br><span class="line">            // In &amp;#39;try...catch&amp;#39; statements, always call &lt;code&gt;&lt;a href=&quot;/reference/android/os/Trace.html#endSection()&quot;&gt;endSection()&lt;/a&gt;&lt;/code&gt;</span><br><span class="line">            // in a &amp;#39;finally&amp;#39; block to ensure it is invoked even when an exception</span><br><span class="line">            // is thrown.</span><br><span class="line">            Trace.endSection();</span><br><span class="line">        &#125;</span><br><span class="line">        return myViewHolder;</span><br><span class="line">    &#125;&lt;/p&gt;</span><br><span class="line"></span><br><span class="line">&lt;p&gt;@Override</span><br><span class="line">    public void onBindViewHolder(MyViewHolder holder, int position) &#123;</span><br><span class="line">        Trace.beginSection(&amp;quot;MyAdapter.onBindViewHolder&amp;quot;);</span><br><span class="line">        try &#123;</span><br><span class="line">            try &#123;</span><br><span class="line">                Trace.beginSection(&amp;quot;MyAdapter.queryDatabase&amp;quot;);</span><br><span class="line">                RowItem rowItem = queryDatabase(position);</span><br><span class="line">                mDataset.add(rowItem);</span><br><span class="line">            &#125; finally &#123;</span><br><span class="line">                Trace.endSection();</span><br><span class="line">            &#125;</span><br><span class="line">            holder.bind(mDataset.get(position));</span><br><span class="line">        &#125; finally &#123;</span><br><span class="line">            Trace.endSection();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>然后通过python systrace.py –app=sectionName 指定apk，或者通过ddms选择指定apk，抓取systrace分析。</p>
+<h2 id="4-2、Java-framework"><a href="#4-2、Java-framework" class="headerlink" title="4.2、Java framework"></a>4.2、Java framework</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">import android.os.Trace;</span><br><span class="line">Trace.traceBegin(long traceTag, String methodName)</span><br><span class="line">Trace.traceEnd(long traceTag)</span><br></pre></td></tr></table></figure>
+<h2 id="4-3、Native-framework"><a href="#4-3、Native-framework" class="headerlink" title="4.3、Native framework"></a>4.3、Native framework</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;cutils/trace.h&gt;</span><br><span class="line">ATRACE_CALL()</span><br></pre></td></tr></table></figure>
+<h1 id="5、主机Trace-Viewer的实现-js"><a href="#5、主机Trace-Viewer的实现-js" class="headerlink" title="5、主机Trace-Viewer的实现(js)"></a>5、主机Trace-Viewer的实现(js)</h1><p>从systrace python文件的解析我们可以看到，最后把trace数据和’prefix.html’、’suffix.html’、’systrace_trace_viewer.html’合成一个’trace.html’文件，使用chrome浏览器打开’trace.html’就可以非常方便的以图形化的形式来查看和分析trace数据。</p>
+<p>这里面的关键就是Trace-Viewer，核心是其中的js脚本。该项目的<a href="https://github.com/catapult-project/catapult" target="_blank" rel="noopener">github主页</a>。</p>
+<p>本人js功底太差，看了一堆资料还是不得要领。如有感兴趣的同学可以继续深入研究，Trace-Viewer功能非常强大，用来做trace数据的分析和实现再合适不过了，如果可以利用起来自己修改非常强大。</p>
+<p>一些参考文档：<br><a href="https://github.com/catapult-project/catapult" target="_blank" rel="noopener">catapult on github</a><br><a href="https://github.com/catapult-project/catapult/blob/master/tracing/README.md" target="_blank" rel="noopener">Trace-Viewer</a><br><a href="https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/preview#heading=h.yr4qxyxotyw" target="_blank" rel="noopener">Trace Event Format</a><br><a href="https://github.com/catapult-project/catapult/blob/master/tracing/docs/extending-and-customizing-trace-viewer.md" target="_blank" rel="noopener">extending-and-customizing-trace-viewer</a><br><a href="https://github.com/catapult-project/catapult/blob/master/tracing/docs/getting-started.md" target="_blank" rel="noopener">Trace Viewer getting-started</a><br><a href="https://github.com/catapult-project/catapult/tree/master/tracing/docs" target="_blank" rel="noopener">Trace Viewer doc</a><br><a href="https://developer.mozilla.org/zh-CN/docs/Web/HTML/Element/template" target="_blank" rel="noopener"><template>标签</template></a><br><a href="https://www.ibm.com/developerworks/cn/web/wa-polymer/index.html" target="_blank" rel="noopener">和 Polymer 一起加入 Web 组件革命</a><br><a href="http://dev.chromium.org/developers/how-tos/trace-event-profiling-tool" target="_blank" rel="noopener">The Trace Event Profiling Tool (about:tracing)</a><br><a href="http://dev.chromium.org/developers/how-tos/trace-event-profiling-tool/recording-tracing-runs" target="_blank" rel="noopener">Recording Tracing Runs</a><br><a href="http://dev.chromium.org/developers/how-tos/trace-event-profiling-tool/trace-event-reading" target="_blank" rel="noopener">Understanding about:tracing results</a><br><a href="http://dev.chromium.org/developers/how-tos/trace-event-profiling-tool/using-frameviewer" target="_blank" rel="noopener">FrameViewer How-To</a>  </p>
+<p>这里面最有名的一个问题是在trace.html中加上一条自定义的trace曲线，主要步骤如下：</p>
+<ul>
+<li>1、在内核中实现自己的trace event；</li>
+<li>2、在atrace.cpp代码的k_categories[]数组中加上对应的category；</li>
+<li>3、在Trace-Viewer中加上对这类category的解析，Trace-Viewer对数据的解析都是通过parser来实现的，可以仿照<a href="https://github.com/catapult-project/catapult/tree/master/tracing/tracing/extras/importer/linux_perf" target="_blank" rel="noopener">linux_perf</a>中的实现增加一条parser，重新生成’systrace_trace_viewer.html’、’trace.html’文件即可。</li>
+</ul>
+<h1 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h1><p><a href="https://developer.android.com/studio/command-line/systrace" target="_blank" rel="noopener">1、systrace</a><br><a href="https://www.cnblogs.com/wanqieddy/p/4494896.html" target="_blank" rel="noopener">2、Android系统性能调优工具介绍</a><br><a href="https://blog.csdn.net/omnispace/article/details/77620667" target="_blank" rel="noopener">3、理解和使用systrace</a>  </p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/systrace/" rel="tag"># systrace</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2018/10/16/bpf_index/" rel="next" title="Linux bpf+bcc (Index)">
+                <i class="fa fa-chevron-left"></i> Linux bpf+bcc (Index)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2018/12/12/android_binder/" rel="prev" title="Android Binder">
+                Android Binder <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+    <div class="comments" id="comments">
+      <div id="disqus_thread">
+        <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
+      </div>
+    </div>
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope="" itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="/images/touxiang/ycqs.jpg" alt="pwl999">
+            
+              <p class="site-author-name" itemprop="name">pwl999</p>
+              <p class="site-description motion-element" itemprop="description">RTFSC(Read The Fucking Source Code)</p>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives">
+                
+                    <span class="site-state-item-count">30</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  <a href="/categories/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">3</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-tags">
+                  <a href="/tags/index.html">
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">22</span>
+                    <span class="site-state-item-name">标签</span>
+                  </a>
+                </div>
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1、systrace的使用"><span class="nav-number">1.</span> <span class="nav-text">1、systrace的使用</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2、主机systrace命令的实现-python"><span class="nav-number">2.</span> <span class="nav-text">2、主机systrace命令的实现(python)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1、SystraceRunner类的初始化"><span class="nav-number">2.1.</span> <span class="nav-text">2.1、SystraceRunner类的初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2、SystraceRunner-StartTracing"><span class="nav-number">2.2.</span> <span class="nav-text">2.2、SystraceRunner.StartTracing()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3、SystraceRunner-StopTracing"><span class="nav-number">2.3.</span> <span class="nav-text">2.3、SystraceRunner.StopTracing()</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4、SystraceRunner-OutputSystraceResults"><span class="nav-number">2.4.</span> <span class="nav-text">2.4、SystraceRunner.OutputSystraceResults()</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-4、执行的命令"><span class="nav-number">3.</span> <span class="nav-text">2.4、执行的命令</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3、目标机atrace命令的实现-c"><span class="nav-number">4.</span> <span class="nav-text">3、目标机atrace命令的实现(c++)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1、categories"><span class="nav-number">4.1.</span> <span class="nav-text">3.1、categories</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2、’–async-start’"><span class="nav-number">4.2.</span> <span class="nav-text">3.2、’–async_start’</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3、’–async-dump’"><span class="nav-number">4.3.</span> <span class="nav-text">3.3、’–async_dump’</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-4、’–async-stop’"><span class="nav-number">4.4.</span> <span class="nav-text">3.4、’–async_stop’</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4、目标机Trace类的使用-java-c"><span class="nav-number">5.</span> <span class="nav-text">4、目标机Trace类的使用(java/c++)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1、app"><span class="nav-number">5.1.</span> <span class="nav-text">4.1、app</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2、Java-framework"><span class="nav-number">5.2.</span> <span class="nav-text">4.2、Java framework</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-3、Native-framework"><span class="nav-number">5.3.</span> <span class="nav-text">4.3、Native framework</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5、主机Trace-Viewer的实现-js"><span class="nav-number">6.</span> <span class="nav-text">5、主机Trace-Viewer的实现(js)</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文档"><span class="nav-number">7.</span> <span class="nav-text">参考文档</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright">&copy; <span itemprop="copyrightYear">2019</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">pwl999</span>
+
+  
+
+  
+</div>
+
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> v6.6.0</div>
+
+
+
+
+        
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    <script src="/lib/jquery/index.js?v=2.1.3"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+  
+
+  
+  
+    <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+  
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=6.6.0"></script>
+
+  <script src="/js/src/motion.js?v=6.6.0"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=6.6.0"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=6.6.0"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=6.6.0"></script>
+<script src="/js/src/post-details.js?v=6.6.0"></script>
+
+
+
+  
+
+
+  <script src="/js/src/bootstrap.js?v=6.6.0"></script>
+
+
+
+  
+
+  
+    <script id="dsq-count-scr" src="https://.disqus.com/count.js" async></script>
+  
+
+  
+    <script>
+      var disqus_config = function () {
+        this.page.url = "http://yoursite.com/2018/10/29/systrace/";
+        this.page.identifier = "2018/10/29/systrace/";
+        this.page.title = 'Systrace';
+        };
+      function loadComments () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', '' + +new Date());
+        (d.head || d.body).appendChild(s);
+      }
+      
+        loadComments();
+      
+    </script>
+  
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
